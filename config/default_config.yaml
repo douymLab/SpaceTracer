@@ -1,0 +1,109 @@
+# Mutation Caller Default Configuration
+
+# Pipeline-level settings
+pipeline:
+  name: "SpaceTracer"
+  version: "1.0.0"
+
+## Required
+# Runtime settings
+runtime:
+  threads: 8
+  memory: "32G"
+  keep_intermediates: false
+  skip_validation: false
+
+# Reference genome settings
+genome: "hg38"  
+genome_fasta: "/storage/douyanmeiLab/yangzhirui/Reference/Cellranger/refdata-gex-GRCh38-2020-A/fasta/genome.fa"  
+reference_dir: null #
+
+
+## Optional
+# Step-specific configurations
+steps:
+    
+  # Step 1: BAM Processing
+  bam_processing:
+    remove_duplicates: true
+    mark_duplicates: true
+    realign_indels: false  # 是否进行indel realignment
+    sort_by: "coordinate"  # coordinate or queryname
+    create_index: true
+  
+  # Step 2: Mpileup
+  mpileup:
+    min_depth: 30
+    max_depth: 200000
+    min_mapq: 0
+    min_baseq: 0
+    exclude_flag:  0 # strongly recommended
+
+  # Step 3 Calculate background error(optional)
+  bkg: 
+    filter_count: true
+
+  # Step 4: UMI combine
+  reads_processing:
+    filter_duplicates: true
+    filter_secondary: true
+    filter_qcfail: true
+    filter_supplementary: true
+    min_read_quality: 20
+    extract_features:
+      - "base_quality"
+      - "mapping_quality"
+      - "strand"
+      - "position_in_read"
+  
+  # Step 5: Genotyping
+  genotyping:
+    algorithm: "bayesian"  # bayesian, ml, custom
+    prior: 0.001  # 突变的先验概率
+    min_likelihood: 0.95
+    min_depth: 10
+    min_alt_depth: 3
+    het_prior: 0.001
+  
+  # Step 6: Feature Extraction
+  feature_extraction:
+    features:
+      - "depth"
+      - "base_quality"
+      - "mapping_quality"
+      - "strand_bias"
+      - "position_bias"
+      - "nearby_variants"
+      - "complexity"
+    window_size: 100  # 用于计算nearby features
+  
+  # Step 7: Prediction
+  prediction:
+    model: "default"  # default, 或自定义模型路径
+    model_type: "random_forest"  # random_forest, xgboost, neural_network
+    threshold: 0.8  # 预测概率阈值
+    use_features:
+      - "all"  # 或指定特定features
+  
+  # Step 8: Remove recurrent error
+  final_filter:
+    hard_filters:
+      min_prediction_score: 0.8
+      max_missing_features: 2
+    output_format: "vcf"  # vcf, tsv, bed
+    compress: true
+    create_index: true
+
+# Output settings
+output:
+  vcf_format: "4.2"
+  include_filters: true
+  include_info: true
+  include_genotypes: true
+  compress_output: true
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_file: "pipeline.log"
+  verbose_steps: false
