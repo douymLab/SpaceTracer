@@ -13,3 +13,5 @@ old_demo_output
 run_snakemake_for_conda_old
 .gitignore
 run_snakemake_for_conda_beifen
+.DS_Store
+models_trained/.DS_Store
