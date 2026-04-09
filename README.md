@@ -9,23 +9,25 @@ This is the initial version of SpaceTracer.
 - 2026/02/25: Version 1.1.0  
 This release focuses on updating the genotype calculation and enhancing the features used in the random forest model. Additionally, we've added more filter steps to improve the accuracy of the results.
 
-We expect to release the **next version** of SpaceTracer in roughly one month. This release will feature substantial performance improvements.
+We expect to release the <span style="color:red"><strong>next version</strong></span> of SpaceTracer soon. This release will 
+feature substantial 
+performance improvements, the **most important update** in this release is significantly improved running speed.
 
 **Key Improvements for Upcoming Release**
 - Integrated Lysis Error Calculation \
 Lysis error calculation for single samples will be incorporated directly into the full algorithm pipeline, providing more comprehensive and streamlined analysis.
 - One-Command Execution Mode \
-A new simplified execution option will allow users to run SpaceTracer with a single command, removing the dependency on Snakemake and making the workflow more accessible.
-- Up to 10× Speed Improvement \
-Major performance optimizations will enable processing speeds up to ten times faster than the previous version.
+A simplified execution option will allow users to run SpaceTracer with a single command, removing the Snakemake dependency and making the workflow more accessible.
+- Improved Running Speed \
+Major performance optimizations will significantly accelerate processing compared with the previous version.
 
 ## Table Contents
 - [Installation](#installation)
   - [Install from Github](#install-from-github)
   - [Dependencies](#dependencies)
 - [Public Resources](#public-resources)
-- [Run SpaceTracer with Snakemake](#run-spacetracer-with-snakemake)
-- [Run SpaceTracer with Separate Steps](#run-spacetracer-with-separate-steps)
+- [Run SpaceTracer with Snakemake (Recommended: one-step workflow)](#run-spacetracer-with-snakemake)
+- [Run SpaceTracer with Separate Steps (Optional: advanced users)](#run-spacetracer-with-separate-steps)
   - [Step0: Data Pre-processing](#step0-data-pre-processing)
   - [Step1: Quality Control](#step1-quality-control)
   - [Step2: Genotyping](#step2-genotyping)
