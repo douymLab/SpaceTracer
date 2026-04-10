@@ -13,7 +13,7 @@ __version__ = "1.0.0"
 __author__ = "Zhirui Yang & Mengdie Yao"
 __email__ = "yangzhirui@westlake.edu.cn"
 
-from SpaceTracer.pipeline.orchestrator_old import PipelineOrchestrator
+from SpaceTracer.pipeline.orchestrator import PipelineOrchestrator
 from SpaceTracer.config.config_loader import LoadConfig
 
 __all__ = [

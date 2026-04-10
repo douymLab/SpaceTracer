@@ -3,6 +3,9 @@ import os
 from pathlib import Path
 import yaml
 from typing import Dict, Any
+from multiprocessing import cpu_count
+
+from SpaceTracer.utils.get_genome_info import GenomeDetails
 
 def check_file_exist(path):
     # if path=="":
@@ -53,16 +56,37 @@ class LoadConfig:
             in_dir=Path(self.config["resource_dir"])
             self.config["genome_fasta"]=in_dir/"genome.fa"
             self.config["gnomad_path"]=in_dir/"gnomad"
+            self.config["mappability_path"]=in_dir/"mappability"
+            self.config["gene_bed"]=in_dir/"gene_region.bed"
+            self.config["dbsnp_vcf_file"]=in_dir/"dbSNP.vcf"
+            self.config["imprinted_bed"]=in_dir/"imprinted_gene_region.bed"
+            self.config["editing_bed"]=in_dir/"editing.bed"
+            self.config["PON_file"]=in_dir/"PON.txt"
+            self.config["reference_error_profile"]=in_dir/"reference_error_profile.txt"
 
         details=self.config["resource_details"]
-        self._replace_config("genome_fasta",details)
-        self._replace_config("gnomad_path",details)
+        # self._replace_config("genome_fasta",details)
+        # self._replace_config("gnomad_path",details)
+        # self._replace_config("mappability_path",details)
+        # self._replace_config("gene_bed",details)
+        # self._replace_config("dbsnp_vcf_file",details)
+        # self._replace_config("imprinted_bed",details)
+        # self._replace_config("editing_bed",details)
+        # self._replace_config("PON_file",details)
+        # self._replace_config("reference_error_profile",details)
+
+        # check_file_exist(self.config["genome_fasta"])    
+        # check_file_exist(self.config["gnomad_path"])
+
+        resource_list=["genome_fasta","gnomad_path","mappability_path","gene_bed",
+                        "dbsnp_vcf_file","imprinted_bed","editing_bed","PON_file","reference_error_profile"]
+        for key in resource_list:
+            self._replace_config(key, details)
+            check_file_exist(self.config[key])
+
+        Genome=GenomeDetails(self.config.get('genome'),self.config.get('genome_fasta'))
+        self.config['genome_details']=Genome._get_genome_details()
         
-        print(self.config["genome_fasta"])
-
-        check_file_exist(self.config["genome_fasta"])    
-        check_file_exist(self.config["gnomad_path"])
-
     def _check_required_values(self,check_list):
         for key in check_list:
             if not self.config[key]:
@@ -88,13 +112,15 @@ class LoadConfig:
         # Reference genome settings
 
         # 1. Default parameters (built-in defaults)
-        DEFAULT_CONFIG = {
-            'threads': 4,
-            'memory': '32G',
-            'chunk_size': 1000000,
-            'keep_intermediates': False,
-            'skip_validation': False,
-            'sequence_type': 'visium' 
+        DEFAULT_CONFIG = {'run':
+            {
+                'threads': 4,
+                'memory': '32G',
+                'chunk_size': 1000000,
+                'keep_intermediates': False,
+                'skip_validation': False,
+                'sequence_type': 'visium' 
+            }
         }
 
         # priority order
@@ -113,12 +139,14 @@ class LoadConfig:
                         config[key] = json.loads(value.lower())
                     else:
                         config[key] = value
+                        
 
         if 'bin_size' in config.keys() and config['sequence_type']!='visium':
             config['bin_size']=config.get('bin_size',100)
         else:
             config['bin_size']=None
-            
+
+        config['run']['threads']=min(config['run']['threads'],cpu_count())
         self.config=config
 
         self._check_input_details()

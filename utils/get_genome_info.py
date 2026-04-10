@@ -1,5 +1,6 @@
 import os
 import subprocess
+from pathlib import Path
 
 from SpaceTracer.utils.logger import get_logger
 
@@ -14,7 +15,9 @@ GENOME_CONFIGS = {
         'chromosomes': {
             'autosomes': [f'chr{i}' for i in range(1, 23)],
             'sex_chromosomes': ['chrX', 'chrY'],
-            'mitochondrial': ['chrM']
+            'mitochondrial': ['chrM'],
+            'contigs' : [],
+            'length':{}
         }
     },
     
@@ -24,7 +27,10 @@ GENOME_CONFIGS = {
         'chromosomes': {
             'autosomes': [str(i) for i in range(1, 23)],  # 注意：无chr前缀
             'sex_chromosomes': ['X', 'Y'],
-            'mitochondrial': ['MT', 'M']
+            'mitochondrial': ['MT', 'M'],
+            'contigs' : [],
+            'length':{}
+
         }
     },
     
@@ -35,7 +41,10 @@ GENOME_CONFIGS = {
         'chromosomes': {
             'autosomes': [f'chr{i}' for i in range(1, 20)],
             'sex_chromosomes': ['chrX', 'chrY'],
-            'mitochondrial': ['chrM']
+            'mitochondrial': ['chrM'],
+            'contigs' : [],
+            'length':{}
+
         }
     },
     
@@ -45,7 +54,10 @@ GENOME_CONFIGS = {
         'chromosomes': {
             'autosomes': [f'chr{i}' for i in range(1, 20)],
             'sex_chromosomes': ['chrX', 'chrY'],
-            'mitochondrial': ['chrM']
+            'mitochondrial': ['chrM'],
+            'contigs' : [],
+            'length':{}
+
         }
     },
 
@@ -56,7 +68,10 @@ GENOME_CONFIGS = {
         'chromosomes': {
             'autosomes': [f'chr{i}' for i in range(1, 21)], 
             'sex_chromosomes': ['chrX', 'chrY'],
-            'mitochondrial': ['chrM']
+            'mitochondrial': ['chrM'],
+            'contigs' : [],
+            'length':{}
+
         }
     }
 }
@@ -66,38 +81,64 @@ class GenomeDetails:
         self.genome=genome
         self.genome_fasta=genome_fasta
     
+    # def _find_fai_file(self):
+    #     """ find raw fai file """
+    #     fasta_path=self.genome_fasta
+    #     dir_name = os.path.dirname(fasta_path)
+    #     file_name = os.path.basename(fasta_path)
+    #     # 1. most common fai file     
+    #     path1 = str(fasta_path) + '.fai'
+    #     if os.path.exists(path1):
+    #         logger.debug(f"Found fai: {path1}")
+    #         return path1
+        
+    #     # if not, try other path
+    #     suffixes_to_try = ['.fa', '.fasta', '.fna', '.fas']
+    #     # 2. add fai
+    #     for suffix in suffixes_to_try:
+    #         if fasta_path.endswith(suffix):
+    #             path2 = fasta_path+'.fai'
+    #             if path2.exists():
+    #                 logger.debug(f"Found fai: {path2}")
+    #                 return path2
+        
+    #     # 3. remove .fa .fasta; and add .fai
+    #     if fasta_path.endswith(('.fa', '.fasta')):
+    #         path3 = os.path.join(dir_name, file_name + '.fai') 
+    #         if path3.exists():
+    #             logger.debug(f"Found fai: {path3}")
+    #             return path3
+        
+    #     logger.error(f"No fai file found for {fasta_path}")
+    #     return None
+    
     def _find_fai_file(self):
-        """ find raw fai file """
-        fasta_path=self.genome_fasta
-        dir_name = os.path.dirname(fasta_path)
-        file_name = os.path.basename(fasta_path)
-        # 1. most common fai file     
-        path1 = str(fasta_path) + '.fai'
+        """find raw fai file"""
+        fasta_path = Path(self.genome_fasta)
+        
+        path1 = Path(str(fasta_path) + '.fai')
         if path1.exists():
             logger.debug(f"Found fai: {path1}")
-            return path1
+            return str(path1)
         
-        # if not, try other path
         suffixes_to_try = ['.fa', '.fasta', '.fna', '.fas']
-        # 2. add fai
         for suffix in suffixes_to_try:
-            if fasta_path.endswith(suffix):
-                path2 = fasta_path+'.fai'
+            if fasta_path.suffix == suffix:
+                path2 = Path(str(fasta_path) + '.fai')
                 if path2.exists():
                     logger.debug(f"Found fai: {path2}")
-                    return path2
+                    return str(path2)
         
-        # 3. remove .fa .fasta; and add .fai
-        if fasta_path.endswith(('.fa', '.fasta')):
-            path3 = os.path.join(dir_name, file_name + '.fai') 
+        if fasta_path.suffix in ('.fa', '.fasta'):
+            path3 = fasta_path.with_suffix('.fai')
             if path3.exists():
                 logger.debug(f"Found fai: {path3}")
-                return path3
+                return str(path3)
         
         logger.error(f"No fai file found for {fasta_path}")
         return None
-    
-    def _standardize_chrom_name(chrom_name: str) -> str:
+        
+    def _standardize_chrom_name(self, chrom_name: str) -> str:
         """standardize chromosome name"""
         
         # remove other info
@@ -154,12 +195,12 @@ class GenomeDetails:
                 parts = line.strip().split('\t')
                 if len(parts) >= 2:
                     chrom_name = parts[0]
-                    # chrom_length = int(parts[1])
+                    chrom_length = int(parts[1])
                     
                     # use standard_chrom_name to judge the chromosome type
                     standard_chrom_name = self._standardize_chrom_name(chrom_name)
                     chromosomes[chrom_name] = {
-                        # 'length': chrom_length,
+                        'length': chrom_length,
                         'type': self._classify_chromosome_by_name(standard_chrom_name)
                     }
         
@@ -169,8 +210,14 @@ class GenomeDetails:
         # 1. from known info
         if self.genome in GENOME_CONFIGS.keys():
             genome_info=GENOME_CONFIGS[self.genome]
+            chromosomes=self._get_chromosomes_from_fasta_idx()
+            for chrom in chromosomes:
+                if chromosomes[chrom]['type']=="other":
+                    genome_info['chromosomes']['contigs'].append(chrom)
 
-        # 2. from fai file
+                genome_info['chromosomes']['length'][chrom]=chromosomes[chrom]['length']
+
+        # 2. only from fai file
         else:
             other_chrom=[]
             genome_info={'species': self.genome,
@@ -178,18 +225,27 @@ class GenomeDetails:
                 'chromosomes': {
                     'autosomes': 'auto',  
                     'sex_chromosomes': [],  
-                    'mitochondrial': []
+                    'mitochondrial': [],
+                    'contigs': [],
+                    'length': {}
                 }
             }
-            chromosomes=self._get_chromosomes_from_fasta_idx
+            chromosomes=self._get_chromosomes_from_fasta_idx()
             for chrom in chromosomes:
+                genome_info['chromosomes']['length'][chrom]=chromosomes[chrom]['length']
+
                 if chromosomes[chrom]['type']=='autosome':
                     genome_info['chromosomes']['autosomes'].append(chrom)
+
                 elif chromosomes[chrom]['type']=='sex_chromosome':
                     genome_info['chromosomes']['sex_chromosomes'].append(chrom)
+
                 elif chromosomes[chrom]['type']=='mitochondrial':
                     genome_info['chromosomes']['mitochondrial'].append(chrom)
+                    
                 else:
+                    genome_info['chromosomes']['contigs'].append(chrom)
+                    
                     other_chrom.append(chrom)
 
             if genome_info['chromosomes']['autosomes']==[]:
@@ -197,3 +253,11 @@ class GenomeDetails:
         return genome_info
 
 
+def get_chr_size(fai_file):
+    chr_sizes=dict()
+    for line in open(fai_file,"r"):
+        line=line.rstrip()
+        fields=line.split('\t')
+        chr_sizes[fields[0]]=chr_sizes.get(fields[0],fields[1])
+
+    return chr_sizes

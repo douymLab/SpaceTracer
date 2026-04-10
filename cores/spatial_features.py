@@ -23,102 +23,12 @@ from matplotlib.lines import Line2D
 import colorcet as cc
 
 
-def handle_ind_geno_to_get_mutation_list(spot_geno_file):
-    '''
-    input:    
-    #chrom  pos     ID      germline        mutant  cluster spot_number    consensus_read_count    l_germline      l_mosaic        max_spot_geno   G_spot_max      depth   vaf     p_mosaic
-    chr12   52487210        .       A       T       ind       5      46,0,0,0        0.7874611700926878      0.21253882990731235     germline        0/0     46      0.0     0.3685326340225939
-    
-    output: get new allele info from the "ind_ref" and "ind_alt"
-    list: [("chrX", "119811135", "T", "C,<*>"),...]
-    '''
-    mutation_identifier_list=[]
-    f=open(spot_geno_file,"r")
-    for line in f.readlines():
-        if line[0]!="#" and line[0:5]!="chrom":
-            s = line.strip().split()
-            chrom=s[0];pos=s[1];ref=s[3];alt=s[4]
-            mutation="_".join([str(chrom),str(pos),str(ref),str(alt)])
-            if mutation not in mutation_identifier_list:
-                mutation_identifier_list.append(mutation)
-
-    return mutation_identifier_list
-
-
-def read_spot_posterior_file(file):
-    # df = pd.read_csv(file,sep='\t',header=None)
-    colnames=["chr","pos","ID","germline","mutant","cluster","spot_barcode","consensus_read_count", \
-              "l_germline", "l_mosaic", "max_spot_geno","G_spot_max","depth","vaf","p_mosaic"]
-    df = pd.read_csv(file, sep='\t', header=None, names=colnames, comment = "#")
-    # df.columns=colnames
-    df['pos'] = df['pos'].astype(str)
-    df['identifier'] = df['chr']+"_"+df['pos']+"_"+df['germline']+"_"+df['mutant'].astype(str)
-    df = df.set_index('identifier')
-    # spot_geno_file=BedTool(file)
-    return df
-
-
-def handle_per_line(barcode_dir,output_dir,in_name,spot_geno_file,barcode_dict,alpha,thr_r2,thr_prob,thr_likelihood,thr_vaf, \
-                    plot_supp, fig_size,method,num_directions,line):
-        barcode_geno={}
-        mutation_name=line
-        mutation=line.split("_")
-        barcode_mutinfo_file_name=os.path.join(barcode_dir,mutation_name+'.barcode.mutinfo.txt')
-        barcode_mutinfo_file=open(barcode_mutinfo_file_name,"w")
-        try:
-            short_df = spot_geno_file.loc[mutation_name]
-        except:
-            return []
-    
-        for i in range(len(short_df)): # type: ignore
-            barcode_geno[short_df.iloc[i]["spot_barcode"]]=(short_df.iloc[i]["cluster"],short_df.iloc[i]["depth"],short_df.iloc[i]["vaf"],short_df.iloc[i]["p_mosaic"],short_df.iloc[i]["l_mosaic"])
-
-        for barcode in barcode_dict.keys():
-            if barcode not in barcode_geno:  # ← No need for .keys()
-                continue
-            
-            cluster, depth, vaf, mut_prob, l_mosaic = barcode_geno[barcode]
-            barcode_mutinfo_file.write(f'{barcode}\t{cluster}\t1\t{barcode_dict[barcode][0]}\t{barcode_dict[barcode][1]}\t{depth}\t{vaf}\t{mut_prob}\t{l_mosaic}\n')
-        barcode_mutinfo_file.close()
-        if in_name:
-            barcode_mutinfo_file_name=os.path.join(barcode_dir,in_name+"."+mutation_name+'.barcode.mutinfo.txt')
-        else:
-            barcode_mutinfo_file_name=os.path.join(barcode_dir,mutation_name+'.barcode.mutinfo.txt')
-
-        input_file=barcode_mutinfo_file_name
-        if in_name:
-            sample_name=in_name+"."+mutation_name
-        else:
-            sample_name=mutation_name
-        
-        res=get_spatial_features(input_file,output_dir, sample_name, alpha, thr_r2, \
-                            thr_prob, thr_likelihood, thr_vaf, plot_supp, fig_size, method, num_directions)
-
-        if res[9] != "NA":
-            out_line=list(mutation)+ [str(i) for i in res]
-        else:
-            out_line=[]
-
-        # significant if pass at least one test
-        # test_sig = res[0]
-
-        print("end:", mutation_name)
-        return out_line
-
-
-def merge_dataframes(df_list):
-    if df_list:
-        return pd.concat(df_list, ignore_index=False, axis=1)
-    return pd.DataFrame()
-
-
-def save_dataframe(df, filename):
-    df.to_csv(filename, sep="\t", index=True, index_label='barcode_name', na_rep='NA')
-
-
 def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2=0.5, \
-                        thr_prob=0.5, thr_likelihood=0.5, thr_vaf=0, plot_supp=False, fig_size=5,  method="LDA", num_directions=8):
+                         thr_prob=0.5, thr_likelihood=0.5, thr_vaf=0, plot_supp=False, fig_size=5, \
+                         fig_xmin=0, fig_xmax=128, fig_ymin=0, fig_ymax=128, point_size=6, \
+                         method="LDA", num_directions=8, n_quantile=100):
     """
+    Inputs:
         input_file - the direction and the name of the input file, which is the spot mutation info
         output_dir - the direction saving the output figures
         sample_name - the sample name of the output files
@@ -130,8 +40,6 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
         thr_vaf - the threshold of mutant allele frequency (default=0)
             the spots with higher mutant AF than the threshold are recognized as having mosaic mutations
         thr_r2 - the threshold of the R-square used to distinguish early-embryonic somatic mutations (default=0.5)
-        plot - Boolean variable of whether plotting the scatter plot of the spots in the original axes
-            when the test result is significant (default=True)
         plot_supp - Boolean variable of whether plotting the supplementary plots (default=False), including
             the scatter plot between mutant probability versus vaf
             the bar plot for the cluster mutated spots count
@@ -150,34 +58,32 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
         num_directions - the number of directions to test in the optimization method (OPT) (default=8)
         n_quantile - the number of quantiles plotted in the QQ-plot (default=100)
         
-    Outputs: [int(test_sig), int(early_embryonic), int(late_mutation), int(verylate_mut), \
-              min_ks_stat, min_ks_pval, min_moran_stat, min_moran_pval, \
-              mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, \
-              meanVAF, maxVAF, r_squared, wilcoxon_stat, wilcoxon_pval, \
-              outlier_output, outlierVAF, outlier_moran_stat, outlier_moran_pval]
+    Outputs:[int(test_sig), int(early_embryonic), int(late_mutation), \
+            min_ks_stat, min_ks_pval, min_moran_stat, min_moran_pval, \
+            mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, \
+            all_spots_vaf_mean, all_spots_vaf_max, mut_spots_vaf_mean, mut_spots_vaf_median, \
+            num_spots, num_mut_spots, r_squared, wilcoxon_stat, wilcoxon_pval, wilcoxon_rbc]
         test_sig - True if pass the spatial test (including the early somatic mutation and the late, very late somatic mutation).
             i.e. Either for mutation probability or mosaic likelihood or mutant allele frequency, one of the KS test or global Moran's I test is passed
-        early_embryonic, late_mutation, verylate_mut - True if the site is identified as early embryonic or late somatic mutation or very late mutation, else False
-        min_moran_stat, min_ks_pval - the statistic and the minimum p-value for the KS-test whether on the PC1/PC2 direction or 
+        early_embryonic, late_mutation - True if the site is identified as early embryonic or late somatic mutation, else False
+        min_ks_stat, min_ks_pval - the statistic and the minimum p-value for the KS-test whether on the PC1/PC2 direction or 
                                       the most variant direction or the candidate direction lists
         min_moran_stat, min_moran_pval - the statistic and the p-value for the moran I's index versus the normal distribution
         mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf - the proportion of the spots that contain candidate mutations with
                                                                      high mutant probability or high mosaic likelihood or high vaf
-        meanVAF, maxVAF - the average / maximum spot mutant allele frequency
+        all_spots_vaf_mean, all_spots_vaf_max - the average / maximum spot mutant allele frequency
+        mut_spots_vaf_mean, mut_spots_vaf_median - the average / median spot mutant allele frequency for spots with alternative alleles
+        num_spots, num_mut_spots - the total number of spots and the number of spots with alternative alleles
         r_squared - the R-squared for the linear regression between the standardized depth and mutant allele number
-        wilcoxon_stat, wilcoxon_pval - the statistic and the p-value of the Wilcoxon test between the standardized depth and mutant allele number
-        outlier_output - the clusters whose proportion of candidate mutated spots significantly higher than the others using three measurements
-        outlierVAF - the average vaf for the spots in the outlier clusters using three measurements
-        outlier_moran_stat, outlier_moran_pval - the statistic and the p-value for the moran I's index using three measurements
+        wilcoxon_stat, wilcoxon_pval, wilcoxon_rbc - the statistic, p-value and the rbc value of the Wilcoxon test 
+                                                     between the standardized depth and mutant allele number
     """
-    min_moran_stat, min_moran_pval= "NA","NA"
     # read data and remove the rows with NA
     input = open(input_file,"r")
     df = pd.read_csv(input, sep="\t", header=None, names=['barcode_name', 'cluster', 'in_tissue', 'pos_x', 'pos_y', 'depth', 'vaf', 'mut_prob', 'l_mosaic'])
     df = df.dropna()
     
     # make sure the cluster column are factors
-    
     df['cluster'] = df['cluster'].astype('category') if df['cluster'].dtype=='object' else df['cluster'].astype('int').astype('category')
     # identify if the spot is potential mutated
     df['mutant_allele_num'] = (np.ceil(df['depth'] * df['vaf'])).astype(int)
@@ -198,17 +104,24 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
     # mut_rate_ratio = len(df[df['high_likelihood']==1]) / len(df[df['has_mutant_allele']==1]) if len(df)>0 else "NA"
 
     # other features
-    maxVAF = df['vaf'].max()
-    meanVAF = df['vaf'].mean()
-    # identify output for NA sites
-    outlier_output = "NA"
-    outlierVAF = "NA"    
+    all_spots_vaf_max = df['vaf'].max()
+    all_spots_vaf_mean = df['vaf'].mean()
+    mut_spots_vaf_mean = df.loc[df["vaf"] > 0, "vaf"].mean()
+    mut_spots_vaf_median = df.loc[df["vaf"] > 0, "vaf"].median()
+    num_spots = len(df)
+    num_mut_spots = (df["vaf"] > 0).sum()
+    
+    # identify output for NA sites  
     r_squared = "NA"
     wilcoxon_stat = "NA"
     wilcoxon_pval = "NA"
-    output_null = [0]*4 + ["NA"]*4 + [mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, meanVAF, maxVAF, \
-                                      r_squared, wilcoxon_stat, wilcoxon_pval, \
-                                      outlier_output, outlierVAF] + ["NA"]*2
+    wilcoxon_rbc = "NA"
+    min_moran_stat = "NA"
+    min_moran_pval = "NA"
+    output_null = [0]*3 + ["NA"]*4 + [mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, \
+                                      all_spots_vaf_mean, all_spots_vaf_max, \
+                                      mut_spots_vaf_mean, mut_spots_vaf_median, num_spots, num_mut_spots, \
+                                      r_squared, wilcoxon_stat, wilcoxon_pval, wilcoxon_rbc]
 
     # standardize the two variables
     depth_data = pd.DataFrame({
@@ -230,9 +143,11 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
         r_squared = 1
     if len(diff.unique()) > 1:
         wilcoxon_stat, wilcoxon_pval = wilcoxon(depth_std['depth'], depth_std['mutant_allele_num'])
+        wilcoxon_rbc = calculate_rbc_for_paired_wilcoxon(depth_std['depth'], depth_std['mutant_allele_num'])
     else:
         wilcoxon_stat = 0
         wilcoxon_pval = 1
+        wilcoxon_rbc = 0
 
     # check if the site caused by allele dropout
     no_alleledrop = (r_squared < thr_r2) or (wilcoxon_pval < alpha)
@@ -247,9 +162,10 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
         return output_null
     # if only one mutated spot, then the site is a very late mutation
     elif len(df[df['mutated']==1])==1:
-        output_verylate = [1,0,0,1] + ["NA"]*4 + [mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, meanVAF, maxVAF, \
-                                                  r_squared, wilcoxon_stat, wilcoxon_pval, \
-                                                  outlier_output, outlierVAF] + ["NA"]*2
+        output_verylate = [1,0,1] + ["NA"]*4 + [mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, \
+                                                all_spots_vaf_mean, all_spots_vaf_max, \
+                                                mut_spots_vaf_mean, mut_spots_vaf_median, num_spots, num_mut_spots, \
+                                                r_squared, wilcoxon_stat, wilcoxon_pval, wilcoxon_rbc]
         return output_verylate
     
 
@@ -263,27 +179,27 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
     elif np.isinf(df['mutated']).any():
         print("There are infinite values in the data at the site: ", sample_name)
     else:
-        try:
-            _, ks_pass, min_ks_stat, min_ks_pval = spatial_kstest(df=df, col='mutated', alpha=alpha, method=method, num_directions=num_directions, \
-                                                    plot_supp=plot_supp, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size, \
-                                                    note="")
-            moran_pass, min_moran_stat, min_moran_pval = spatial_moran(df=df, col='mutated', alpha=alpha, \
-                                                    plot_supp=plot_supp, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size, \
-                                                    note="")
-            early_mut = True if (ks_pass or moran_pass) else False
-        except ZeroDivisionError as e:
-            print("Division by zero error:", e)
-            print("At the site: ", sample_name)
-        except Exception as e:
-            print("An error occurred:", e)
-            print("At the site: ", sample_name)
+        # try:
+        _, ks_pass, min_ks_stat, min_ks_pval = spatial_kstest(df=df, col='mutated', alpha=alpha, method=method, num_directions=num_directions, \
+                                                plot_supp=plot_supp, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size, \
+                                                note="")
+        moran_pass, min_moran_stat, min_moran_pval = spatial_moran(df=df, col='mutated', alpha=alpha, \
+                                                plot_supp=plot_supp, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size, \
+                                                note="")
+        early_mut = True if (ks_pass or moran_pass) else False
+        # except ZeroDivisionError as e:
+        #     print("Division by zero error:", e)
+        #     print("At the site: ", sample_name)
+        # except Exception as e:
+        #     print("An error occurred:", e)
+        #     print("At the site: ", sample_name)
+
 
     # =============================================================================
-    # Local spatial tests for clusters
-    # Try to find late mutations and very late mutations
+    # Cluster-level spatial features
     # =============================================================================
     # group cluster info
-    df_cluster = df.groupby(['cluster']).agg({
+    df_cluster = df.groupby(['cluster'], observed=True).agg({
         'barcode_name': 'count',
         'depth': 'sum',
         'mutant_allele_num': 'sum',
@@ -301,75 +217,7 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
     df_cluster['mutant_prop_likelihood'] = (df_cluster['high_likelihood'] / df_cluster['spot_count']).replace([np.inf, -np.inf], np.nan)
     df_cluster['mutant_prop_vaf'] = (df_cluster['has_mutant_allele'] / df_cluster['spot_count']).replace([np.inf, -np.inf], np.nan)
 
-    # calcualte the first and third quantiles
-    Q1, Q3 = np.percentile(df_cluster['mutant_prop'], [25, 75])
-    # calculate the Interquartile Range (IQR) 
-    IQR = Q3 - Q1
-    # the upper bound
-    upper_bound = Q3 + 1.5 * IQR
-
-    # identify outlier clusters
-    outlier_rows = df_cluster[df_cluster['mutant_prop'] > upper_bound]
-    outlier_clusters = outlier_rows['cluster'].values
-    df_cluster['if_outlier'] = "no_outlier"
-    df_cluster.loc[df_cluster['mutant_prop'] > upper_bound, 'if_outlier'] = "outlier"
-
-    # late mutation Boolean
-    if len(outlier_clusters)>0:
-        outlier_output = ",".join([str(c) for c in outlier_clusters])
-        late_mut = True
-        # cluster the dataframe by outlier or not outlier
-        df_kind = df_cluster.groupby(['if_outlier']).agg({
-            'cluster': 'count',
-            'spot_count': 'sum',
-            'depth': 'sum',
-            'mutant_allele_num': 'sum',
-            'has_mutant_allele': 'sum',
-            'high_prob': 'sum',
-            'high_likelihood': 'sum',
-            'mutated': 'sum',
-            'vaf': 'mean',
-            'vaf_unnom': 'mean',
-            'mutant_prop': 'mean'
-        }).reset_index()
-        df_kind.rename(columns={'cluster': 'cluster_count'}, inplace=True)
-        df_kind['vaf_unnom'] = (df_kind['mutant_allele_num'] / df_kind['depth']).replace([np.inf, -np.inf], np.nan)
-        df_kind['mutant_prop'] = (df_kind['mutated'] / df_kind['spot_count']).replace([np.inf, -np.inf], np.nan)
-        df_kind.set_index('if_outlier', inplace=True)
-        # calculate vaf for the outlier
-        outlierVAF = df_kind.at["outlier", 'vaf_unnom']
-    else:
-        outlier_output = "NA"
-        late_mut = False
-        outlierVAF = "NA"
-
-    # very late mutations
-    # if there is only one cluster as the outlier, then calculate the moran's I value for the cluster 
-    # to see whether it is a very late mutation
-    # default values
-    verylate_mut = False
-    outlier_moran_stat = "NA"
-    outlier_moran_pval = "NA"
-
-    if len(outlier_clusters) == 1:
-        df_outlier = df[df['cluster'] == outlier_clusters[0]]
-        # return false if all mutant
-        if (len(df_outlier) < 2 or 
-            len(df_outlier[df_outlier['mutated']==1])==0 or 
-            len(df_outlier[df_outlier['mutated']==0])==0):
-            verylate_mut = False
-        try:
-            # df_outlier, ks_pass_cluster, ks_pval_cluster = spatial_kstest(df_outlier, alpha=alpha, method=method, num_directions=num_directions)
-            moran_pass_cluster, outlier_moran_stat, outlier_moran_pval = spatial_moran(df=df_outlier, col='mutated', alpha=alpha, \
-                                                                    plot_supp=plot_supp, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size, \
-                                                                    note="_outlier")
-            verylate_mut = moran_pass_cluster
-        except ZeroDivisionError as e:
-            print("Division by zero error:", e)
-        except Exception as e:
-            print("An error occurred:", e)
-
-
+    
     # =============================================================================
     # Conclusion and Plot
     # =============================================================================
@@ -377,12 +225,6 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
     # test_sig = (early_mut or late_mut or verylate_mut) and no_alleledrop
     test_sig = early_mut and no_alleledrop
 
-    # divide each mutation type
-    if verylate_mut:
-        early_mut = False
-        late_mut = False
-    elif late_mut:
-        early_mut = False
     # distinguish early embryonic mutation
     early_embryonic = False
     late_mutation = False
@@ -397,19 +239,24 @@ def get_spatial_features(input_file, output_dir, sample_name, alpha=0.05, thr_r2
     #                          fig_size=fig_size, xmin=fig_xmin, xmax=fig_xmax, ymin=fig_ymin, ymax=fig_ymax, point_size=point_size)
     #     plot_scatter_spatial(df=df, output_dir=output_dir, sample_name=sample_name, column="l_mosaic", note="likelihood", \
     #                          fig_size=fig_size, xmin=fig_xmin, xmax=fig_xmax, ymin=fig_ymin, ymax=fig_ymax, point_size=point_size)
-    # if plot_supp:
-    #     plot_supp_spatial(df=df, df_cluster=df_cluster, output_dir=output_dir, sample_name=sample_name)
-    #     plot_supp_depth(depth_std=depth_std, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size)
-    #     plot_qq_depth(depth_std=depth_std, output_dir=output_dir, sample_name=sample_name, num=n_quantile)
-    #     plot_reg_depth(depth_std=depth_std, r_squared=r_squared, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size)
-    #     plot_box_depth(depth_std=depth_std, wilcoxon_pval=wilcoxon_pval, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size)
+    if plot_supp:
+        plot_scatter_spatial(df=df, output_dir=output_dir, sample_name=sample_name, column="mut_prob", note="prob", \
+                             fig_size=fig_size, xmin=fig_xmin, xmax=fig_xmax, ymin=fig_ymin, ymax=fig_ymax, point_size=point_size)
+        plot_scatter_spatial(df=df, output_dir=output_dir, sample_name=sample_name, column="l_mosaic", note="likelihood", \
+                            fig_size=fig_size, xmin=fig_xmin, xmax=fig_xmax, ymin=fig_ymin, ymax=fig_ymax, point_size=point_size)
+
+        plot_supp_spatial(df=df, df_cluster=df_cluster, output_dir=output_dir, sample_name=sample_name)
+        plot_supp_depth(depth_std=depth_std, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size)
+        plot_qq_depth(depth_std=depth_std, output_dir=output_dir, sample_name=sample_name, num=n_quantile)
+        plot_reg_depth(depth_std=depth_std, r_squared=r_squared, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size)
+        plot_box_depth(depth_std=depth_std, wilcoxon_pval=wilcoxon_pval, output_dir=output_dir, sample_name=sample_name, fig_size=fig_size)
 
     # outputs
-    output = [int(test_sig), int(early_embryonic), int(late_mutation), int(verylate_mut), \
-                min_ks_stat, min_ks_pval, min_moran_stat, min_moran_pval, \
-                mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, \
-                meanVAF, maxVAF, r_squared, wilcoxon_stat, wilcoxon_pval, \
-                outlier_output, outlierVAF, outlier_moran_stat, outlier_moran_pval]
+    output = [int(test_sig), int(early_embryonic), int(late_mutation), \
+            min_ks_stat, min_ks_pval, min_moran_stat, min_moran_pval, \
+            mut_rate, mut_rate_prob, mut_rate_likelihood, mut_rate_vaf, \
+            all_spots_vaf_mean, all_spots_vaf_max, mut_spots_vaf_mean, mut_spots_vaf_median, \
+            num_spots, num_mut_spots, r_squared, wilcoxon_stat, wilcoxon_pval, wilcoxon_rbc]
     return output
 
 
@@ -558,7 +405,7 @@ def spatial_moran(df, col="mutated", alpha=0.05, \
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['pos_x'], df['pos_y']))
     # calculate the weight
     # w = lps.weights.Queen.from_dataframe(gdf)
-    w = weights.Queen.from_dataframe(gdf)    
+    w = weights.Queen.from_dataframe(gdf, use_index=True)  
     # create the pysal Moran object 
     mi = Moran(df[col], w)
     # verify Moran's I results
@@ -799,3 +646,139 @@ def plot_box_depth(depth_std, wilcoxon_pval, output_dir, sample_name, fig_size=5
     output_depth_box = os.path.join(output_dir, sample_name+"_depth_box.png")
     plt.savefig(output_depth_box)
     plt.close()
+
+
+def calculate_rbc_for_paired_wilcoxon(x, y):
+    """ 
+    Calculate the Rank-Biserial Correlation (RBC) value for the paired Wilcoxon signed-rank test.
+    Parameters
+    ----------
+    x,y : array_like
+        The data from the two samples.
+    Returns
+    -------
+    rbc: float
+        The Rank-Biserial Correlation (RBC) value, which is a measure of
+        the strength and direction of the association between the two samples.
+        It ranges from -1 to 1, where:
+        - 1 indicates a perfect positive association,
+        - -1 indicates a perfect negative association,
+        - 0 indicates no association. 
+    """
+    # format as numpy arrays
+    x, y = map(np.asarray, (x, y))
+    # test whether the two arrays are of the same length
+    if len(x) != len(y):
+        raise ValueError("Input arrays must have the same length.")
+    try:
+        # standardize
+        X = np.array([x, y]).T 
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)  # normalizes each column independently
+        x_scaled = X_scaled[:, 0]
+        y_scaled = X_scaled[:, 1] 
+        # Compute RBC
+        diff = x_scaled - y_scaled
+        non_zero = diff != 0
+        ranks = stats.rankdata(np.abs(diff[non_zero]))
+        signed_ranks = ranks * np.sign(diff[non_zero])
+        W_plus = signed_ranks[signed_ranks > 0].sum()
+        W_minus = -signed_ranks[signed_ranks < 0].sum()
+        rbc = (W_plus - W_minus) / (W_plus + W_minus)
+        return rbc
+    except:
+        return 0
+
+
+def handle_ind_geno_to_get_mutation_list(spot_geno_file):
+    '''
+    input:    
+    #chrom  pos     strand      germline        mutant  cluster spot_number    consensus_read_count    l_germline      l_mosaic        max_spot_geno   G_spot_max      depth   vaf     p_mosaic
+    chr12   52487210        +       A       T       ind       5      46,0,0,0        0.7874611700926878      0.21253882990731235     germline        0/0     46      0.0     0.3685326340225939
+    
+    output: get new allele info from the "ind_ref" and "ind_alt"
+    list: [("chrX", "119811135", "T", "C,<*>"),...]
+    '''
+    mutation_identifier_list=[]
+    f=open(spot_geno_file,"r")
+    for line in f.readlines():
+        if line[0]!="#" and line[0:5]!="chrom":
+            s = line.strip().split()
+            chrom=s[0];pos=s[1];ref=s[3];alt=s[4]
+            mutation="_".join([str(chrom),str(pos),str(ref),str(alt)])
+            if mutation not in mutation_identifier_list:
+                mutation_identifier_list.append(mutation)
+
+    return mutation_identifier_list
+
+
+def read_spot_posterior_file(file):
+    # df = pd.read_csv(file,sep='\t',header=None)
+    colnames=["chr","pos","strand","germline","mutant","cluster","spot_barcode","consensus_read_count", \
+              "l_germline", "l_mosaic", "max_spot_geno","G_spot_max","depth","vaf","p_mosaic"]
+    df = pd.read_csv(file, sep='\t', header=None, names=colnames, comment = "#")
+    # df.columns=colnames
+    df['pos'] = df['pos'].astype(str)
+    df['identifier'] = df['chr']+"_"+df['pos']+"_"+df['germline']+"_"+df['mutant'].astype(str)
+    df = df.set_index('identifier')
+    # spot_geno_file=BedTool(file)
+    return df
+
+
+def handle_per_line_for_sf(barcode_dir,output_dir,in_name,spot_geno_file,barcode_dict,alpha,thr_r2,thr_prob,thr_likelihood,thr_vaf, \
+                    plot_supp,fig_size,method,num_directions,line):
+    barcode_geno={}
+    mutation_name=line
+    mutation=line.split("_")
+    barcode_mutinfo_file_name=os.path.join(barcode_dir,mutation_name+'.barcode.mutinfo.txt')
+    barcode_mutinfo_file=open(barcode_mutinfo_file_name,"w")
+    try:
+        short_df = spot_geno_file.loc[mutation_name]
+    except:
+        return []
+
+    for i in range(len(short_df)): # type: ignore
+        barcode_geno[short_df.iloc[i]["spot_barcode"]]=(short_df.iloc[i]["cluster"],short_df.iloc[i]["depth"],short_df.iloc[i]["vaf"],short_df.iloc[i]["p_mosaic"],short_df.iloc[i]["l_mosaic"])
+
+    for barcode in barcode_dict.keys():
+        if barcode not in barcode_geno:  # ← No need for .keys()
+            continue
+        
+        cluster, depth, vaf, mut_prob, l_mosaic = barcode_geno[barcode]
+        barcode_mutinfo_file.write(f'{barcode}\t{cluster}\t1\t{barcode_dict[barcode][0]}\t{barcode_dict[barcode][1]}\t{depth}\t{vaf}\t{mut_prob}\t{l_mosaic}\n')
+    barcode_mutinfo_file.close()
+    if in_name:
+        barcode_mutinfo_file_name=os.path.join(barcode_dir,in_name+"."+mutation_name+'.barcode.mutinfo.txt')
+    else:
+        barcode_mutinfo_file_name=os.path.join(barcode_dir,mutation_name+'.barcode.mutinfo.txt')
+
+    input_file=barcode_mutinfo_file_name
+    if in_name:
+        sample_name=in_name+"."+mutation_name
+    else:
+        sample_name=mutation_name
+    
+    res=get_spatial_features(input_file,output_dir, sample_name, alpha, thr_r2, \
+                        thr_prob, thr_likelihood, thr_vaf, plot_supp, fig_size, method, num_directions)
+
+    if res[9] != "NA":
+        out_line=list(mutation)+ [str(i) for i in res]
+    else:
+        out_line=[]
+
+    # significant if pass at least one test
+    # test_sig = res[0]
+
+    # print("end:", mutation_name)
+    return out_line
+
+
+def merge_dataframes(df_list):
+    if df_list:
+        return pd.concat(df_list, ignore_index=False, axis=1)
+    return pd.DataFrame()
+
+
+def save_dataframe(df, filename):
+    df.to_csv(filename, sep="\t", index=True, index_label='barcode_name', na_rep='NA')
+    

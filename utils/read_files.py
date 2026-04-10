@@ -3,6 +3,8 @@ from typing import Optional
 import pyranges as pr
 import pandas as pd
 import pysam
+import json
+import sqlite3
 
 ## barcode file read (for "tissue_positions.csv" file )
 def handle_barcode(barcode_file,in_tissue_choose=0):
@@ -60,13 +62,13 @@ def load_spot_count_data(
         parquet_path = file_path.with_suffix('.parquet')
         
         if parquet_path.exists():
-            return _load_parquet(parquet_path, **kwargs)
+            return load_parquet(parquet_path, **kwargs)
     
     # ── Strategy 2: Load original file ───────────────────────────────────
     if file_path.suffix.lower() == '.parquet':
-        return _load_parquet(file_path, **kwargs)
+        return load_parquet(file_path, **kwargs)
     else:
-        df = _load_text_file(
+        df = load_text_file(
             file_path,
             sep=sep,
             header=header,
@@ -84,7 +86,7 @@ def load_spot_count_data(
         return df
 
 
-def _load_parquet(file_path: Path, **kwargs) -> pd.DataFrame:
+def load_parquet(file_path: Path, **kwargs) -> pd.DataFrame:
     """Load parquet file with proper kwargs handling."""
     if 'usecols' in kwargs and 'columns' not in kwargs:
         kwargs['columns'] = kwargs.pop('usecols')
@@ -95,7 +97,7 @@ def _load_parquet(file_path: Path, **kwargs) -> pd.DataFrame:
     return pd.read_parquet(file_path, **kwargs)
 
 
-def _load_text_file(
+def load_text_file(
     file_path: Path,
     sep: Optional[str] = None,
     header: Optional[int] = 0,
@@ -134,7 +136,7 @@ def load_spot_genotypes_data(file: str, prefer_parquet: bool = True) -> pd.DataF
     file_path = Path(file)
     
     # Check for Parquet version
-    if file_path.suffix in ['.txt', '.tsv']:
+    if file_path.suffix in ['.txt', '.tsv', '.out']:
         parquet_path = file_path.with_suffix('.parquet')
     else:
         parquet_path = file_path.with_name(file_path.stem + '.parquet')
@@ -146,7 +148,7 @@ def load_spot_genotypes_data(file: str, prefer_parquet: bool = True) -> pd.DataF
         return df
     
     colnames = [
-        "chr", "pos", "ID", "germline", "mutant", "cluster",
+        "chr", "pos", "strand", "germline", "mutant", "cluster",
         "spot_barcode", "consensus_read_count", "l_germline", "l_mosaic",
         "max_spot_geno", "G_spot_max", "depth", "vaf", "p_mosaic"
     ]
@@ -213,4 +215,55 @@ def load_gtf_file(file: str, save_bed: bool = True):
     short_df=df[["Chromosome","Start","End","Strand","gene_name"]]
     short_df = short_df.rename(columns={"gene_name": "GeneName"})
     return short_df
+
+
+
+def load_manifest_files_for_chunk_files(manifest_file, selected_groups=None):
+    """
+    Parameters
+    ----------
+    manifest_file : str
+    selected_groups : list[str] or None
+        eg: ["chr10", "chr11"]
+    Returns
+    -------
+    list[str]
+    """
+    with open(manifest_file, "r") as f:
+        manifest = json.load(f)
+
+    chromosome_groups = manifest.get("chromosome_groups", {})
+    chunk_files = []
+
+    for group_name, group_info in chromosome_groups.items():
+        if group_name=='all':
+            files = group_info.get("files", [])
+            return files
+        else:
+            if selected_groups is not None and group_name not in selected_groups:
+                continue
+
+        files = group_info.get("files", [])
+        chunk_files.extend(files)
+
+    return chunk_files
+
+
+
+def load_chunk_files_from_db(db_path):
+    chunk_files = []
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT chunk_file
+            FROM chunks
+            ORDER BY cost DESC, chrom, chunk_idx
+        """)
+        rows = cur.fetchall()
+        chunk_files = [row[0] for row in rows if row[0]]
+    finally:
+        conn.close()
+
+    return chunk_files
 

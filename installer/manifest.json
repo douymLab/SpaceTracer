@@ -1,0 +1,13 @@
+{
+  "tools": {
+    "phylosolid": {
+      "found": true,
+      "source_dir": "/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/SpaceTracer/external_tools/PhyloSOLID",
+      "python_bin": "/home/douyanmeiLab/yangzhirui/conda/envs/SpaceTracer/bin/python",
+      "invoke_mode": "python_module",
+      "module": "cli.main",
+      "cwd": "/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/SpaceTracer/external_tools/PhyloSOLID",
+      "healthcheck": "registered"
+    }
+  }
+}

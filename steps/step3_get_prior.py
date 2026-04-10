@@ -6,8 +6,8 @@ import os
 import re
 
 from SpaceTracer.steps.base import BaseStep
-
 from SpaceTracer.utils.logger import get_logger
+
 model_name=__name__
 logger = get_logger(model_name)
 
@@ -37,8 +37,9 @@ class PriorCalculator(BaseStep):
         gnomad_path=self.get_inputs(context)['gnomad_path']
         query_file=self.get_inputs(context)['filter_mpileup_file']
         gnomAD_dict=gnomAD(gnomad_path).get_chrom_list_from_file()
-
-        prior_dict=query_sites_for_prior(query_file, gnomAD_dict)
+        auto_chrom=self.genome_details['chromosomes']['autosomes']
+        
+        prior_dict=query_sites_for_prior(query_file, gnomAD_dict,auto_chrom)
 
         out_prior_file=self.get_outputs(context)['prior_file']
         try:
@@ -55,7 +56,9 @@ def prior_dict_to_file(prior_dict: dict,output_file: str):
         
         for pos_key, alt_afs in prior_dict.items():
             chrom, pos, ref = pos_key
-            priors = {base: float(alt_afs.get(base, 0.0)) for base in BASES}
+            # priors = {base: float(alt_afs.get(base, 0.0)) for base in BASES}
+            priors = {base: float(alt_afs.get(base, 0.0)) if alt_afs.get(base, 0.0) != '.' else 0.0 for base in BASES}
+
             other_sum = sum(priors[base] for base in BASES if base != ref)
             
             if other_sum > 1.0:
@@ -71,14 +74,14 @@ def prior_dict_to_file(prior_dict: dict,output_file: str):
                         f"{priors['A']}\t{priors['T']}\t"
                         f"{priors['C']}\t{priors['G']}\n")
                 
-def query_sites_for_prior(query_file: str, db_dict: dict):
+def query_sites_for_prior(query_file: str, db_dict: dict, auto_chrom: list):
     queries_by_chrom = {}
     with open(query_file) as f:
         for line in f:
             parts = line.strip().split()
             chrom = parts[0]
             pos_previous="" 
-            if chrom[0]!="#":
+            if chrom[0]!="#" and chrom in auto_chrom:
                 pos = int(parts[1])
                 ref = parts[3]
                 
@@ -110,7 +113,7 @@ def query_sites_for_prior(query_file: str, db_dict: dict):
                 if len(parts) < 6:
                     continue
                     
-                db_pos = int(parts[1])
+                db_pos = int(parts[2])
                 db_ref = parts[3]
                 db_alt = parts[4]
                 db_af = parts[5]

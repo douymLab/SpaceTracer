@@ -5,322 +5,357 @@ Checkpoint Manager
 
 import json
 import logging
+import os
+import shutil
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
 
+
 class CheckpointManager:
     """
     检查点管理器
-    
-    功能：
-    1. 记录每个步骤的完成/失败状态
-    2. 记录输入/输出文件信息
-    3. 支持断点续跑
-    4. 检测输入文件是否变化
+
+    设计原则：
+    1. 保留 disabled 语义（force 模式下禁用 checkpoint）
+    2. 顶层结构为 meta + steps
+    3. 每个 step 只记录自己的 outputs
+    4. 使用原子写入
     """
-    
+
     def __init__(self, output_dir: Path, disabled: bool = False):
-        """
-        初始化检查点管理器
-        
-        Args:
-            output_dir: 输出目录
-            disabled: 是否禁用检查点（force模式）
-        """
         self.output_dir = Path(output_dir)
-        self.checkpoint_file = self.output_dir / '.pipeline_checkpoints.json'
+        self.checkpoint_file = self.output_dir / ".pipeline_checkpoints.json"
+        self.backup_file = self.output_dir / ".pipeline_checkpoints.json.bak"
         self.disabled = disabled
-        
-        self.checkpoints = self._load_checkpoints()
-    
-    def _load_checkpoints(self) -> Dict:
-        """从文件加载检查点"""
-        if self.disabled:
-            return {}
-        
-        if self.checkpoint_file.exists():
-            try:
-                with open(self.checkpoint_file, 'r') as f:
-                    checkpoints = json.load(f)
-                logger.info(f"Loaded {len(checkpoints)} checkpoints from {self.checkpoint_file}")
-                return checkpoints
-            except Exception as e:
-                logger.warning(f"Failed to load checkpoints: {e}")
-                return {}
-        
-        return {}
-    
-    def _save_checkpoints(self):
-        """保存检查点到文件"""
-        if self.disabled:
-            return
-        
-        try:
-            # 确保目录存在
-            self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            with open(self.checkpoint_file, 'w') as f:
-                json.dump(self.checkpoints, f, indent=2)
-            logger.debug(f"Saved checkpoints to {self.checkpoint_file}")
-        except Exception as e:
-            logger.error(f"Failed to save checkpoints: {e}")
-    
-    def _get_file_state(self, file_path: str) -> Optional[Dict]:
-        """获取文件的状态信息"""
-        path = Path(file_path)
-        if not path.exists():
-            return None
-        
-        stat = path.stat()
+
+        self.state = self._load_checkpoints()
+
+    # ─────────────────────────────────────────────────────────────
+    # basic helpers
+    # ─────────────────────────────────────────────────────────────
+
+    def _now(self) -> str:
+        return datetime.now().isoformat(timespec="seconds")
+
+    def _default_state(self) -> Dict[str, Any]:
+        now = self._now()
         return {
-            'path': str(path.resolve()),
-            'mtime': stat.st_mtime,
-            'size': stat.st_size,
+            "meta": {
+                "format_version": 2,
+                "created_at": now,
+                "updated_at": now,
+                "validation": {
+                    "mode": "exists"
+                }
+            },
+            "steps": {}
         }
-    
-    def mark_complete(self, step_name: str, 
-                    # inputs: Dict[str, str], 
-                    # outputs: Dict[str, str],
-                    context: Dict = None):
-        """
-        标记步骤完成
-        
-        Args:
-            step_name: 步骤名称
-            inputs: 输入文件路径字典
-            outputs: 输出文件路径字典
-            context: 其他元数据（参数、版本等）
-        """
+
+    def _is_valid_state(self, state: Dict[str, Any]) -> bool:
+        return (
+            isinstance(state, dict)
+            and "meta" in state
+            and "steps" in state
+            and isinstance(state["steps"], dict)
+        )
+
+    # ─────────────────────────────────────────────────────────────
+    # load / save
+    # ─────────────────────────────────────────────────────────────
+
+    def _load_checkpoints(self) -> Dict[str, Any]:
+        if self.disabled:
+            logger.info("Checkpoint is disabled")
+            return self._default_state()
+
+        if not self.checkpoint_file.exists():
+            logger.info("No checkpoint file found, starting fresh")
+            return self._default_state()
+
+        try:
+            state = self._load_json_file(self.checkpoint_file)
+            if not self._is_valid_state(state):
+                raise ValueError("Invalid checkpoint structure")
+            logger.info(
+                f"Loaded {len(state.get('steps', {}))} checkpoints from {self.checkpoint_file}"
+            )
+            return state
+
+        except Exception as e:
+            logger.warning(f"Failed to load checkpoint file: {e}")
+
+            if self.backup_file.exists():
+                try:
+                    logger.info("Trying backup checkpoint...")
+                    state = self._load_json_file(self.backup_file)
+                    if self._is_valid_state(state):
+                        self._save_state(state)
+                        logger.info("Recovered checkpoint from backup")
+                        return state
+                except Exception as e2:
+                    logger.error(f"Failed to load backup checkpoint: {e2}")
+
+            logger.warning("Starting with empty checkpoint state")
+            return self._default_state()
+
+    def _load_json_file(self, path: Path) -> Dict[str, Any]:
+        with open(path, "r") as f:
+            content = f.read().strip()
+
+        if not content:
+            return self._default_state()
+
+        data = json.loads(content)
+        return data
+
+    def _save_state(self, state: Dict[str, Any]) -> None:
         if self.disabled:
             return
-        
-        logger.info(f"Marking step '{step_name}' as complete")
-        
-        # # 记录输入文件的状态
-        # input_states = {}
-        # for name, path in inputs.items():
-        #     if path:
-        #         state = self._get_file_state(path)
-        #         if state:
-        #             input_states[name] = state
-        
-        # # 记录输出文件的状态
-        # output_states = {}
-        # for name, path in outputs.items():
-        #     if path:
-        #         state = self._get_file_state(path)
-        #         if state:
-        #             output_states[name] = state
-        
-        self.checkpoints[step_name] = {
-            'status': 'complete',
-            'timestamp': datetime.now().isoformat(),
-            # 'inputs': input_states,
-            # 'outputs': output_states,
-            'context': context or {},
-        }
-        
-        self._save_checkpoints()
-        logger.debug(f"Marked {step_name} as complete")
-    
-    def mark_failed(self, step_name: str, error_message: str, 
-                    inputs: Dict[str, str] = None):
-        """
-        标记步骤失败
-        
-        Args:
-            step_name: 步骤名称
-            error_message: 错误信息
-            inputs: 当时的输入文件（可选）
-        """
+
+        self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+
+        fd, tmp_path = tempfile.mkstemp(
+            dir=self.checkpoint_file.parent,
+            prefix=".checkpoint_",
+            suffix=".tmp"
+        )
+
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(state, f, indent=2)
+
+            if self.checkpoint_file.exists():
+                shutil.copy2(self.checkpoint_file, self.backup_file)
+
+            shutil.move(tmp_path, self.checkpoint_file)
+            logger.debug(f"Saved checkpoint to {self.checkpoint_file}")
+
+        except Exception:
+            Path(tmp_path).unlink(missing_ok=True)
+            raise
+
+    def _save_checkpoints(self) -> None:
         if self.disabled:
             return
-        
-        logger.error(f"Marking step '{step_name}' as failed: {error_message}")
-        
-        checkpoint = {
-            'status': 'failed',
-            'timestamp': datetime.now().isoformat(),
-            'error': error_message,
-        }
-        
-        # 如果有输入文件，也记录下来
-        if inputs:
-            input_states = {}
-            for name, path in inputs.items():
-                if path:
-                    state = self._get_file_state(path)
-                    if state:
-                        input_states[name] = state
-            checkpoint['inputs'] = input_states
-        
-        self.checkpoints[step_name] = checkpoint
-        self._save_checkpoints()
-    
-    def is_complete(self, step_name: str, 
-                    current_inputs: Dict[str, str] = None) -> bool:
-        """
-        检查步骤是否已完成且输入未变化
-        
-        Args:
-            step_name: 步骤名称
-            current_inputs: 当前输入文件（用于检查变化）
-        
-        Returns:
-            True 如果已完成且输入未变
-        """
-        if self.disabled:
-            return False
-        
-        # 1. 检查是否有记录
-        if step_name not in self.checkpoints:
-            return False
-        
-        checkpoint = self.checkpoints[step_name]
-        
-        # 2. 检查状态
-        if checkpoint.get('status') != 'complete':
-            return False
-        
-        # 3. 检查输出文件是否都存在
-        outputs = checkpoint.get('outputs', {})
-        for name, state in outputs.items():
-            if not Path(state['path']).exists():
-                logger.warning(f"Output file missing for {step_name}: {state['path']}")
+        self.state["meta"]["updated_at"] = self._now()
+        self._save_state(self.state)
+
+    # ─────────────────────────────────────────────────────────────
+    # file info / validation
+    # ─────────────────────────────────────────────────────────────
+
+    def _build_file_info(self, file_path: str) -> Dict[str, Any]:
+        path = Path(file_path).resolve()
+        info = {"path": str(path)}
+
+        if path.exists():
+            stat = path.stat()
+            info["mtime"] = stat.st_mtime
+            info["size"] = stat.st_size
+
+        return info
+
+    def verify_output_file(self, file_info: Dict[str, Any]) -> bool:
+        try:
+            path = file_info.get("path")
+            if not path:
                 return False
-        
-        # 4. 如果提供了当前输入，检查输入是否有变化
-        if current_inputs:
-            saved_inputs = checkpoint.get('inputs', {})
-            
-            # 检查输入文件数量是否一致
-            current_input_keys = {k for k, v in current_inputs.items() if v}
-            saved_input_keys = set(saved_inputs.keys())
-            
-            if current_input_keys != saved_input_keys:
-                logger.info(f"Input files changed for {step_name}: "
-                            f"current={current_input_keys}, saved={saved_input_keys}")
-                return False
-            
-            # 检查每个输入文件是否有变化
-            for name, current_path in current_inputs.items():
-                if not current_path:  # 跳过None值
-                    continue
-                    
-                saved_state = saved_inputs.get(name)
-                if not saved_state:
-                    logger.info(f"New input file for {step_name}: {name}")
-                    return False
-                
-                # 检查文件是否存在
-                current_path_obj = Path(current_path)
-                if not current_path_obj.exists():
-                    logger.warning(f"Current input file missing: {current_path}")
-                    return False
-                
-                # 检查路径是否相同（考虑软链接）
-                if str(current_path_obj.resolve()) != str(Path(saved_state['path']).resolve()):
-                    logger.info(f"Input file path changed for {step_name}: {name}")
-                    return False
-                
-                # 检查文件修改时间
-                current_stat = current_path_obj.stat()
-                if abs(current_stat.st_mtime - saved_state['mtime']) > 1:  # 允许1秒误差
-                    logger.info(f"Input file modified for {step_name}: {name}")
-                    return False
-                
-                # 检查文件大小
-                if current_stat.st_size != saved_state['size']:
-                    logger.info(f"Input file size changed for {step_name}: {name}")
-                    return False
-        
-        logger.debug(f"Step '{step_name}' is complete and inputs unchanged")
-        return True
-    
-    def is_failed(self, step_name: str) -> bool:
-        """检查步骤是否失败"""
-        if self.disabled:
+            return Path(path).exists()
+        except:
             return False
-        
-        checkpoint = self.checkpoints.get(step_name, {})
-        return checkpoint.get('status') == 'failed'
-    
+
+    # ─────────────────────────────────────────────────────────────
+    # record access
+    # ─────────────────────────────────────────────────────────────
+
+    def get_step_record(self, step_name: str) -> Dict[str, Any]:
+        return self.state["steps"].get(step_name, {})
+
     def get_step_status(self, step_name: str) -> str:
-        """获取步骤状态"""
         if self.disabled:
-            return 'disabled'
-        
-        checkpoint = self.checkpoints.get(step_name, {})
-        return checkpoint.get('status', 'not_started')
-    
-    def get_outputs(self, step_name: str) -> Dict[str, str]:
-        """获取步骤的输出文件路径"""
-        checkpoint = self.checkpoints.get(step_name, {})
-        if checkpoint.get('status') != 'complete':
-            return {}
-        
-        outputs = checkpoint.get('outputs', {})
-        return {name: state['path'] for name, state in outputs.items()}
-    
+            return "disabled"
+        return self.get_step_record(step_name).get("status", "not_started")
+
     def get_error(self, step_name: str) -> Optional[str]:
-        """获取步骤的错误信息"""
-        checkpoint = self.checkpoints.get(step_name, {})
-        return checkpoint.get('error')
-    
-    def clear(self):
-        """清除所有检查点"""
-        self.checkpoints = {}
+        return self.get_step_record(step_name).get("error")
+
+    def get_outputs(self, step_name: str) -> Dict[str, str]:
+        record = self.get_step_record(step_name)
+        if record.get("status") != "complete":
+            return {}
+
+        outputs = record.get("outputs", {})
+        result = {}
+        for key, file_info in outputs.items():
+            if self.verify_output_file(file_info):
+                result[key] = file_info["path"]
+            elif isinstance(file_info,int):
+                result[key] = file_info
+        return result
+
+    # ─────────────────────────────────────────────────────────────
+    # mark status
+    # ─────────────────────────────────────────────────────────────
+
+    def mark_complete(self, step_name: str, new_outputs: Dict[str, Any]) -> None:
+        if self.disabled:
+            return
+        logger.info(
+            f"Marking step '{step_name}' as complete, outputs={list(new_outputs.keys())}"
+        )
+
+        outputs = {}
+        for key, value in new_outputs.items():
+            if value is None:
+                continue
+            if isinstance(value,str):
+                outputs[key] = self._build_file_info(str(value))
+            elif isinstance(value,int):
+                outputs[key] = {"path": value}
+            else:
+                raise ValueError(f'Wrong output file of {key}: {value} in step[{step_name}]!')
+
+        self.state["steps"][step_name] = {
+            "status": "complete",
+            "timestamp": self._now(),
+            "outputs": outputs,
+        }
+        self._save_checkpoints()
+
+    def mark_failed(self, step_name: str, error_message: str) -> None:
+        if self.disabled:
+            return
+
+        logger.error(f"Marking step '{step_name}' as failed: {error_message}")
+        self.state["steps"][step_name] = {
+            "status": "failed",
+            "timestamp": self._now(),
+            "error": error_message,
+        }
+        self._save_checkpoints()
+
+    # ─────────────────────────────────────────────────────────────
+    # state checks
+    # ─────────────────────────────────────────────────────────────
+
+    def check_outputs_exist(self, step_name: str) -> bool:
+        if self.disabled:
+            return False
+
+        record = self.get_step_record(step_name)
+        if record.get("status") != "complete":
+            return False
+
+        outputs = record.get("outputs", {})
+        if not outputs:
+            logger.debug(f"No outputs recorded for {step_name}")
+            return False
+
+        for key, file_info in outputs.items():
+            if not isinstance(file_info,int) and not self.verify_output_file(file_info):
+                logger.warning(
+                    f"Output file missing for {step_name}:{key} -> {file_info}"
+                )
+                return False
+
+        return True
+
+    def is_complete(self, step_name: str) -> bool:
+        if self.disabled:
+            return False
+        return self.check_outputs_exist(step_name)
+
+    def is_failed(self, step_name: str) -> bool:
+        if self.disabled:
+            return False
+        return self.get_step_status(step_name) == "failed"
+
+    # ─────────────────────────────────────────────────────────────
+    # restore outputs
+    # ─────────────────────────────────────────────────────────────
+
+    def load_outputs_to_context(self, step_name: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        record = self.get_step_record(step_name)
+        if record.get("status") != "complete":
+            return context
+
+        outputs = record.get("outputs", {})
+        for key, file_info in outputs.items():
+            if self.verify_output_file(file_info):
+                context[key] = file_info["path"]
+            elif isinstance(file_info,int):
+                context[key] = file_info
+            else:
+                logger.warning(f"Output file missing: {file_info.get('path')}")
+
+        return context
+
+    def load_all_completed_outputs(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        for step_name in self.get_completed_steps():
+            context = self.load_outputs_to_context(step_name, context)
+        return context
+
+    # ─────────────────────────────────────────────────────────────
+    # summary / maintenance
+    # ─────────────────────────────────────────────────────────────
+
+    def get_completed_steps(self) -> List[str]:
+        return [
+            name for name, cp in self.state.get("steps", {}).items()
+            if cp.get("status") == "complete"
+        ]
+
+    def get_failed_steps(self) -> List[str]:
+        return [
+            name for name, cp in self.state.get("steps", {}).items()
+            if cp.get("status") == "failed"
+        ]
+
+    def clear(self) -> None:
+        self.state = self._default_state()
+
         if self.checkpoint_file.exists():
-            self.checkpoint_file.unlink()
-        logger.info("Cleared all checkpoints")
-    
-    def clear_step(self, step_name: str):
-        """清除特定步骤的检查点"""
-        if step_name in self.checkpoints:
-            del self.checkpoints[step_name]
+            if self.backup_file.exists():
+                self.backup_file.unlink()
+            shutil.move(self.checkpoint_file, self.backup_file)
+
+        logger.info("Cleared all checkpoints (old file moved to backup)")
+
+    def clear_step(self, step_name: str) -> None:
+        if step_name in self.state["steps"]:
+            del self.state["steps"][step_name]
             self._save_checkpoints()
             logger.info(f"Cleared checkpoint for {step_name}")
-    
-    def get_all_checkpoints(self) -> Dict:
-        """获取所有检查点"""
-        return self.checkpoints.copy()
-    
-    def get_completed_steps(self) -> List[str]:
-        """获取所有已完成的步骤"""
-        return [name for name, cp in self.checkpoints.items() 
-                if cp.get('status') == 'complete']
-    
-    def get_failed_steps(self) -> List[str]:
-        """获取所有失败的步骤"""
-        return [name for name, cp in self.checkpoints.items() 
-                if cp.get('status') == 'failed']
-    
-    def print_summary(self):
-        """打印检查点摘要"""
+
+    def get_all_checkpoints(self) -> Dict[str, Any]:
+        return self.state.copy()
+
+    def print_summary(self) -> None:
         logger.info("=" * 50)
         logger.info("Checkpoint Summary")
         logger.info("=" * 50)
-        
+
         completed = self.get_completed_steps()
         failed = self.get_failed_steps()
-        
-        logger.info(f"Total checkpoints: {len(self.checkpoints)}")
+
+        logger.info(f"Total checkpoints: {len(self.state.get('steps', {}))}")
         logger.info(f"Completed: {len(completed)}")
         logger.info(f"Failed: {len(failed)}")
-        
+
         if completed:
-            logger.info("\nCompleted steps:")
+            logger.info("Completed steps:")
             for step in completed:
-                timestamp = self.checkpoints[step].get('timestamp', 'unknown')
-                logger.info(f"  - {step} ({timestamp})")
-        
+                timestamp = self.state["steps"][step].get("timestamp", "unknown")
+                logger.info(f"  ✓ {step} ({timestamp})")
+
         if failed:
-            logger.info("\nFailed steps:")
+            logger.info("Failed steps:")
             for step in failed:
-                error = self.checkpoints[step].get('error', 'unknown error')
-                logger.info(f"  - {step}: {error}")
-        
+                error = self.state["steps"][step].get("error", "unknown error")
+                logger.info(f"  ✗ {step}: {error}")
+
         logger.info("=" * 50)

@@ -1,327 +1,327 @@
 #!/usr/bin/env python3
 """
-PipelineDAG - 你的原始代码 + 以下修复：
-  1. 修复 'pileup' → 'mpileup' 的key不一致问题
-  2. 修复 start_from/stop_at 在有分支时不正确（不能用list切片）
-  3. 修复 prior step 的 name 字段与 key 不一致
-  4. 完善 only_steps 的依赖自动补全逻辑
+Pipeline DAG
 """
 
-from typing import List, Dict, Set, Optional
-from dataclasses import dataclass
-from enum import Enum
-
-
-class StepStatus(Enum):
-    PENDING   = "pending"
-    RUNNING   = "running"
-    COMPLETED = "completed"
-    FAILED    = "failed"
-    SKIPPED   = "skipped"
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set
 
 
 @dataclass
-class Step:
-    """描述一个步骤的元数据（不含执行逻辑）"""
+class DAGStep:
     name: str
-    description: str
-    dependencies: List[str]   # 上游依赖的step name列表
-    produces: List[str]       # 产出的数据/文件标识
-    optional: bool = False
-    parallel: bool = False
+    dependencies: List[str] = field(default_factory=list)
+    produces: List[str] = field(default_factory=list)
+    run_level: Optional[str] = None
+    output_level: Optional[str] = None
 
 
 class PipelineDAG:
     """
-    基于DAG的流程调度器
+    统一维护 pipeline 的 DAG 信息
 
-    职责：
-    - 定义步骤间的依赖关系（纯元数据）
-    - 生成正确的拓扑排序执行计划
-    - 计算可并行执行的步骤组
-    - 查询上下游关系
+    设计目标：
+    1. 定义每个 step 的依赖关系
+    2. 定义每个 step 产出的 context key
+    3. 提供 execution plan / topo sort / parallel groups
     """
 
-    STEPS = {
-        # 'cluster': Step(
-        #     name='cluster',
-        #     description='聚类分析',
-        #     dependencies=[],
-        #     produces=['clustered_bam']
-        # ),
-        'bam_processing': Step(
-            name='bam_processing',
-            description='BAM过滤',
-            dependencies=[], #'cluster'
-            produces=['filtered_bam']
-        ),
-        'cell_num': Step(
-            name='cell_num',
-            description='cell number per spot calculation',
-            dependencies=['bam_processing'],
-            produces=['cell_num_results']
-        ),
-        'mpileup': Step(
-            name='mpileup',
-            description='mpileup生成',
-            dependencies=['bam_processing'],
-            produces=['pileup_results']
-        ),
-        # ────────────────────────────────────────────
-        # BUG FIX: 原来写的 dependencies=['pileup']
-        # 但字典的key是 'mpileup'，导致依赖永远找不到
-        # ────────────────────────────────────────────
-        'umi_combine': Step(
-            name='umi_combine',
-            description='UMI合并',
-            dependencies=['mpileup'],          # ← 修正: 'pileup' → 'mpileup'
-            produces=['umi_combined']
-        ),
-        'prior': Step(
-            name='prior',                      # ← 修正: 原来name='prior_error'但key='prior'
-            description='先验错误率计算',
-            dependencies=['mpileup'],          # ← 修正: 'pileup' → 'mpileup'
-            produces=['prior_error_results']
-        ),
-        # 'error': Step(
-        #     name='error',
-        #     description='错误率计算',
-        #     dependencies=['umi_combine'],
-        #     produces=['error_results']
-        # ),
-        'genotyping': Step(
-            name='genotyping',
-            description='基因分型',
-            dependencies=['umi_combine', 'prior'],  # 汇合两个分支
-            produces=['genotype_results']
-        ),
-        # 'phasing': Step(
-        #     name='phasing',
-        #     description='单倍型phasing',
-        #     dependencies=['genotyping'],
-        #     produces=['phasing_results']
-        # ),
-        'spatial_feature': Step(
-            name='spatial_feature',
-            description='提取空间特征',
-            dependencies=['genotyping'],
-            produces=['spatial_features']
-        ),
-        # 'feature': Step(
-        #     name='feature',
-        #     description='特征整合',
-        #     dependencies=['spatial_feature', 'prior'],
-        #     produces=['feature_results']
-        # ),
-        # 'hfdr': Step(
-        #     name='hfdr',
-        #     description='hFDR校正',
-        #     dependencies=['error', 'genotyping', 'phasing', 'feature'],
-        #     produces=['hfdr_results']
-        # ),
-        # 'final_filter': Step(
-        #     name='final_filter',
-        #     description='最终过滤',
-        #     dependencies=['hfdr'],
-        #     produces=['final_variants']
-        # ),
-    }
-
     def __init__(self):
-        self.steps = self.STEPS
-        self._validate_dag()
+        self.steps: Dict[str, DAGStep] = {
+            "cluster": DAGStep(
+                name="cluster",
+                dependencies=[],
+                produces=["cluster_file"],
+                run_level="sample",
+                output_level="sample"
+            ),
+            "bam_processing": DAGStep(
+                name="bam_processing",
+                dependencies=[],
+                produces=["filtered_bam"],
+                run_level="sample",
+                output_level="sample"
+            ),
+            "mpileup": DAGStep(
+                name="mpileup",
+                dependencies=["bam_processing"],
+                produces=["pileup_results"],
+                run_level="sample",
+                output_level="chunk"
+            ),
+            "umi_combine": DAGStep(
+                name="umi_combine",
+                dependencies=["mpileup"],
+                produces=["umi_combined"],
+                run_level="chunk",
+                output_level="chunk"
+            ),
+            "cell_num": DAGStep(
+                name="cell_num",
+                dependencies=["cluster","umi_combine"],
+                produces=["spot_count_file", "error_count_file"],
+                run_level="sample",
+                output_level="sample"
+            ),
+            "prior": DAGStep(
+                name="prior",
+                dependencies=["umi_combine"],
+                produces=["prior_file"],
+                run_level="chrom",
+                output_level="chrom"
+            ),
+            "genotyping": DAGStep(
+                name="genotyping",
+                dependencies=["cluster","prior", "cell_num"],
+                produces=["genotype_results"],
+                run_level="chunk",
+                output_level="chunk"
+            ),
+            "spatial_feature": DAGStep(
+                name="spatial_feature",
+                dependencies=["genotyping"],
+                produces=["spatial_feature_results"],
+                run_level="chunk",
+                output_level="chunk"
+            ),
+            "mappability_feature": DAGStep(
+                name="mappability_feature",
+                dependencies=["genotyping"],
+                produces=["mappability_feature_results"],
+                run_level="chrom",
+                output_level="chrom"
+            ),
+            "read_feature": DAGStep(
+                name="read_feature",
+                dependencies=["genotyping"],
+                produces=["read_feature_results"],
+                run_level="chunk",
+                output_level="chunk"
+            ),
+            "RNA_feature": DAGStep(
+                name="RNA_feature",
+                dependencies=["genotyping"],
+                produces=["RNA_feature_results"],
+                run_level="sample",
+                output_level="sample"
+            ),
+            "merge_feature": DAGStep(
+                name="merge_feature",
+                dependencies=[
+                    "spatial_feature",
+                    "mappability_feature",
+                    "read_feature",
+                    "RNA_feature",
+                ],
+                produces=["marged_features"],
+                run_level="sample",
+                output_level="sample"
+            ),
+            # "mutation_prediction": DAGStep(
+            #     name="mutation_predict",
+            #     dependencies=["merge_feature"],
+            #     produces=["final_vcf"]
+            # )
+        }
 
-    # ─────────────────────────────────────────────
-    # 原有方法：保持你的接口不变
-    # ─────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────
+    # 基础查询
+    # ─────────────────────────────────────────────────────────────
 
-    def _validate_dag(self):
-        """验证DAG是否有环"""
+    def has_step(self, step_name: str) -> bool:
+        return step_name in self.steps
+
+    def get_dependencies(self, step_name: str) -> List[str]:
+        self._require_step(step_name)
+        return list(self.steps[step_name].dependencies)
+
+    def get_upstream(self, step_name: str) -> Set[str]:
+        """
+        返回某 step 的所有递归上游依赖
+        """
+        self._require_step(step_name)
+
         visited = set()
-        recursion_stack = set()
 
-        def dfs(step_name):
-            if step_name in recursion_stack:
-                raise ValueError(f"检测到循环依赖: {step_name}")
-            if step_name in visited:
-                return
+        def dfs(s: str):
+            for dep in self.steps[s].dependencies:
+                if dep not in visited:
+                    visited.add(dep)
+                    dfs(dep)
 
-            visited.add(step_name)
-            recursion_stack.add(step_name)
+        dfs(step_name)
+        return visited
 
-            step = self.steps.get(step_name)
-            if step:
-                for dep in step.dependencies:
-                    if dep in self.steps:
-                        dfs(dep)
+    def _require_step(self, step_name: str) -> None:
+        if step_name not in self.steps:
+            raise ValueError(f"Unknown step: {step_name}")
 
-            recursion_stack.remove(step_name)
-
-        for step_name in self.steps:
-            dfs(step_name)
-
-    def get_execution_plan(self,
-                           start_from: Optional[str] = None,
-                           stop_at: Optional[str] = None,
-                           only_steps: Optional[List[str]] = None) -> List[str]:
-        """
-        生成执行计划（拓扑排序）
-
-        BUG FIX: 原来用 all_steps[start_idx:end_idx] 线性切片，
-        在有分支的DAG中会漏掉或错误包含步骤。
-        现在改为基于依赖关系的子图提取。
-        """
-        if only_steps:
-            # 补全 only_steps 的依赖，然后拓扑排序
-            return self._get_subgraph_with_deps(only_steps)
-
-        if start_from or stop_at:
-            # 提取 [start_from, stop_at] 之间的子图
-            return self._get_range_subgraph(start_from, stop_at)
-
-        # 全量执行：对所有step做拓扑排序
-        return self._topological_sort(list(self.steps.keys()))
-
-    def _get_range_subgraph(self,
-                            start_from: Optional[str],
-                            stop_at: Optional[str]) -> List[str]:
-        """
-        提取从 start_from 到 stop_at 的子图
-
-        策略：
-        - 先确定 stop_at 及其所有上游 → 这是终止集合
-        - 再从终止集合中去掉 start_from 的上游（这些已完成，跳过）
-        - 对剩余部分做拓扑排序
-        """
-        all_steps = set(self.steps.keys())
-
-        # 确定终止范围
-        if stop_at:
-            if stop_at not in self.steps:
-                raise ValueError(f"Unknown step: '{stop_at}'")
-            # stop_at 及其所有上游
-            included = self.get_upstream(stop_at) | {stop_at}
-        else:
-            included = all_steps
-
-        # 去掉 start_from 的上游（已完成，不需要跑）
-        if start_from:
-            if start_from not in self.steps:
-                raise ValueError(f"Unknown step: '{start_from}'")
-            excluded = self.get_upstream(start_from)  # start_from本身要跑，不排除
-            included -= excluded
-
-        return self._topological_sort(list(included))
-
-    def _get_subgraph_with_deps(self, step_names: List[str]) -> List[str]:
-        """
-        获取指定步骤 + 它们的所有依赖，做拓扑排序
-        （与原来的 _get_subgraph 相同，保留你的原始实现）
-        """
-        from collections import deque
-
-        needed = set(step_names)
-        queue = deque(step_names)
-
-        while queue:
-            step_name = queue.popleft()
-            if step_name in self.steps:
-                for dep in self.steps[step_name].dependencies:
-                    if dep not in needed:
-                        needed.add(dep)
-                        queue.append(dep)
-
-        return self._topological_sort(list(needed))
+    # ─────────────────────────────────────────────────────────────
+    # topo sort
+    # ─────────────────────────────────────────────────────────────
 
     def _topological_sort(self, step_names: List[str]) -> List[str]:
-        """
-        Kahn算法拓扑排序（你的原始实现，保持不变）
-        """
-        from collections import deque, defaultdict
+        subset = set(step_names)
+        in_degree = {s: 0 for s in subset}
+        graph = {s: [] for s in subset}
 
-        graph = defaultdict(list)
-        in_degree = defaultdict(int)
-        step_set = set(step_names)
-
-        for step_name in step_names:
-            step = self.steps[step_name]
-            for dep in step.dependencies:
-                if dep in step_set:
+        for step_name in subset:
+            for dep in self.steps[step_name].dependencies:
+                if dep in subset:
                     graph[dep].append(step_name)
                     in_degree[step_name] += 1
 
-        queue = deque([s for s in step_names if in_degree[s] == 0])
+        # 保持输入顺序稳定
+        queue = [s for s in step_names if in_degree[s] == 0]
         result = []
 
         while queue:
-            step = queue.popleft()
-            result.append(step)
-            for neighbor in graph[step]:
-                in_degree[neighbor] -= 1
-                if in_degree[neighbor] == 0:
-                    queue.append(neighbor)
+            current = queue.pop(0)
+            result.append(current)
+
+            for nxt in graph[current]:
+                in_degree[nxt] -= 1
+                if in_degree[nxt] == 0:
+                    queue.append(nxt)
 
         if len(result) != len(step_names):
-            cycle = set(step_names) - set(result)
-            raise ValueError(f"检测到循环依赖: {cycle}")
+            raise ValueError(f"Cyclic dependency detected in steps: {step_names}")
 
         return result
 
-    def get_parallel_groups(self, step_names: List[str]) -> List[List[str]]:
+    # ─────────────────────────────────────────────────────────────
+    # 执行计划
+    # ─────────────────────────────────────────────────────────────
+
+    def get_execution_plan(
+        self,
+        start_from: Optional[str] = None,
+        stop_at: Optional[str] = None,
+        only_steps: Optional[List[str]] = None,
+    ) -> List[str]:
         """
-        获取可以并行执行的步骤组（你的原始实现，保持不变）
+        正常 DAG 模式：
+        - only_steps: 精确子集模式（只对子集做 topo，不补外部依赖）
+        - start_from/stop_at: 按全 DAG 顺序截取
+        - 都不传: 返回全量 topo
         """
-        from collections import defaultdict
+        all_steps = self._topological_sort(list(self.steps.keys()))
 
-        levels = {}
+        if only_steps:
+            unique_steps = list(dict.fromkeys(only_steps))
+            for step_name in unique_steps:
+                self._require_step(step_name)
+            return self._topological_sort_subset(unique_steps)
 
-        def get_level(step_name):
-            if step_name in levels:
-                return levels[step_name]
-            step = self.steps[step_name]
-            if not step.dependencies:
-                levels[step_name] = 0
-                return 0
-            # 只考虑在 step_names 里的依赖
-            relevant_deps = [d for d in step.dependencies if d in step_names]
-            if not relevant_deps:
-                levels[step_name] = 0
-                return 0
-            max_dep_level = max(get_level(dep) for dep in relevant_deps)
-            levels[step_name] = max_dep_level + 1
-            return max_dep_level + 1
+        if start_from is not None:
+            self._require_step(start_from)
+        if stop_at is not None:
+            self._require_step(stop_at)
 
-        for step_name in step_names:
-            get_level(step_name)
+        start_idx = 0
+        stop_idx = len(all_steps) - 1
 
-        groups = defaultdict(list)
-        for step_name, level in levels.items():
-            if step_name in step_names:
-                groups[level].append(step_name)
+        if start_from is not None:
+            start_idx = all_steps.index(start_from)
 
-        return [groups[i] for i in sorted(groups.keys())]
+        if stop_at is not None:
+            stop_idx = all_steps.index(stop_at)
 
-    def get_upstream(self, step_name: str) -> Set[str]:
-        """获取所有上游依赖（递归，你的原始实现）"""
-        upstream = set()
+        if start_idx > stop_idx:
+            raise ValueError(
+                f"Invalid range: start_from='{start_from}' is after stop_at='{stop_at}'"
+            )
 
-        def collect(step):
-            if step in self.steps:
-                for dep in self.steps[step].dependencies:
-                    if dep not in upstream:
-                        upstream.add(dep)
-                        collect(dep)
+        return all_steps[start_idx: stop_idx + 1]
 
-        collect(step_name)
-        return upstream
+    def _topological_sort_subset(self, subset_steps: List[str]) -> List[str]:
+        """
+        只在 subset 内部排序，不补集合外依赖
+        """
+        subset = set(subset_steps)
+        in_degree = {s: 0 for s in subset}
+        graph = {s: [] for s in subset}
 
-    def get_downstream(self, step_name: str) -> Set[str]:
-        """获取所有下游步骤（递归，你的原始实现）"""
-        downstream = set()
+        for step_name in subset:
+            for dep in self.steps[step_name].dependencies:
+                if dep in subset:
+                    graph[dep].append(step_name)
+                    in_degree[step_name] += 1
 
-        for s, step in self.steps.items():
-            if step_name in step.dependencies:
-                downstream.add(s)
-                downstream.update(self.get_downstream(s))
+        queue = [s for s in subset_steps if in_degree[s] == 0]
+        result = []
 
-        return downstream
+        while queue:
+            current = queue.pop(0)
+            result.append(current)
+
+            for nxt in graph[current]:
+                in_degree[nxt] -= 1
+                if in_degree[nxt] == 0:
+                    queue.append(nxt)
+
+        if len(result) != len(subset_steps):
+            raise ValueError(f"Cyclic dependency detected in only_steps: {subset_steps}")
+
+        return result
+
+    # ─────────────────────────────────────────────────────────────
+    # smart plan 支持
+    # ─────────────────────────────────────────────────────────────
+
+    def get_missing_dependencies(
+        self,
+        step_name: str,
+        completed_steps: Set[str]
+    ) -> List[str]:
+        """
+        返回 step_name 所有未完成的递归依赖，按 topo 排序
+        """
+        self._require_step(step_name)
+
+        upstream = self.get_upstream(step_name)
+        missing = [s for s in upstream if s not in completed_steps]
+
+        if not missing:
+            return []
+
+        return self._topological_sort(missing)
+
+    # ─────────────────────────────────────────────────────────────
+    # parallel groups
+    # ─────────────────────────────────────────────────────────────
+
+    def get_parallel_groups(self, steps_to_run: List[str]) -> List[List[str]]:
+        """
+        对一个已经 topo 排序的 steps_to_run 分层。
+        同一层中的 step：
+        - 依赖都已在前面层满足
+        - 层内彼此无依赖
+        """
+        remaining = list(steps_to_run)
+        completed = set()
+        groups: List[List[str]] = []
+
+        while remaining:
+            current_group = []
+
+            for step_name in remaining:
+                deps_in_plan = [
+                    dep for dep in self.steps[step_name].dependencies
+                    if dep in steps_to_run
+                ]
+                if all(dep in completed for dep in deps_in_plan):
+                    current_group.append(step_name)
+
+            if not current_group:
+                raise ValueError(
+                    f"Cannot build parallel groups, possible cycle in plan: {steps_to_run}"
+                )
+
+            groups.append(current_group)
+
+            for step_name in current_group:
+                completed.add(step_name)
+                remaining.remove(step_name)
+
+        return groups
