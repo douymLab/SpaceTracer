@@ -1,0 +1,34 @@
+site_name: SpaceTracer
+site_url: https://douymLab.github.io/SpaceTracer/
+repo_url: https://github.com/douymLab/SpaceTracer
+repo_name: SpaceTracer
+edit_uri: edit/main/docs/
+
+theme:
+  name: readthedocs
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick Start: quickstart.md
+  - Resources: resources.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/copy-code.js
+
+strict: true
