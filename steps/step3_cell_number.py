@@ -23,24 +23,24 @@ class CellNumStep(BaseStep):
 
     
     def get_outputs(self, context):
-        cell_num=self.config.get('cell_num')
+        # print(self.config)
+        cell_num=context.get('cell_num',0)
         if isinstance(cell_num,int):
-            if cell_num==0:
-                save_dir=Path(self.work_dir)
-                return {'cell_num': save_dir/"refined_umi_read_cellNum.txt"}
-            else:
-                return {'cell_num': self.config.get('cell_num')}
-        elif Path(cell_num).exists():
-            return {'cell_num': self.config.get('cell_num')}
+            if cell_num==0: # 0 means we'll run cell number function.
+                return {'cell_num': os.path.join(self.work_dir, "refined_cell_num.txt")}
+            else: # other int means the data was cell/sub-cell level.
+                return {'cell_num': cell_num}
+        elif Path(cell_num).exists(): # also file is allowed
+            return {'cell_num': cell_num}
         else:
             raise ValueError(f'Wrong cell number input {cell_num}')
 
     def optional_parameters(self, context: Dict) -> Dict[str, str]:
         """ That's optional parameters """
         
-        cluster_file=self.config.get('cluster','')
+        cluster_file=self.context.get('cluster_file')
         if os.path.exists(cluster_file):
-            cluster_df= pd.read_csv(cluster_file, sep="\t", header=None, names=['spot_barcode', 'cluster'], na_values=[])
+            cluster_df= pd.read_csv(cluster_file, sep="\t", header=None, names=['barcode', 'cluster'], na_values=[])
             cluster_df['cluster'] = cluster_df['cluster'].apply(lambda x: str(int(x)) if isinstance(x, float) and x.is_integer() 
                                                             else str(x) if pd.notnull(x) else "NA")
         else:
@@ -49,7 +49,8 @@ class CellNumStep(BaseStep):
         return cluster_df
     
     def _run(self,context):
-        if self.config.get('cell_num')==0:
+        cell_num=context.get('cell_num',0)
+        if isinstance(cell_num,int) and cell_num==0:
             save_dir=Path(self.work_dir)
 
             # input:
@@ -57,7 +58,7 @@ class CellNumStep(BaseStep):
 
             #output:
             outputs=self.get_outputs(context)
-            count_file=save_dir/"raw_umi_read_count.txt"
+            count_file=save_dir/"raw_cell_num.txt"
             cell_num_file=outputs['cell_num']
 
             #parameter:
@@ -84,8 +85,11 @@ class CellNumStep(BaseStep):
             median_nUMI = max_cluster_data['nUMI'].median()
             file_merged['calculated_cell_num'] = np.ceil(20 * file_merged['nUMI'] / median_nUMI)
             file_merged['refined_cell_num'] = np.where(file_merged['calculated_cell_num'] > 25, 25, file_merged['calculated_cell_num'])
-        
-            final_output_df = file_merged[['barcode', 'cluster', 'nUMI', 'nREAD', 'refined_cell_num']]
+
+            final_output_df = file_merged[['barcode', 'cluster', 'nUMI', 'refined_cell_num']]
+            final_output_df=final_output_df.rename(columns={'nUMI': 'UMI_counts'})
+
+            # final_output_df = file_merged[['barcode', 'cluster', 'nUMI', 'nREAD', 'refined_cell_num']]
             final_output_df.to_csv(cell_num_file, index=False,sep="\t")
         else:
             pass

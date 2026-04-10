@@ -14,7 +14,7 @@ class UMICombiner_from_spot:
         self.BASES = ['A', 'T', 'C', 'G']
     
     def _save(self,grouped,output_file):
-        columns = ['chrom', 'pos', 'ID', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG']
+        columns = ['chrom', 'pos', 'strand', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG']
         grouped = grouped[grouped['spot_number'] > 0]
         grouped = grouped[columns]
         grouped.rename(columns={'chrom': '#chrom'}, inplace=True)
@@ -26,13 +26,16 @@ class UMICombiner_from_spot:
         """combine UMI to cluster/ind level"""
         df = self._load_data(umi_count_file)
         df.rename(columns={'#chrom': 'chrom'}, inplace=True)
-        
+        print("******************",df)
+        print("******************-------",cluster_df)
         if cluster_df.empty:
             df['cluster'] = "bulk"
         else:
             df = self._merge_clusters(df, cluster_df)
         
         result = self._aggregate(df)
+        print("******************result",result)
+
         self._save(result, output_file)
 
     
@@ -44,7 +47,7 @@ class UMICombiner_from_spot:
             df['cluster'] = "bulk"
         else:
             df = self._merge_clusters(df, cluster_df)
-            
+
         result = self._aggregate(df)
         self._save(result, output_file)
 
@@ -52,7 +55,7 @@ class UMICombiner_from_spot:
     def _load_data(self, file_path):
         """load data"""
         df= load_spot_count_data(file_path, sep="\t", header=None,
-                            names=['chrom', 'pos', 'ID', 'ref', 'alt', 
+                            names=['chrom', 'pos', 'strand', 'ref', 'alt', 
                                 'barcode', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG'],
                             comment="#")
 
@@ -72,11 +75,12 @@ class UMICombiner_from_spot:
         100_200 cluster1
         """
         df = df.merge(cluster_df, on=['barcode'])
+        
         return df
 
     def _aggregate(self, df):
         """aggregate data"""
-        return df.groupby(['chrom', 'pos', 'ID', 'ref', 'cluster']).agg({
+        return df.groupby(['chrom', 'pos', 'strand', 'ref', 'cluster']).agg({
             'alt': combine_alt,
             'spot_number': 'sum',
             'consensus_read_count': combine_UMI_count,
@@ -271,7 +275,7 @@ class ClusterAlleleFilter:
     def filter(self, cluster_count_file, output_file):
         # cluster_allele_filter(cluster_count_file, output_file, alpha=0.05, epsAF=0.003)
         df = pd.read_csv(cluster_count_file, sep="\t", header=None, \
-                    names=['chrom', 'pos', 'ID', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG'], \
+                    names=['chrom', 'pos', 'strand', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG'], \
                     keep_default_na=False, comment = "#")
         # df=cluster_count_df
         if df.empty:
@@ -284,7 +288,7 @@ class ClusterAlleleFilter:
         allele_cluster = self._aggregate_by_position(df)
         df = df.merge(allele_cluster, on=['chrom', 'pos'])
         df[['qA_final', 'qT_final', 'qC_final', 'qG_final']] = df.apply(self._quality_choose, axis=1, result_type='expand')
-        df = df[['chrom', 'pos', 'ID', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA_final', 'qT_final', 'qC_final', 'qG_final']]
+        df = df[['chrom', 'pos', 'strand', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA_final', 'qT_final', 'qC_final', 'qG_final']]
         # rename the keep columns
         df = df.rename(columns={
             'qA_final': 'qA',
@@ -311,7 +315,7 @@ class ClusterAlleleFilter:
         try:
             q_dicts = [str2dict(row[x]) for x in ["qA", "qT", "qC", "qG"]]
         except:
-            print(row)
+            print(f"Cannot find the q_dicts in {row}")
         q_filter = dict(zip(nucleotide_list, q_dicts))
         
         # calculate the numbers of the nucleotides
@@ -552,7 +556,7 @@ class UMICombiner_from_cluster:
     def _load_data(self, cluster_filter_count_file):
         """load data"""
         df= pd.read_csv(cluster_filter_count_file, sep="\t", header=None, 
-                    names=['chrom', 'pos', 'ID', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG'], 
+                    names=['chrom', 'pos', 'strand', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG'], 
                     keep_default_na=False, comment = "#")
         df['cluster'] = df['cluster'].apply(lambda x: str(int(x)) if isinstance(x, float) and x.is_integer() 
                                                                 else str(x) if pd.notnull(x) else "NA")
@@ -560,7 +564,7 @@ class UMICombiner_from_cluster:
 
     def _aggregate(self, df):
         """aggregate data"""
-        return df.groupby(['chrom', 'pos', 'ID', 'ref']).agg({
+        return df.groupby(['chrom', 'pos', 'strand', 'ref']).agg({
             'alt': combine_alt,
             'spot_number': 'sum',
             'consensus_read_count': combine_UMI_count,
@@ -571,7 +575,7 @@ class UMICombiner_from_cluster:
         df=self._load_data(cluster_filter_count_file)
         grouped=self._aggregate(df)
         grouped['cluster'] = "bulk"
-        columns = ['chrom', 'pos', 'ID', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG']
+        columns = ['chrom', 'pos', 'strand', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG']
         grouped = grouped[columns]
         grouped.rename(columns={'chrom': '#chrom'}, inplace=True)
         grouped.to_csv(output_file, sep="\t", index=None, na_rep='NA')

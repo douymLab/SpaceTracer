@@ -31,21 +31,21 @@ class SpotGenoCalculator:
 
         if self.bins is None:
         # read in inputs
-            ind_geno_df = ind_geno_df.drop(["cluster","spot_number","consensus_read_count"], axis=1)
+            ind_geno_df = ind_geno_df.drop(["cluster","spot_number","consensus_read_count","prior_ATCG"], axis=1)
             spot_count_df=raw_spot_count_df
         
         else:
             bins=self.bins
-            ind_geno_df = ind_geno_df.drop(["cluster","spot_number","consensus_read_count"], axis=1)
+            ind_geno_df = ind_geno_df.drop(["cluster","spot_number","consensus_read_count","prior_ATCG"], axis=1)
             spot_count_df=bin_df(raw_spot_count_df,bins)
 
         del raw_spot_count_df
 
         # join the data
         count_cluster_df = pd.merge(spot_count_df, cluster_df, on='barcode', how='left')
-        count_geno_join = pd.merge(count_cluster_df, ind_geno_df, on=['#chrom','pos','ID'], how='inner')
+        count_geno_join = pd.merge(count_cluster_df, ind_geno_df, on=['#chrom','pos','strand'], how='inner')
         count_geno_join = count_geno_join.rename(columns={'vaf': 'ind_vaf'})
-        count_geno_vaf_join = pd.merge(count_geno_join, cluster_vaf_df, on=['#chrom','pos','ID','germline','mutant','cluster'], how='left')
+        count_geno_vaf_join = pd.merge(count_geno_join, cluster_vaf_df, on=['#chrom','pos','strand','germline','mutant','cluster'], how='left')
         count_geno_vaf_join = count_geno_vaf_join.rename(columns={'vaf': 'cluster_vaf'})
 
         # input the cell number for each spot
@@ -54,7 +54,7 @@ class SpotGenoCalculator:
             cell_num_file = cell_num_file.drop(["cluster", "nUMI", "nREAD"], axis=1)
             count_geno_vaf_join = pd.merge(count_geno_vaf_join, cell_num_file, on='barcode', how='left')
 
-        out_colname = "\t".join(["#chrom","pos","ID","germline","mutant","cluster","spot_barcode","consensus_read_count", \
+        out_colname = "\t".join(["#chrom","pos","strand","germline","mutant","cluster","spot_barcode","consensus_read_count", \
                                 "l_germline", "l_mosaic", "max_spot_geno","G_spot_max","depth","vaf","p_mosaic"])
         mosaic_mask = count_geno_vaf_join.iloc[:, 14] == "mosaic"
         mosaic_df = count_geno_vaf_join[mosaic_mask]
@@ -65,7 +65,7 @@ class SpotGenoCalculator:
             data = data[:, :-1]     
         else:
             cell_nums = np.full(len(data), self.cell_num)
-
+        print("****++++***+++***",output_file)
         with open(output_file, 'w') as f:
             f.write(out_colname+"\n")
             for i in range(len(data)):
@@ -78,10 +78,9 @@ class SpotGenoCalculator:
                 )
                 if spot_geno_info[10] != "NA":
                     f.write("\t".join(map(str, spot_geno_info)) + "\n")
-
         # Read the TSV we just wrote and convert to Parquet with index
         df = load_spot_genotypes_data(output_file) 
-        
+        print(df)
         parquet_file = str(output_file).replace('.out', '.parquet')
         df.to_parquet(parquet_file, index=True, compression='snappy')
         
@@ -329,13 +328,13 @@ def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
 
     Input:
         join_info - the join list of spot_site_info and initial_geno
-        ['chrom', 'pos', 'ID', 'ref', 'alt', 'spot_barcode',
+        ['chrom', 'pos', 'strand', 'ref', 'alt', 'spot_barcode',
        'consensus_read_count', 'qA', 'qT', 'qC', 'qG', 'cluster', 'germline',
        'mutant', 'genotype', 'p_mosaic', 'Gi', 'ind_vaf', 'cluster_vaf']
         cell_num - an integer denotes the number of cells in the spot
     Output:
         spot_geno - a dataframe with only one row containing the following information
-        #chrom	pos	ID	germline	mutant	cluster spot_barcode    consensus_read_count    l_refhom   l_somatic   max_spot_geno   G_spot_max  depth   vaf    p_mosaic 
+        #chrom	pos	strand	germline	mutant	cluster spot_barcode    consensus_read_count    l_refhom   l_somatic   max_spot_geno   G_spot_max  depth   vaf    p_mosaic 
     """
     # get info from input
     qA = join_info[7]
@@ -346,7 +345,6 @@ def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
     germline = join_info[12]
     mutant = join_info[13]
     cluster_vaf = 0 if join_info[18]=="NA" else float(join_info[18])
-    print(join_info)
     # run
     _, l_norm, spot_geno = spot_posterior(germline, mutant, cluster_vaf, qA, qT, qC, qG, cell_num=cell_num, \
                                             epsQ=epsQ, thr_dp=thr_dp, pop_vaf=pop_vaf)
@@ -357,17 +355,6 @@ def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
     return output
 
 def convert_tsv_to_parquet(tsv_file: str, output_parquet: str = None):
-    """
-    One-time conversion of existing TSV files to Parquet.
-    
-    Usage:
-    ──────
-    convert_tsv_to_parquet("sample1.genotypes.txt")
-    # Creates: sample1.genotypes.parquet
-    
-    After conversion, load_spot_genotypes_fast() will automatically
-    use the .parquet version (10× faster).
-    """
     if output_parquet is None:
         output_parquet = tsv_file.replace('.txt', '.parquet')
     

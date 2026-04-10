@@ -1,9 +1,12 @@
 
 
+from collections import defaultdict
+from functools import reduce
 from math import ceil, log10
 
 import numpy as np
 from SpaceTracer.utils.logger import get_logger
+from SpaceTracer.utils.utils import round_to_nearest_bin
 
 model_name=__name__
 logger = get_logger(model_name)
@@ -122,28 +125,25 @@ def trans(qual_list):
     return qual_str
 
 
-def round_to_nearest_bin(x,bins):
-    return int(np.ceil(x / bins) * bins)
+def handel_barcode_name(cell_dict,barcode_name):
+    if cell_dict!={}:
+        return cell_dict.get(barcode_name, barcode_name)
+    else:
+        return str(barcode_name)
 
 
-def handle_seq_type(read,run_type,bins):
+def handle_seq_type(read,run_type,bins,cell_dict={}):
     if run_type=="visium":
         try:
             CB=read.get_tag("CB").strip()
             UB=read.get_tag("UB").strip()
 
             barcode_name=str(CB)
-            UMI_name=str(UB)
+            barcode_name=handel_barcode_name(cell_dict,barcode_name)
+            UMI_name=barcode_name+"_"+str(UB)
         except:
             return None,None
 
-    # elif run_type=="stereo":
-    #     Cx=str(read.get_tag("Cx"))
-    #     Cy=str(read.get_tag("Cy"))
-    #     UR=read.get_tag("UR").strip()
-
-    #     barcode_name=Cx+"_"+Cy
-    #     UMI_name=str(UR)
     elif run_type=="stereo":
         try:
             Cx_raw=int(read.get_tag("Cx"))
@@ -157,20 +157,105 @@ def handle_seq_type(read,run_type,bins):
             UR=read.get_tag("UR").strip()
 
             barcode_name=str(Cx)+"_"+str(Cy)
-            UMI_name=str(Cx_raw)+"_"+str(Cy_raw)+"_"+str(UR)
+            barcode_name=handel_barcode_name(cell_dict,barcode_name)
+            UMI_name=barcode_name+"_"+str(UR)
         except:
             return None,None
+
 
     elif run_type=="ST":
         try:
             CB=str(read.get_tag("B0"))
             UB=str(read.get_tag("B3"))
-
             barcode_name=str(CB)
-            UMI_name=str(UB)
+            barcode_name=handel_barcode_name(cell_dict,barcode_name)
+            UMI_name=barcode_name+"_"+str(UB)
         except:
             return None,None
+
     else:
         raise ValueError(f"The input type is not recognized {run_type}")
-    
+
     return barcode_name, UMI_name
+    
+
+
+def calculate_UMI_combine_phred(count_dict, quality_dict,weigh=0.5):
+    """
+    The function is used to get all candidate allele and their phred score,
+    based on count and quality dict per UMI.
+    """
+    all_genos=["A","T","C","G"]
+    pcr_error = 1e-6
+    #no_pcr_error = 1.0 - 3e-5 the reference from smcount
+    no_pcr_error = (1.0 - pcr_error) ** 100 # median cycle in RNA-seq is 100 (50-150)
+    rightP = 1.0
+    sumP = 0.0
+    dp=sum(count_dict.values())
+    proP_dict=defaultdict(lambda : 1.0)
+    pcrP_dict=defaultdict(float)
+    likelihood_dict=defaultdict(float)
+    phred_dict=defaultdict(float)
+    for geno in count_dict.keys():
+        ## proP_value means no sequencing error for each geno
+        # the likelihood whose allele equal to geno, here the quality is the right prob for one base
+        qual_geno_list=[phred_2_q(key)**int(quality_dict[geno][key]) for key in quality_dict[geno].keys()]
+        qual_geno=reduce(lambda x, y: x*y, qual_geno_list)
+        proP_dict[geno]*=qual_geno
+        # the likelihood whose allele not equal to geno
+        for other_geno in quality_dict.keys()-set([geno]):
+            other_qual_geno_list = [(1-phred_2_q(key))**int(quality_dict[other_geno][key]) for key in quality_dict[other_geno].keys()]
+            if other_qual_geno_list == []:
+                continue
+            other_qual_geno=reduce(lambda x, y: x*y, other_qual_geno_list)
+            proP_dict[geno]*=other_qual_geno
+        
+        ## rightP means no sequencing error, or no base calling error for all base
+        rightP = rightP * qual_geno
+    
+    for geno in all_genos:
+        ## pcrP means PCR error
+        count_geno = 0 if geno not in count_dict.keys() else count_dict[geno]
+        ratio = ( count_geno + 0.5) / (dp + 0.5 * 4)
+        pcrP = 10.0 ** (-6.0 * ratio)
+        pcrP_dict[geno]=pcrP
+    
+    # after obtaining [sequencing_error, no_pcr_error, no_sequencing_error, pcr_error], the likelihood of each geno will be calculate
+    for geno in all_genos:
+        if geno in count_dict.keys():
+            base_calling_error = proP_dict[geno]
+            no_base_calling_error=rightP
+            pcr_error=min([pcrP_dict[char] for char in pcrP_dict.keys() if char != geno])
+            likelihood_value = weigh * no_pcr_error * base_calling_error + (1-weigh) * no_base_calling_error * pcr_error 
+        else:
+            likelihood_value = rightP
+            for char in set(all_genos) - set([geno]):
+                likelihood_value *= pcrP_dict[char]
+                    
+        likelihood_dict[geno]=likelihood_value
+        sumP += likelihood_value
+    
+    for geno in likelihood_dict.keys():
+        phred_dict[geno] = 0 if sumP <= 0 else q_2_phred(likelihood_dict[geno] / sumP)
+
+    return phred_dict
+
+
+# following the last function, 
+def get_most_candidate_allele(phred_dict,ref_allele):
+    """
+    To get the most candidate allele and it's phred
+    """
+    rank_list=sorted(phred_dict.items(), key = lambda item:item[1], reverse=True)
+    major_allele=rank_list[0][0]; major_allele_phred=rank_list[0][1]
+    # major_allele_count=count_dict[major_allele]
+
+    # ref_allele_count=count_dict[ref_allele]
+    ref_allele_phred=phred_dict[ref_allele]
+
+    if  major_allele != ref_allele and ref_allele_phred>=major_allele_phred:
+        candidate_allele=ref_allele;phred=ref_allele_phred
+    else:
+        candidate_allele=major_allele;phred=major_allele_phred
+
+    return candidate_allele,phred

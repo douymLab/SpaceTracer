@@ -93,9 +93,9 @@ def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_
             try:
                 germ_prior = ",".join([str(f[i]) for i in [ref, allele]])
             except:
-                print(ref, allele)
-                print(count_dict)
-
+                # print(ref, allele)
+                # print(count_dict)
+                print("Opps! The germ prior cannot be detected, in 'individual posterior'")
     # use original ref and alt if remain two alleles and have population ref
     else:
         # ======================================================
@@ -334,10 +334,10 @@ def individual_genotype(row, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallel
 
     Input:
         row - a dataframe with only one row containing the following information
-        #chrom	pos	ID	ref	alt	cluster spot_number	consensus_read_count	read_quality_A	read_quality_T	read_quality_C	read_quality_G	population_AF_A	 population_AF_T  population_AF_C	population_AF_G
+        #chrom	pos	strand	ref	alt	cluster spot_number	consensus_read_count	read_quality_A	read_quality_T	read_quality_C	read_quality_G	population_AF_A	 population_AF_T  population_AF_C	population_AF_G
     Output:
         geno_info - a dataframe with only one row containing the following information
-        #chrom	pos	ID	germline	mutant	cluster spot_number	consensus_read_count	genotype	p_mosaic	Gi  vaf
+        #chrom	pos	strand	germline	mutant	cluster spot_number	consensus_read_count	genotype	p_mosaic	Gi  vaf
         germline_info - a dataframe with only one row containing the following information
         #chrom	pos    germline_geno   germline_allele germ_count germ_prior
     """
@@ -360,6 +360,7 @@ def individual_genotype(row, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallel
     fT = int(row['fT'])
     fC = int(row['fC'])
     fG = int(row['fG'])
+    prior_string=",".join([str(i) for i in [fA,fT,fC,fG]])
 
     # run
     res_list, germline_list = individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, \
@@ -367,18 +368,23 @@ def individual_genotype(row, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallel
                                                     filter_oneallele=filter_oneallele)
     # output for individual genotype
     output_list = []
+    write_germline=False
     for res in res_list:
         [geno_max, p_mosaic, G_max, ind_ref, alt, vaf] = res
-        output = [
-            row['chrom'], row['pos'], row['ID'],
-            ind_ref, alt,
-            row['cluster'], row['spot_number'], row['consensus_read_count'],
-            geno_max, p_mosaic, G_max, vaf
-        ]
-        output_list.append(output)
-    
-    germline_output = [row['chrom'], row['pos']] + germline_list
-    
+        if geno_max!="NA":
+            output = [
+                row['chrom'], row['pos'], row['strand'],
+                ind_ref, alt,
+                row['cluster'], row['spot_number'], row['consensus_read_count'],prior_string,
+                geno_max, p_mosaic, G_max, vaf
+            ]
+            output_list.append(output)
+            write_germline=True
+    if write_germline:
+        germline_output = [row['chrom'], row['pos']] + germline_list
+    else:
+        germline_output=[]
+
     return output_list, germline_output
 
 
@@ -399,7 +405,7 @@ class IndGenoCalculator:
     ## load count
     def _load_count_file(self,file):
         df=pd.read_csv(file,sep="\t",header=None,comment="#", keep_default_na=False)
-        columns = ['chrom', 'pos', 'ID', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG']
+        columns = ['chrom', 'pos', 'strand', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG']
         df.columns=columns
         df['identifier'] = df['chrom']+"_"+df['pos'].astype(str)
         # df=df.set_index('identifier')
@@ -436,13 +442,15 @@ class IndGenoCalculator:
         all_germlines = []
         
         for genotype_list, germline in results:
-            for geno in genotype_list:
-                all_genotypes.append(geno)
-            all_germlines.append(germline)
+            if genotype_list:
+                for geno in genotype_list:
+                    all_genotypes.append(geno)
+            if germline:
+                all_germlines.append(germline)
         
         # 转换为DataFrame
-        geno_columns = ['#chrom', 'pos', 'ID', 'germline', 'mutant', 
-                        'cluster', 'spot_number', 'consensus_read_count',
+        geno_columns = ['#chrom', 'pos', 'strand', 'germline', 'mutant', 
+                        'cluster', 'spot_number', 'consensus_read_count','prior_ATCG',
                         'genotype', 'p_mosaic', 'Gi', 'vaf']
         
         germ_columns = ['#chrom', 'pos', 'germline_geno', 'germline_allele', 
@@ -476,7 +484,6 @@ def ClusterVAFCalculator(ind_geno_file,cluster_count_file,outfile_path):
 
     ind_geno_df=pd.read_csv(ind_geno_file,sep="\t")
     cluster_count_df=pd.read_csv(cluster_count_file,sep="\t")
-
     ind_geno_df['key'] = ind_geno_df['#chrom'].astype(str) + "_" + ind_geno_df['pos'].astype(str)
     cluster_count_df['key'] = cluster_count_df['#chrom'].astype(str) + "_" + cluster_count_df['pos'].astype(str)
     
@@ -499,7 +506,7 @@ def ClusterVAFCalculator(ind_geno_file,cluster_count_file,outfile_path):
     )
     
     result = merged[[
-        '#chrom', 'pos', 'ID', 'germline', 'mutant',
+        '#chrom', 'pos', 'strand', 'germline', 'mutant',
         'cluster', 'spot_number', 'consensus_read_count', 'vaf'
     ]]
     result.to_csv(outfile_path, sep='\t', index=False)

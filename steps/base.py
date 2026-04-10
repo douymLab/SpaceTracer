@@ -11,6 +11,7 @@ import sys
 from typing import Dict
 import os
 
+from SpaceTracer.utils.get_genome_info import GenomeDetails
 from SpaceTracer.utils.utils import check_dir
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class BaseStep(ABC):
         self.config = context['config']
         self.work_dir = self.config.get('output_dir')
         self.threads=int(self.config.get('run').get('threads'))
-
+        self.genome_details=self.config['genome_details']
         
         # 创建步骤专用目录
         self.step_dir = os.path.join(self.work_dir, self.name)
@@ -50,16 +51,7 @@ class BaseStep(ABC):
         
         logger.debug(f"Initialized step: {self.name}")
     
-    def execute(self, context: Dict) -> Dict:
-        """
-        执行步骤
-        
-        Args:
-            context: 输入上下文
-        
-        Returns:
-            更新后的上下文
-        """
+    def execute(self, context: Dict, skip_validation: bool = True) -> Dict:
         logger.info(f"[{self.name}] Executing...")
         # 验证输入
         if not self.validate_inputs(context):
@@ -70,15 +62,27 @@ class BaseStep(ABC):
         result_context = self.get_outputs(context)
         
         # 验证输出
-        if not self.validate_outputs(result_context):
-            logger.error(f"Something wrong in {self.name}")
-            sys.exit()
-        
+        if not skip_validation and not self.validate_outputs(result_context):
+            raise ValueError(f"Something wrong in {self.name}")
+
+        # logger.info(f'++++++++++++++++++raw:{context}')
         # 更新context
         context.update(result_context)
-        
+        # logger.info(f'=================update:{context}')
         return context
-    
+
+    # def execute(self, context):
+    #     self.validate_inputs(context)
+    #     self._run(context)
+    #     new_outputs = self.get_outputs(context)
+    #     self.validate_output_files(new_outputs)
+    #     return new_outputs
+
+    # def validate_output_files(self, outputs: Dict[str, str]):
+    #     for key, path in outputs.items():
+    #         if not os.path.exists(path):
+    #             raise FileNotFoundError(f"Output {key} not found: {path}")
+
     @abstractmethod
     def _run(self, context: Dict) -> Dict:
         """
@@ -197,3 +201,9 @@ class BaseStep(ABC):
     def get_step_config(self) -> Dict:
         """获取该步骤的配置"""
         return self.config.get('steps', {}).get(self.name, {})
+
+    def get_executor(self) -> str:
+        step_cfg = self.get_step_config()
+        return step_cfg.get("executor", self.config.get("executor", "internal"))
+
+

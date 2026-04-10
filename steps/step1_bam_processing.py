@@ -5,6 +5,7 @@ bam process: here we need to filter the bam
 
 import os
 from pathlib import Path
+import glob
 import subprocess
 from typing import Dict
 from SpaceTracer.steps.base import BaseStep
@@ -114,31 +115,35 @@ class BamProcessingStep(BaseStep):
         output_dir: save dir 
         """
         threads = self.threads
-        
+        output_dir = str(output_dir)
+
+        if os.path.exists(output_dir):
+            for file_path in glob.glob(os.path.join(output_dir, 'IN*')):
+                logger.warning(f"Removing existing file: {file_path}")
+                os.remove(file_path)
+                
         cmd = [
             'sinto', 'filterbarcodes',
             '-b', str(bam_file),
             '-c', str(barcode_file),
             '--barcodetag', str(barcode_key),
-            '--outdir', str(output_dir),
+            '--outdir', output_dir,
             '-p', str(threads)
         ]
-        cmd_str="\t".join(cmd)
         logger.debug(f"run sinto: {' '.join(cmd)}")
-        
-        check_dir(output_dir)
-        
+
         result = subprocess.run(
-            cmd,
+            cmd,  
             capture_output=True,
-            text=True,
+            shell=False,  
             encoding='utf-8',
             check=False  
         )
-        
+
+        cmd_str=' '.join(cmd)
         if result.returncode != 0:
             raise RuntimeError(
-                    f"samtools mpileup failed with command: {cmd_str}). Please try to rm -rf {output_dir}, and try again.",)
+                    f"samtools mpileup failed with command: {cmd_str}. Please try to rm -rf {output_dir}, and try again.",)
 
         return True
 
