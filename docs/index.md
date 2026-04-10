@@ -21,4 +21,11 @@ SpaceTracer supports the analysis of both **nuclear SNVs** and **mitochondrial S
 
 ## Get started
 
-To start using SpaceTracer, please visit the [Installation](installation.md) page.
+To start using SpaceTracer:
+
+1. Follow [Installation](installation.md)
+2. Read [Quick Start](quickstart.md)
+3. Run your first dataset with [Running Tutorial](running-pipeline.md)
+4. Understand method details in [Algorithm Walkthrough](algorithm.md)
+5. Explore each stage in [Step Reference Overview](steps/overview.md)
+6. Use practical rerun recipes in [Single-Step Debug Cookbook](steps/debug-cookbook.md)

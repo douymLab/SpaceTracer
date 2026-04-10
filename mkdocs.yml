@@ -11,6 +11,26 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Quick Start: quickstart.md
+  - Running Tutorial: running-pipeline.md
+  - Configuration: configuration.md
+  - Algorithm Walkthrough: algorithm.md
+  - Step Reference:
+    - Overview: steps/overview.md
+    - Single-Step Debug Cookbook: steps/debug-cookbook.md
+    - cluster: steps/cluster.md
+    - bam_processing: steps/bam-processing.md
+    - mpileup: steps/mpileup.md
+    - umi_combine: steps/umi-combine.md
+    - cell_num: steps/cell-num.md
+    - prior: steps/prior.md
+    - genotyping: steps/genotyping.md
+    - spatial_feature: steps/spatial-feature.md
+    - mappability_feature: steps/mappability-feature.md
+    - read_feature: steps/read-feature.md
+    - RNA_feature: steps/rna-feature.md
+    - merge_feature: steps/merge-feature.md
+    - mutation_prediction: steps/mutation-prediction.md
+  - Outputs & Troubleshooting: outputs.md
   - Resources: resources.md
 
 plugins:

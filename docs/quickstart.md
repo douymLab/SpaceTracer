@@ -1,78 +1,47 @@
 # Quick Start
 
-This page provides a minimal workflow for running SpaceTracer.
+This page gives the fastest path to your first SpaceTracer run.
 
-## Before you begin
+## 1) Install and prepare resources
 
-Make sure you have:
+Complete:
 
-* cloned the SpaceTracer repository
-* prepared the required environment
-* downloaded the required reference resources
+- [Installation](installation.md)
+- [Resources](resources.md)
 
-If you have not completed these steps yet, please see the [Installation](installation.md) and [Resources](resources.md) pages.
+## 2) Create a config file
 
-## Step 1: Clone the repository
+Create `config.yaml` using the minimal template from [Configuration](configuration.md).
 
-```bash
-git clone https://github.com/douymLab/SpaceTracer.git
-cd SpaceTracer
-```
+At minimum, provide valid paths for:
 
-## Step 2: Prepare the environment
+- input BAM and tissue position file (`input_details`)
+- all required references (`resource_details`)
+- `output_dir`
 
-You can either use the Docker image or create the Conda environment.
-
-### Option 1: Docker
+## 3) Run SpaceTracer
 
 ```bash
-docker pull xiayh17/spacetracer
-docker run -it -v $(pwd):/mnt/workflow xiayh17/spacetracer bash
+SpaceTracer run --config config.yaml
 ```
 
-### Option 2: Conda
+Fallback command:
 
 ```bash
-conda env create -f environment.yaml
-conda activate SpaceTracer
+python -m SpaceTracer.cli.run --config config.yaml
 ```
 
-## Step 3: Prepare input files
-
-Before running SpaceTracer, make sure your input data and reference files are ready.
-
-Typical inputs include:
-
-* spatial transcriptomics data
-* reference genome
-* genome annotation
-* other required resource files described in the [Resources](resources.md) page
-
-## Step 4: Run SpaceTracer
-
-Run SpaceTracer with your input files and output directory.
+## 4) Resume or rerun if needed
 
 ```bash
-python SpaceTracer.py \
-    --input <input_data> \
-    --reference <reference_genome> \
-    --annotation <annotation_file> \
-    --output <output_directory>
+SpaceTracer run --config config.yaml --start-from genotyping
+SpaceTracer run --config config.yaml --force
 ```
 
-Replace the placeholders above with your actual file paths and parameters.
+## 5) Understand outputs
 
-## Step 5: Check the output
+For result interpretation and debugging, see:
 
-After the run is complete, the output directory will contain the SpaceTracer results for downstream analysis.
-
-Typical outputs may include:
-
-* detected somatic SNVs
-* intermediate result files
-* summary tables
-* lineage-related analysis results
-
-## Next steps
-
-For more details about required inputs, parameters, and output formats, please refer to the full tutorial and documentation pages.
+- [Running Tutorial](running-pipeline.md)
+- [Algorithm Walkthrough](algorithm.md)
+- [Outputs & Troubleshooting](outputs.md)

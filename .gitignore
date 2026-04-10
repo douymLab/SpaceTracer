@@ -215,3 +215,8 @@ external_tools/
 **/*copy*py
 
 **/__pycache__
+
+
+# Mac OS specific files
+.DS_Store
+**/.DS_Store
