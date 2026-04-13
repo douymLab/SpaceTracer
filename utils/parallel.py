@@ -1,5 +1,5 @@
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from typing import Callable, Iterable, List, Any, Optional
 import logging
 
@@ -12,6 +12,7 @@ def parallel_map(
     max_workers: int = 4,
     desc: Optional[str] = None,
     raise_on_error: bool = True,
+    backend: str = "thread",
 ) -> List[Any]:
     """
     Args:
@@ -20,6 +21,7 @@ def parallel_map(
         max_workers: 最大并发数
         desc: 日志描述
         raise_on_error: 是否在任务失败时抛异常
+        backend: 并行后端，"thread" 或 "process"
 
     Returns:
         与 items 对应顺序一致的结果列表
@@ -28,10 +30,14 @@ def parallel_map(
     if not items:
         return []
 
+    if backend not in {"thread", "process"}:
+        raise ValueError(f"Unsupported parallel backend: {backend}")
+
     results = [None] * len(items)
     future_to_index = {}
 
-    with ThreadPoolExecutor(max_workers=min(len(items), max_workers)) as executor:
+    executor_cls = ThreadPoolExecutor if backend == "thread" else ProcessPoolExecutor
+    with executor_cls(max_workers=min(len(items), max_workers)) as executor:
         for i, item in enumerate(items):
             future = executor.submit(worker_fn, item)
             future_to_index[future] = i
