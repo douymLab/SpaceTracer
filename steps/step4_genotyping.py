@@ -5,6 +5,8 @@ Genotyping Step - This step will help you to get candidate sites by mpileup
 
 from typing import Dict
 import os
+import time
+from functools import partial
 import pandas as pd
 from tqdm import tqdm
 from SpaceTracer.cores.genotyping_02_ind_genotype import ClusterVAFCalculator, IndGenoCalculator
@@ -137,6 +139,7 @@ class GenotypingStep(BaseStep):
         bins,
         context: Dict,
     ) -> Dict[str, str]:
+        t0 = time.perf_counter()
         chunk = row["chunk"]
         spot_count = row["parquet_file"]
         if not os.path.exists(spot_count):
@@ -154,25 +157,32 @@ class GenotypingStep(BaseStep):
         spot_geno_file = outputs["spot_geno_file"]
 
         # 1. cluster-level combine
+        t1 = time.perf_counter()
         UMICombiner_from_spot(epsQ).combine_cluster(
             spot_count,
             cluster_count_file,
             cluster_df
         )
+        t1 = time.perf_counter() - t1
 
         # 2. allele filter
+        t2 = time.perf_counter()
         ClusterAlleleFilter(alpha, epsAF).filter(
             cluster_count_file,
             cluster_count_filter_file
         )
+        t2 = time.perf_counter() - t2
 
         # 3. individual-level combine
+        t3 = time.perf_counter()
         UMICombiner_from_cluster(epsQ).combine_ind(
             cluster_count_filter_file,
             ind_count_filter_file
         )
+        t3 = time.perf_counter() - t3
 
         # 4. genotype
+        t4 = time.perf_counter()
         IndGenoCalculator().calculate_individual_genotype(
             ind_count_filter_file,
             prior_file,
@@ -184,19 +194,23 @@ class GenotypingStep(BaseStep):
             pop_vaf,
             filter_oneallele
         )
+        t4 = time.perf_counter() - t4
 
         with open(ind_geno_filter_file, "r") as f:
             row_length = sum(1 for _ in f)
 
         has_data = row_length > 1
         if has_data:
+            t5 = time.perf_counter()
             ClusterVAFCalculator(
                 ind_geno_filter_file,
                 cluster_count_filter_file,
                 cluster_vaf_file
             )
+            t5 = time.perf_counter() - t5
 
             # 6. spot genotype
+            t6 = time.perf_counter()
             SpotGenoCalculator(
                 bins,
                 epsQ,
@@ -210,12 +224,26 @@ class GenotypingStep(BaseStep):
                 cluster_vaf_file,
                 spot_geno_file
             )
+            t6 = time.perf_counter() - t6
+            total = time.perf_counter() - t0
+            logger.info(
+                "[genotyping chunk=%s] combine_cluster=%.2fs allele_filter=%.2fs "
+                "combine_ind=%.2fs ind_genotype=%.2fs cluster_vaf=%.2fs "
+                "spot_genotype=%.2fs total=%.2fs",
+                chunk, t1, t2, t3, t4, t5, t6, total
+            )
             return {
                 "chunk": chunk,
                 "spot_count_file": spot_count,
                 **outputs,
             }
         else:
+            total = time.perf_counter() - t0
+            logger.info(
+                "[genotyping chunk=%s] combine_cluster=%.2fs allele_filter=%.2fs "
+                "combine_ind=%.2fs ind_genotype=%.2fs no-spot-output total=%.2fs",
+                chunk, t1, t2, t3, t4, total
+            )
             return {}
 
     def _run(self, context: Dict):
@@ -250,23 +278,23 @@ class GenotypingStep(BaseStep):
         cell_num = self.config.get("cell_num")
         bins = self.config.get("bin_size")
         max_workers = self.config.get("runtime", {}).get("max_parallel", self.threads)
+        parallel_backend = self.config.get("runtime", {}).get("parallel_backend", "thread")
 
-        def worker(row: Dict[str, str]) -> Dict[str, str]:
-            return self._run_one_chunk(
-                row=row,
-                cluster_df=cluster_df,
-                prior_file=prior_file,
-                epsQ=epsQ,
-                alpha=alpha,
-                epsAF=epsAF,
-                mu=mu,
-                thr_dp=thr_dp,
-                pop_vaf=pop_vaf,
-                filter_oneallele=filter_oneallele,
-                cell_num=cell_num,
-                bins=bins,
-                context=context,
-            )
+        worker = partial(
+            self._run_one_chunk,
+            cluster_df=cluster_df,
+            prior_file=prior_file,
+            epsQ=epsQ,
+            alpha=alpha,
+            epsAF=epsAF,
+            mu=mu,
+            thr_dp=thr_dp,
+            pop_vaf=pop_vaf,
+            filter_oneallele=filter_oneallele,
+            cell_num=cell_num,
+            bins=bins,
+            context=context,
+        )
 
         chunk_results = parallel_map(
             rows,
@@ -274,6 +302,7 @@ class GenotypingStep(BaseStep):
             max_workers=max_workers,
             desc=f"{self.name} parallel genotyping for sample={context.get('sample', 'unknown')}",
             raise_on_error=True,
+            backend=parallel_backend,
         )
         
         save_manifest_tsv(chunk_results, result_manifest)

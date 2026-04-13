@@ -3,11 +3,11 @@
 
 import math
 from pathlib import Path
+from typing import List
 
 import numpy as np
 import pandas as pd
 from operator import add
-from pysam import List
 from scipy.special import comb
 
 from SpaceTracer.utils.read_files import load_spot_genotypes_data,load_spot_count_data
@@ -65,7 +65,7 @@ class SpotGenoCalculator:
             data = data[:, :-1]     
         else:
             cell_nums = np.full(len(data), self.cell_num)
-        print("****++++***+++***",output_file)
+        # print("****++++***+++***",output_file)
         with open(output_file, 'w') as f:
             f.write(out_colname+"\n")
             for i in range(len(data)):
@@ -80,7 +80,7 @@ class SpotGenoCalculator:
                     f.write("\t".join(map(str, spot_geno_info)) + "\n")
         # Read the TSV we just wrote and convert to Parquet with index
         df = load_spot_genotypes_data(output_file) 
-        print(df)
+        # print(df)
         parquet_file = str(output_file).replace('.out', '.parquet')
         df.to_parquet(parquet_file, index=True, compression='snappy')
         

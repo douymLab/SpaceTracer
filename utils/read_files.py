@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 import pyranges as pr
 import pandas as pd
 import pysam
@@ -46,7 +46,7 @@ def load_spot_count_data(
     file_path,
     sep: Optional[str] = '\t',
     header: Optional[int] = 0,
-    names: Optional[pysam.List[str]] = None,
+    names: Optional[List[str]] = None,
     comment: Optional[str] = None,
     prefer_parquet: bool = True,
     create_parquet: bool = False,
@@ -101,7 +101,7 @@ def load_text_file(
     file_path: Path,
     sep: Optional[str] = None,
     header: Optional[int] = 0,
-    names: Optional[pysam.List[str]] = None,
+    names: Optional[List[str]] = None,
     comment: Optional[str] = None,
     **kwargs,
 ) -> pd.DataFrame:

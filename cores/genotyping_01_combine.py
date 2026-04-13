@@ -26,15 +26,15 @@ class UMICombiner_from_spot:
         """combine UMI to cluster/ind level"""
         df = self._load_data(umi_count_file)
         df.rename(columns={'#chrom': 'chrom'}, inplace=True)
-        print("******************",df)
-        print("******************-------",cluster_df)
+        # print("******************",df)
+        # print("******************-------",cluster_df)
         if cluster_df.empty:
             df['cluster'] = "bulk"
         else:
             df = self._merge_clusters(df, cluster_df)
         
         result = self._aggregate(df)
-        print("******************result",result)
+        # print("******************result",result)
 
         self._save(result, output_file)
 

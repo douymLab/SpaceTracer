@@ -9,6 +9,8 @@ pipeline:
 # Runtime settings
 runtime:
   threads: 8
+  max_parallel: 8
+  parallel_backend: "thread"  # "thread" (safe default) or "process" (often faster for CPU-heavy genotyping)
   memory: "32G"
   keep_intermediates: false
   skip_validation: false
