@@ -143,7 +143,7 @@ def load_spot_genotypes_data(file: str, prefer_parquet: bool = True) -> pd.DataF
     
     # parquet
     if prefer_parquet and parquet_path.exists():
-        print(f"Loading Parquet: {parquet_path}")
+        # print(f"Loading Parquet: {parquet_path}")
         df = pd.read_parquet(parquet_path)
         return df
     

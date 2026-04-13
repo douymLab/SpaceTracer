@@ -300,7 +300,7 @@ class GenotypingStep(BaseStep):
             rows,
             worker_fn=worker,
             max_workers=max_workers,
-            desc=f"{self.name} parallel genotyping for sample={context.get('sample', 'unknown')}",
+            desc=f"genotyping",
             raise_on_error=True,
             backend=parallel_backend,
         )
@@ -312,16 +312,3 @@ class GenotypingStep(BaseStep):
     def get_step_config(self) -> Dict:
         return self.config.get('steps', {}).get('genotyping', {})
     
-    def _process_one_chunk(self, row: Dict):
-        chunk = row["chunk"]
-        parquet_file = row["parquet_file"]
-
-        # 这里只是示例
-        df = pd.read_parquet(parquet_file)
-
-        # TODO: 你的 chunk 级 genotyping 逻辑
-        # result_df = do_genotyping(df, prior_file=...)
-        # 现在先直接返回
-        return chunk, len(df)
-
-  

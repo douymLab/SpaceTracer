@@ -417,7 +417,8 @@ class IndGenoCalculator:
 
         # ind_count_df['identifier'] = ind_count_df.iloc[:,0] + "_" + ind_count_df.iloc[:,1].astype(str)
         # prior_df['identifier'] = prior_df.iloc[:,0] + "_" + prior_df.iloc[:,1].astype(str)
-        
+        print("*******prior_df",ind_count_df)
+        print("*******ind_count_df",prior_df)
         merged = ind_count_df.merge(prior_df[['identifier'] + list(prior_df[["fA","fT","fC","fG"]])], 
                                 on='identifier', how='left')
         merged.fillna(0, inplace=True)

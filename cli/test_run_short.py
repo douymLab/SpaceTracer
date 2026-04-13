@@ -37,7 +37,7 @@ def test_two_steps():
         
         
     # results = pipeline.run()
-    results = pipeline.run(start_from="genotyping")
+    results = pipeline.run(only_steps=["genotyping"])
 
     # pipeline.run(start_from="genotyping", stop_at="merge_feature", enable_parallel=True)
 

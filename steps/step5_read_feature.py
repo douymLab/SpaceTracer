@@ -96,7 +96,7 @@ class ReadFeatureStep(BaseStep):
             return {
                 "chunk": chunk,
                 "ind_geno_filter_mutation_list": mutation_list_file,
-                "read_feature": output_file,
+                "read_feature_txt": output_file,
                 "read_feature_parquet": parquet_file,
             }
 
@@ -108,7 +108,7 @@ class ReadFeatureStep(BaseStep):
             return {
                 "chunk": chunk,
                 "ind_geno_filter_mutation_list": mutation_list_file,
-                "read_feature": output_file,
+                "read_feature_txt": output_file,
                 "read_feature_parquet": parquet_file,
             }
 
@@ -133,7 +133,7 @@ class ReadFeatureStep(BaseStep):
         return {
             "chunk": chunk,
             "ind_geno_filter_mutation_list": mutation_list_file,
-            "read_feature": output_file,
+            "read_feature_txt": output_file,
             "read_feature_parquet": parquet_file,
         }
 
@@ -206,7 +206,7 @@ class ReadFeatureStep(BaseStep):
             valid_rows,
             worker_fn=worker,
             max_workers=max_workers,
-            desc=f"{self.name} parallel read_feature for sample={context.get('sample', 'unknown')}",
+            desc=f"read_feature",
             raise_on_error=True,
         )
 
@@ -302,8 +302,8 @@ class ReadFeatureStep(BaseStep):
 
                 total_features += len(region_features)
 
-                if total_features % 10000 == 0:
-                    logger.info(f"Processed {total_features} features so far...")
+                # if total_features % 10000 == 0:
+                #     logger.info(f"Processed {total_features} features so far...")
 
         # 没有任何结果，写空表头文件
         if total_features == 0:

@@ -1,6 +1,3 @@
-options(warn = -1)  # 关闭所有警告
-
-
 args <- commandArgs(trailingOnly = TRUE)
 
 if ("-h" %in% args || "--help" %in% args) {
@@ -23,20 +20,18 @@ reference_error_profile<-args[5]
 
 if (!file.exists(outpath)) {
   dir.create(outpath)
-  # print(paste("Path", outpath, "created successfully"))
-# } else {
-#   print(paste("Path", outpath, "already exists"))
+  print(paste("Path", outpath, "created successfully"))
+} else {
+  print(paste("Path", outpath, "already exists"))
 } 
 
 #===========functions=================
-suppressPackageStartupMessages({
-    library(pracma)
-    library(dplyr)
-    library(extraDistr)
-    library(tidyr)
-    library(deconstructSigs)
-    library(parallel)
-})
+library(pracma)
+library(dplyr)
+library(extraDistr)
+library(tidyr)
+library(deconstructSigs)
+
 
 mutation_order <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G","G>A","G>T","G>C","A>T","A>C","A>G")
 extract_mutation_type <- function(rownames) {
@@ -189,45 +184,26 @@ proportion=read.table(proportion_file,sep="\t",header=TRUE)
 beta_a=0.107
 beta_b=47.58
 
-chunk_size <- 10000
-n_rows <- nrow(candidate_df)
-n_chunks <- ceiling(n_rows / chunk_size)
-
-process_chunk <- function(chunk_idx) {
-  start_row <- (chunk_idx - 1) * chunk_size + 1
-  end_row <- min(chunk_idx * chunk_size, n_rows)
-  
-  chunk_df <- candidate_df[start_row:end_row, ]
-  
-  for (i in 1:nrow(chunk_df)) {
-    dp <- as.numeric(chunk_df[i, "count"])
-    altreads <- as.numeric(chunk_df[i, "alt_count"])
+for (i in 1:nrow(candidate_df)) {
+    dp<-as.numeric(candidate_df[i,"count"])
+    altreads<-as.numeric(candidate_df[i,"alt_count"])
     proportions <- proportion[proportion$Sample == sample_id, ]
-    
-    back_info <- handle_per_site_3artifact_remove_weight(
-      chunk_df[i,], normalized_refine_sig, proportions, sig_eps
-    )
-    
+
+    back_info <- handle_per_site_3artifact_remove_weight(candidate_df[i,], normalized_refine_sig, proportions,sig_eps)
+
     for(col_name in names(back_info)) {
-      chunk_df[i, col_name] <- as.numeric(back_info[[col_name]])
+      # print(col_name)
+      candidate_df[i, col_name] <- as.numeric(back_info[[col_name]])
     }
-    
-    alpha <- 1 - pbbinom(altreads - 1, dp, beta_a, beta_b)
-    beta_val <- (dp - altreads + 1) / (dp + 1)
-    
-    chunk_df[i, "refine_hFDR"] <- alpha / (alpha + beta_val * chunk_df[i, "rweigh"] * 1/49)
-    chunk_df[i, "alpha"] <- alpha
-    chunk_df[i, "beta"] <- beta_val
-  }
-  
-  return(chunk_df)
+    # #**** NOTES: in this script, we use the real artifact distribution to evaluate alpha, and beta distribution to evaluate beta.
+    alpha =1 - pbbinom(altreads-1, dp, beta_a, beta_b)
+    beta=(dp-altreads+1) / (dp+1)
+
+  candidate_df[i, "refine_hFDR"] <- alpha / (alpha + beta * candidate_df[i, "rweigh"] * 1/49)
+
+  candidate_df[i, "alpha"] <- as.numeric(alpha)
+  candidate_df[i, "beta"] <- as.numeric(beta)
 }
-
-n_cores <- detectCores() - 2
-results_list <- mclapply(1:n_chunks, process_chunk, mc.cores = n_cores)
-
-candidate_df_updated <- do.call(rbind, results_list)
-
-write.table(candidate_df_updated,
+write.table(candidate_df,
             file.path(outpath, "features_with_hFDR.txt"),
             sep = "\t", quote = FALSE, row.names = FALSE)

@@ -6,6 +6,7 @@ from tqdm import tqdm
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.cores.mappability_features import mappabilityFeatures
 from SpaceTracer.utils.logger import get_logger
+from SpaceTracer.utils.parallel import parallel_map
 from SpaceTracer.utils.utils import load_manifest_tsv
 
 model_name = __name__
@@ -134,26 +135,40 @@ class MappabilityFeatureStep(BaseStep):
         chrom_groups = mutation_identifier_list.groupby("chrom")
 
         results = []
-        with ThreadPoolExecutor(max_workers=self.threads) as executor:
-            future_to_chrom = {
-                executor.submit(
-                    process_chromosome_mutations_for_mappable,
-                    chrom,
-                    group,
-                    mappability_path
-                ): chrom
-                for chrom, group in chrom_groups
-            }
+        def process_chrom_wrapper(chrom_group):
+            chrom, group = chrom_group
+            return process_chromosome_mutations_for_mappable(chrom, group, mappability_path)
 
-            for future in tqdm(as_completed(future_to_chrom), total=len(future_to_chrom), desc="Chromosomes"):
-                chrom = future_to_chrom[future]
-                try:
-                    result_df = future.result()
-                    if result_df is not None and not result_df.empty:
-                        results.append(result_df)
-                except Exception as e:
-                    logger.error(f"Failed to process {chrom}: {e}")
-                    raise
+        results = parallel_map(
+            list(chrom_groups),
+            worker_fn=process_chrom_wrapper,
+            max_workers=self.threads,
+            desc="mappability_feature",
+            raise_on_error=True
+        )
+
+        results = [df for df in results if df is not None and not df.empty]
+
+        # with ThreadPoolExecutor(max_workers=self.threads) as executor:
+        #     future_to_chrom = {
+        #         executor.submit(
+        #             process_chromosome_mutations_for_mappable,
+        #             chrom,
+        #             group,
+        #             mappability_path
+        #         ): chrom
+        #         for chrom, group in chrom_groups
+        #     }
+
+            # for future in tqdm(as_completed(future_to_chrom), total=len(future_to_chrom), desc="mappability_feature"):
+            #     chrom = future_to_chrom[future]
+            #     try:
+            #         result_df = future.result()
+            #         if result_df is not None and not result_df.empty:
+            #             results.append(result_df)
+            #     except Exception as e:
+            #         logger.error(f"Failed to process {chrom}: {e}")
+            #         raise
 
         if not results:
             logger.warning("No mappability results generated, writing empty outputs.")

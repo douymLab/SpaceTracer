@@ -52,7 +52,7 @@ class BaseStep(ABC):
         logger.debug(f"Initialized step: {self.name}")
     
     def execute(self, context: Dict, skip_validation: bool = True) -> Dict:
-        logger.info(f"[{self.name}] Executing...")
+        # logger.info(f"[{self.name}] Executing...")
         # 验证输入
         if not self.validate_inputs(context):
             raise ValueError(f"Step {self.name}: Input validation failed")
