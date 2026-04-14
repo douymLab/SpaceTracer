@@ -91,7 +91,8 @@ def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
     counts = df['consensus_read_count'].str.split(',', expand=True).astype(int)
     counts.columns = ['A_count', 'T_count', 'C_count', 'G_count']
     
-    priors = df['prior_ATCG'].str.split(',', expand=True).astype(int)
+    # print("*****************df['prior_ATCG']",df['prior_ATCG'])
+    priors = df['prior_ATCG'].str.split(',', expand=True).astype(float)
     priors.columns = ['A_prior', 'T_prior', 'C_prior', 'G_prior']
     
     df = pd.concat([df, counts, priors], axis=1)

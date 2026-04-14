@@ -1,5 +1,4 @@
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
 import time
 from typing import Callable, Iterable, List, Any, Optional
 import logging
@@ -13,7 +12,7 @@ def parallel_map(
     desc: Optional[str] = None,
     raise_on_error: bool = True,
     backend: str = "thread",
-    progress_interval: float = 0.05,  # 新增：每 10% 打印一次
+    progress_interval: float = 0.05,
 ) -> List[Any]:
     """
     Args:
@@ -73,7 +72,6 @@ def parallel_map(
                     bar = '█' * filled + '░' * (bar_len - filled)
                     print(f"  [{desc}] {bar} {current_pct}% ({completed}/{total}) | Estimated Time Remaining: {eta:.0f}s")
                     last_print_pct = current_pct    
-
 
     if errors and raise_on_error:
         msg = "; ".join([f"index={i}, item={item}, err={err}" for i, item, err in errors])

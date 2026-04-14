@@ -37,7 +37,7 @@ def test_two_steps():
         # 'prior': PriorCalculator
         
         
-    results = pipeline.run(only_steps=["umi_combine"])
+    results = pipeline.run(stop_at="umi_combine")
     
     print(f"✅ Pipeline completed!")
     # print(f"   Variants called: {results['stats']['genotyping']['n_variants']}")

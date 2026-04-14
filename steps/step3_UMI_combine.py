@@ -81,8 +81,8 @@ class UMICombineStep(BaseStep):
 
         # df = pd.read_csv(mpileup_file, sep="\t")
         
-        max_region_size=50000
-        max_variants_per_region=5000
+        max_region_size=20000000 # 20M
+        max_variants_per_region=5000 
         chunksize=5
         max_workers=self.threads
         thread_per_chunk=2
