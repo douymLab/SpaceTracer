@@ -1,5 +1,7 @@
 import os
 import pandas as pd
+import subprocess
+import tempfile
 
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.utils.read_files import load_parquet, load_text_file
@@ -18,7 +20,7 @@ def collect_files_from_manifest(manifest_file: str, column_name: str):
     return files
 
 
-def load_single_feature_file(path, sep="	"):
+def load_single_feature_file(path, sep="\t"):
     """
     读取单个 feature 文件：
     - 优先读取同名 parquet
@@ -47,7 +49,6 @@ def load_single_feature_file(path, sep="	"):
                 [df["#chrom"], df["pos"], df["ref"], df["alt"]],
                 names=["#chrom", "pos", "ref", "alt"]
             )
-            # 保留原列也可以，不强制 drop
     return df
 
 
@@ -55,47 +56,55 @@ def merge_feature_files_from_manifest(
     manifest_file: str,
     manifest_column: str,
     output_file: str,
-    sep="	"
+    sep="\t" 
 ):
-    """
-    从 manifest 中收集 feature 文件，逐个读取后按行合并。
-    输出保存为 txt，同时如果需要也可写 parquet。
-    """
     files = collect_files_from_manifest(manifest_file, manifest_column)
-    files = [f for f in files if f]
+    
+    valid_files = []
+    for f in files:
+        if not f or not os.path.exists(f):
+            continue
+        if os.path.getsize(f) == 0:
+            print(f"Warning: Skipping empty file: {f}")
+            continue
+        valid_files.append(f)
 
     out_dir = os.path.dirname(output_file)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
 
-    if not files:
+    if not valid_files:
         empty_df = pd.DataFrame()
         empty_df.to_csv(output_file, sep=sep, index=False)
         return empty_df
 
-    dfs = []
-    for f in files:
-        df = load_single_feature_file(f, sep=sep)
-        if df is not None and not df.empty:
-            dfs.append(df)
+    with open(output_file, 'w') as out_f:
+        for i, file_path in enumerate(valid_files):
+            with open(file_path, 'r') as in_f:
+                if i == 0:
+                    out_f.write(in_f.read())
+                else:
+                    next(in_f, None)  # 安全跳过
+                    out_f.write(in_f.read())
+                    if not out_f.write('\n'):
+                        out_f.write('\n')
 
-    if not dfs:
-        empty_df = pd.DataFrame()
-        empty_df.to_csv(output_file, sep=sep, index=False)
-        return empty_df
-
-    merged_df = pd.concat(dfs, axis=0)
-
-    # 保存 txt
-    merged_df.to_csv(output_file, sep=sep, index=True)
-
-    # 如果是 MultiIndex，则顺手写 parquet 方便后续调试/复用
-    parquet_file = str(output_file).replace(".txt", ".parquet")
-    try:
-        merged_df.to_parquet(parquet_file, index=True)
-    except Exception:
-        pass
-
+    merged_df = pd.read_csv(output_file, sep=sep)
+    
+    if not isinstance(merged_df.index, pd.MultiIndex):
+        required_cols = ["#chrom", "pos", "ref", "alt"]
+    if all(col in merged_df.columns for col in required_cols):
+        merged_df.index = pd.MultiIndex.from_arrays(
+            [merged_df["#chrom"], merged_df["pos"], merged_df["ref"], merged_df["alt"]],
+            names=["#chrom", "pos", "ref", "alt"]
+        )
+    parquet_file = output_file.replace('.txt', '.parquet')
+    if not merged_df.empty:
+        try:
+            merged_df.to_parquet(parquet_file, index=False)
+        except Exception:
+            pass
+            
     return merged_df
 
 
@@ -128,7 +137,7 @@ class MergeFeatureStep(BaseStep):
         return self.config.get("steps", {}).get("feature_filtration", {})
 
     def _load_single_feature(self, path):
-        return load_single_feature_file(path, sep="	")
+        return load_single_feature_file(path, sep="\t")
 
     def _run(self, context):
         inputs = self.get_inputs(context)
@@ -147,23 +156,14 @@ class MergeFeatureStep(BaseStep):
         spatial_input = inputs.get("spatial_feature_results", "")
         if spatial_input:
             if str(spatial_input).endswith(".tsv"):
-                # 优先尝试 manifest 中的 spatial_feature 列
-                # 如果你保存的是 spatial_feature_parquet 列，可以改成对应列名
                 rows = load_manifest_tsv(spatial_input)
-                spatial_column = None
                 if rows:
                     sample_row = rows[0]
-                    if "spatial_feature" in sample_row:
-                        spatial_column = "spatial_feature"
-                    elif "spatial_feature_parquet" in sample_row:
-                        spatial_column = "spatial_feature_parquet"
-
-                if spatial_column:
                     spatial_feature_df = merge_feature_files_from_manifest(
                         manifest_file=spatial_input,
-                        manifest_column=spatial_column,
+                        manifest_column="spatial_feature_txt",
                         output_file=outputs["merged_spatial_feature"],
-                        sep="	"
+                        sep="\t"
                     )
             else:
                 spatial_feature_df = self._load_single_feature(spatial_input)
@@ -174,20 +174,12 @@ class MergeFeatureStep(BaseStep):
         if read_input:
             if str(read_input).endswith(".tsv"):
                 rows = load_manifest_tsv(read_input)
-                read_column = None
                 if rows:
-                    sample_row = rows[0]
-                    if "read_feature" in sample_row:
-                        read_column = "read_feature"
-                    elif "read_feature_parquet" in sample_row:
-                        read_column = "read_feature_parquet"
-
-                if read_column:
                     read_feature_df = merge_feature_files_from_manifest(
                         manifest_file=read_input,
-                        manifest_column=read_column,
+                        manifest_column="read_feature_txt",
                         output_file=outputs["merged_read_feature"],
-                        sep="	"
+                        sep="\t"
                     )
             else:
                 read_feature_df = self._load_single_feature(read_input)
@@ -301,7 +293,7 @@ class MergeFeatureStep(BaseStep):
             merged_df[col] = merged_df[col].fillna("no")
             merged_df[col] = merged_df[col].replace("", "no")
 
-        merged_df.to_csv(output_feature, sep="	", index=True)
+        merged_df.to_csv(output_feature, sep="\t", index=True)
 
         return {
             "combine_feature": output_feature

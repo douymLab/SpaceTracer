@@ -3,6 +3,7 @@ from functools import partial
 import multiprocessing
 import os
 from pathlib import Path
+import time
 import pandas as pd
 from tqdm import tqdm
 from typing import Dict
@@ -12,6 +13,10 @@ from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.utils.read_files import handle_barcode, load_spot_genotypes_data
 from SpaceTracer.utils.utils import check_dir, load_manifest_tsv,save_manifest_tsv
 from SpaceTracer.utils.parallel import parallel_map
+from SpaceTracer.utils.logger import get_logger
+
+model_name=__name__
+logger = get_logger(model_name)
 
 global_spot_geno_df = None
 global_barcode_dict = None
@@ -191,12 +196,6 @@ class SpatialFeatureStep(BaseStep):
 
         in_name = None
 
-        # fork 只在 linux/mac 下更自然；如果你环境固定 linux，这样可以
-        try:
-            multiprocessing.set_start_method("fork", force=True)
-        except RuntimeError:
-            pass
-
         with (
             multiprocessing.Pool(
                 processes=inner_processes,
@@ -222,11 +221,15 @@ class SpatialFeatureStep(BaseStep):
         ):
             f.write("\t".join(colnames) + "\n")
 
-            for values in tqdm(
-                pool.imap(worker, mutation_identifier_list, chunksize=2),
-                total=len(mutation_identifier_list),
-                desc=f"spatial_feature {chunk}"
-            ):
+            # for values in tqdm(
+            #     pool.imap(worker, mutation_identifier_list, chunksize=2),
+            #     total=len(mutation_identifier_list),
+            #     desc=f"spatial_feature {chunk}"
+            # ):
+            #     if values:
+            #         f.write("\t".join(map(str, values)) + "\n")
+
+            for values in pool.imap(worker, mutation_identifier_list, chunksize=2):
                 if values:
                     f.write("\t".join(map(str, values)) + "\n")
 
@@ -293,7 +296,12 @@ class SpatialFeatureStep(BaseStep):
 
         step_cfg = self.get_step_config()
         inner_processes = int(step_cfg.get("per_chunk_processes", 1))
-
+        total_chunks = len(valid_rows)
+        logger.info(f"Processing {total_chunks} chunks for 'spatial feature'")
+       
+        chunk_results = []
+        start_time = time.time()
+        
         def chunk_worker(row: Dict[str, str]) -> Dict[str, str]:
             return self._run_one_chunk(
                 row=row,
@@ -315,7 +323,7 @@ class SpatialFeatureStep(BaseStep):
             valid_rows,
             worker_fn=chunk_worker,
             max_workers=max_workers,
-            desc=f"{self.name} parallel spatial_feature for sample={context.get('sample', 'unknown')}",
+            desc=f"spatial_feature",
             raise_on_error=True,
         )
 
