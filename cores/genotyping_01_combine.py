@@ -1,48 +1,58 @@
 import pandas as pd
 from collections import Counter
+from functools import lru_cache
 from scipy.stats import binomtest
+from scipy.stats import binom
 
 from SpaceTracer.utils.read_files import load_spot_count_data
 from SpaceTracer.utils.utils import str2dict
 
 
+@lru_cache(maxsize=200000)
+def _cached_str2dict(q: str):
+    return str2dict(q)
+
+
 def combine_alt(series):
     """Combine the alt column"""
-    combined = []
+    combined = set()
     for alt in series:
         if alt != ".":
-            alt_list = alt.split(',')
-            combined = list(set(combined) | set(alt_list))
+            combined.update(alt.split(','))
     if not bool(combined):
         result = "."
     else:
-        result = ",".join(combined)
+        result = ",".join(sorted(combined))
     return result
 
 
 def combine_UMI_count(series):
     """Combine UMI count column"""
-    combined = [0, 0, 0, 0]
+    a = t = c = g = 0
     for consensus_read_count in series:
         if isinstance(consensus_read_count, str):
-            count = [int(i) for i in consensus_read_count.split(',')]
-            combined = [(a + b) for a, b in zip(combined, count)]
-    result = ','.join([str(i) for i in combined])
+            x1, x2, x3, x4 = consensus_read_count.split(',')
+            a += int(x1)
+            t += int(x2)
+            c += int(x3)
+            g += int(x4)
+    result = f"{a},{t},{c},{g}"
     return result
 
 
 def combine_q_columns(series, epsQ=20):
     """Combine quality columns"""
-    combined = {}
+    combined = Counter()
     for q in series:
         if isinstance(q, str):
-            q_dict = str2dict(q)
-            q_filter = {k: v for k, v in q_dict.items() if k >= epsQ}
-            combined = dict(Counter(combined) + Counter(q_filter))
+            q_dict = _cached_str2dict(q)
+            for k, v in q_dict.items():
+                if k >= epsQ:
+                    combined[k] += v
     if not bool(combined):
         result = "NA"
     else:
-        result = ','.join(f'{int(key)}:{value}' for key, value in combined.items())
+        result = ','.join(f'{int(key)}:{combined[key]}' for key in sorted(combined.keys()))
     return result
 
 
@@ -138,7 +148,7 @@ class UMICombiner_from_spot:
         return df.merge(cluster_df, on=['barcode'])
 
     def _aggregate(self, df):
-        return df.groupby(['chrom', 'pos', 'strand', 'ref', 'cluster']).agg({
+        return df.groupby(['chrom', 'pos', 'strand', 'ref', 'cluster'], sort=False).agg({
             'alt': combine_alt,
             'spot_number': 'sum',
             'consensus_read_count': combine_UMI_count,
@@ -200,31 +210,35 @@ class ClusterAlleleFilter:
         if df.empty:
             return df
 
-        df[['keepA', 'keepT', 'keepC', 'keepG']] = df.apply(
-            self._allele_filter_row, axis=1, result_type='expand'
-        )
+        # Parse consensus counts once, then vectorize all downstream operations.
+        counts = df['consensus_read_count'].str.split(',', expand=True).astype(int)
+        counts.columns = ['A_count', 'T_count', 'C_count', 'G_count']
+        df = pd.concat([df, counts], axis=1)
+        depth = df[['A_count', 'T_count', 'C_count', 'G_count']].sum(axis=1).to_numpy()
+
+        for base in self.BASES:
+            k = df[f'{base}_count'].to_numpy()
+            pvals = binom.sf(k - 1, depth, self.epsAF)
+            df[f'keep{base}'] = (depth > 0) & (pvals < self.alpha)
 
         allele_cluster = self._aggregate_by_position(df)
         df = df.merge(allele_cluster, on=['chrom', 'pos'])
-        df[['qA_final', 'qT_final', 'qC_final', 'qG_final']] = df.apply(
-            self._quality_choose, axis=1, result_type='expand'
+
+        for base in self.BASES:
+            df[f'q{base}'] = df[f'q{base}'].where(df[f'tot{base}'], "NA")
+            df[f'{base}_count'] = df[f'{base}_count'].where(df[f'tot{base}'], 0)
+
+        df['consensus_read_count'] = (
+            df[['A_count', 'T_count', 'C_count', 'G_count']]
+            .astype(str)
+            .agg(','.join, axis=1)
         )
+        df['alt'] = df.apply(self._check_alt, axis=1)
 
         df = df[[
             'chrom', 'pos', 'strand', 'ref', 'alt', 'cluster',
-            'spot_number', 'consensus_read_count',
-            'qA_final', 'qT_final', 'qC_final', 'qG_final'
+            'spot_number', 'consensus_read_count', 'qA', 'qT', 'qC', 'qG'
         ]]
-
-        df = df.rename(columns={
-            'qA_final': 'qA',
-            'qT_final': 'qT',
-            'qC_final': 'qC',
-            'qG_final': 'qG'
-        })
-
-        df['consensus_read_count'] = df.apply(self._count_umi, axis=1, result_type='expand')
-        df['alt'] = df.apply(self._check_alt, axis=1)
         return df
 
     # ----------------------------
@@ -325,7 +339,7 @@ class UMICombiner_from_cluster:
         return df
 
     def _aggregate(self, df):
-        return df.groupby(['chrom', 'pos', 'strand', 'ref']).agg({
+        return df.groupby(['chrom', 'pos', 'strand', 'ref'], sort=False).agg({
             'alt': combine_alt,
             'spot_number': 'sum',
             'consensus_read_count': combine_UMI_count,
