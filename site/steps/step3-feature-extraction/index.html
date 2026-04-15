@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/steps/step3-feature-extraction/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Step 3 - Feature extraction - SpaceTracer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Step 3 - Feature extraction";
+        var mkdocs_page_input_path = "steps/step3-feature-extraction.md";
+        var mkdocs_page_url = "/SpaceTracer/steps/step3-feature-extraction/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Step-by-step guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step0-preprocessing/">Step 0 - Data pre-processing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step1-quality-control/">Step 1 - Quality control</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step2-genotyping/">Step 2 - Genotyping</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Step 3 - Feature extraction</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#how-to-run-template">How to run (template)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-outputs">Example outputs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#demo-command">Demo command</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step4-mutation-prediction/">Step 4 - Mutation prediction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step5-remove-recurrent-artifacts/">Step 5 - Remove recurrent artifacts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step6-phylogeny/">Step 6 - Phylogeny</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Step Reference</li>
+      <li class="breadcrumb-item active">Step 3 - Feature extraction</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/master/docs/steps/step3-feature-extraction.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="step-3-feature-extraction">Step 3: Feature extraction<a class="headerlink" href="#step-3-feature-extraction" title="Permanent link">&para;</a></h1>
+<p>Script: <code>3_run_get_features.py</code></p>
+<p><strong>What it does:</strong> extract spatial-, read-, and site-level features for each candidate site.</p>
+<h2 id="how-to-run-template">How to run (template)<a class="headerlink" href="#how-to-run-template" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>3_run_get_features.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--fasta<span class="w"> </span>&lt;FASTAFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--raw_bam<span class="w"> </span>&lt;RAWBAMFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--filter_bam<span class="w"> </span>&lt;FILTERBAMFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gender<span class="w"> </span>&lt;GENDER&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outdir<span class="w"> </span>&lt;OUTPUTDIRECTORY&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outprefix<span class="w"> </span>&lt;OUTPREFIX&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--thread<span class="w"> </span>&lt;NUM_THREADS&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--germline<span class="w"> </span>&lt;GERMLINEFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ind_genotype<span class="w"> </span>&lt;INDGENOFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spot_genotype<span class="w"> </span>&lt;SPOTGENOFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--barcodes<span class="w"> </span>&lt;BARCODESFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--species<span class="w"> </span>&lt;SPECIES&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--readLen<span class="w"> </span>&lt;READLENGTH&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--prior<span class="w"> </span>&lt;PRIORFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--h5ad<span class="w"> </span>&lt;H5ADFILE&gt;<span class="w">  </span><span class="se">\</span>
+<span class="w">  </span>--spaceranger_result_dir<span class="w"> </span>&lt;SPACERANGERDIRECTORY&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ind_count_file<span class="w"> </span>&lt;INDCOUNTFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--mappbablity_file<span class="w"> </span>&lt;MAPPABILITYFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gff3_file<span class="w"> </span>&lt;GFF3FILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--vaf_cluster_file<span class="w"> </span>&lt;CLUSTERVAFFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtexGene<span class="w"> </span>&lt;GTEXTFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--artifact_signature<span class="w"> </span>&lt;ERRORSIGFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reference_error_profile<span class="w"> </span>&lt;LYSISSIGFILE&gt;
+</code></pre></div>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--fasta</code></td>
+<td>Reference FASTA</td>
+</tr>
+<tr>
+<td><code>--raw_bam</code></td>
+<td>Unfiltered BAM</td>
+</tr>
+<tr>
+<td><code>--filter_bam</code></td>
+<td>Filtered BAM</td>
+</tr>
+<tr>
+<td><code>--gender</code></td>
+<td><code>F</code>, <code>M</code>, <code>female</code>, or <code>male</code></td>
+</tr>
+<tr>
+<td><code>--outdir</code></td>
+<td>Output directory</td>
+</tr>
+<tr>
+<td><code>--outprefix</code></td>
+<td>Optional (default <code>sample</code>)</td>
+</tr>
+<tr>
+<td><code>--thread</code></td>
+<td>Optional (default 2)</td>
+</tr>
+<tr>
+<td><code>--germline</code></td>
+<td>Germline file</td>
+</tr>
+<tr>
+<td><code>--ind_genotype</code></td>
+<td>Individual genotype</td>
+</tr>
+<tr>
+<td><code>--spot_genotype</code></td>
+<td>Spot genotype</td>
+</tr>
+<tr>
+<td><code>--barcodes</code></td>
+<td>Spatial positions</td>
+</tr>
+<tr>
+<td><code>--species</code></td>
+<td>Optional (default <code>human</code>)</td>
+</tr>
+<tr>
+<td><code>--readLen</code></td>
+<td>Optional (default 150)</td>
+</tr>
+<tr>
+<td><code>--prior</code></td>
+<td>Optional. Population AF/prior</td>
+</tr>
+<tr>
+<td><code>--h5ad</code></td>
+<td>Optional. AnnData <code>h5ad</code></td>
+</tr>
+<tr>
+<td><code>--spaceranger_result_dir</code></td>
+<td>Optional. Space Ranger <code>outs</code> parent</td>
+</tr>
+<tr>
+<td><code>--ind_count_file</code></td>
+<td>Optional. Individual allele counts</td>
+</tr>
+<tr>
+<td><code>--mappbablity_file</code></td>
+<td>Optional. Mappability</td>
+</tr>
+<tr>
+<td><code>--gff3_file</code></td>
+<td>Optional. GFF3 annotation</td>
+</tr>
+<tr>
+<td><code>--vaf_cluster_file</code></td>
+<td>Optional. Per-cluster VAF</td>
+</tr>
+<tr>
+<td><code>--gtexGene</code></td>
+<td>Optional. GTEx expression table</td>
+</tr>
+<tr>
+<td><code>--artifact_signature</code></td>
+<td>Optional. Sample artifact signature</td>
+</tr>
+<tr>
+<td><code>--reference_error_profile</code></td>
+<td>Optional. Reference lysis error profile</td>
+</tr>
+</tbody>
+</table>
+<h2 id="example-outputs">Example outputs<a class="headerlink" href="#example-outputs" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>demo/output/features_dir/demo.spatial_feature.txt</code></li>
+<li><code>demo/output/features_dir/demo.phase_beforeUMIcombination.txt</code></li>
+<li><code>demo/output/features_dir/demo.phase_afterUMIcombination.txt</code></li>
+<li><code>demo/output/features_dir/demo.features.txt</code></li>
+<li><code>demo/output/features_dir/demo.features.add_hFDR.txt</code></li>
+</ul>
+<h2 id="demo-command">Demo command<a class="headerlink" href="#demo-command" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>3_run_get_features.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--fasta<span class="w"> </span>genome.fa<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--raw_bam<span class="w"> </span>demo_output/demo/bam_filter/IN.bam<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--filter_bam<span class="w"> </span>demo_output/demo/bam_filter/IN_filter.bam<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gender<span class="w"> </span>male<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outdir<span class="w"> </span>demo_output/demo/features_dir<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outprefix<span class="w"> </span>demo<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--thread<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--germline<span class="w"> </span>demo_output/demo/geno_files/demo.germ_genotype.out<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ind_genotype<span class="w"> </span>demo_output/demo/geno_files/demo.ind_genotype_filter.out<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--spot_genotype<span class="w"> </span>demo_output/demo/geno_files/demo.spot_genotype.out<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--readLen<span class="w"> </span><span class="m">120</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--prior<span class="w"> </span>demo_input/demo.prior.out<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--h5ad<span class="w"> </span>demo_input/demo_results.h5ad<span class="w">  </span><span class="se">\</span>
+<span class="w">  </span>--spaceranger_result_dir<span class="w"> </span>demo_input/Spaceranger_result/outs/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ind_count_file<span class="w"> </span>demo_output/demo/counts_files/demo.ind_filter.count.out<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--mappbablity_file<span class="w"> </span>Resources/demo.k24.umap.bedgraph<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gff3_file<span class="w"> </span>Resources/demo.gencode.v44.annotation.exon.sort.gff3<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--vaf_cluster_file<span class="w"> </span>demo_output/demo/geno_files/demo.cluster_vaf.out<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtexGene<span class="w"> </span>Resources/demo.gtexGene.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--artifact_signature<span class="w"> </span>demo_inputs/lysis_errors.Sigprofile.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reference_error_profile<span class="w"> </span>Resources/lysis_Signatures_split3.Sigprofile<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--barcodes<span class="w"> </span>demo_input/Spaceranger_result/outs/spatial/tissue_positions.csv<span class="w"> </span><span class="se">\</span>
+</code></pre></div>
+<p>This step may take about 42 seconds on the demo data.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../step2-genotyping/" class="btn btn-neutral float-left" title="Step 2 - Genotyping"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../step4-mutation-prediction/" class="btn btn-neutral float-right" title="Step 4 - Mutation prediction">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../step2-genotyping/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../step4-mutation-prediction/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../javascripts/copy-code.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

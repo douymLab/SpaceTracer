@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/steps/overview/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Step-by-step guide - SpaceTracer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Step-by-step guide";
+        var mkdocs_page_input_path = "steps/overview.md";
+        var mkdocs_page_url = "/SpaceTracer/steps/overview/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Step-by-step guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#main-algorithm-logic">Main algorithm logic</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#full-workflow-steps">Full workflow steps</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#how-to-run">How to run</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#recommended-one-command-workflow-snakemake">Recommended: one-command workflow (Snakemake)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#advanced-script-by-script-workflow">Advanced: script-by-script workflow</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#important-outputs-by-stage">Important outputs by stage</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step0-preprocessing/">Step 0 - Data pre-processing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step1-quality-control/">Step 1 - Quality control</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step2-genotyping/">Step 2 - Genotyping</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step3-feature-extraction/">Step 3 - Feature extraction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step4-mutation-prediction/">Step 4 - Mutation prediction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step5-remove-recurrent-artifacts/">Step 5 - Remove recurrent artifacts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step6-phylogeny/">Step 6 - Phylogeny</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Step Reference</li>
+      <li class="breadcrumb-item active">Step-by-step guide</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/master/docs/steps/overview.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="step-by-step-guide">Step-by-step guide<a class="headerlink" href="#step-by-step-guide" title="Permanent link">&para;</a></h1>
+<p>This page combines the algorithm-level view and step-level execution map, so you can understand both <strong>why</strong> and <strong>how</strong> the full workflow runs.</p>
+<h2 id="main-algorithm-logic">Main algorithm logic<a class="headerlink" href="#main-algorithm-logic" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Candidate generation</strong><br />
+   Generate candidate variant sites from mpileup and basic depth/VAF filters.</li>
+<li><strong>Allele counting and quality control</strong><br />
+   Build spot, cluster, and individual-level count tables after quality checks.</li>
+<li><strong>Bayesian/statistical genotyping</strong><br />
+   Infer genotypes using allele counts, prior frequencies, and confidence thresholds.</li>
+<li><strong>Feature extraction</strong><br />
+   Extract spatial, read-level, mappability, and transcriptomic features.</li>
+<li><strong>Mutation prediction</strong><br />
+   Use random-forest models to classify true somatic mutations.</li>
+<li><strong>Artifact removal</strong><br />
+   Remove recurrent artifacts using dbSNP, editing databases, imprinted regions, and PON resources.</li>
+</ol>
+<h2 id="full-workflow-steps">Full workflow steps<a class="headerlink" href="#full-workflow-steps" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Main script</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Step0</td>
+<td><code>0_other_func.py</code>, <code>others/get_umiCount_cellNum.py</code></td>
+<td>Data preparation: BAM filtering, mpileup, prior generation, cluster/cell-number utilities.</td>
+</tr>
+<tr>
+<td>Step1</td>
+<td><code>1_run_data_process.py</code></td>
+<td>Allele counting with quality/background filtering.</td>
+</tr>
+<tr>
+<td>Step2</td>
+<td><code>2_run_genotyper.py</code></td>
+<td>Spot/cluster/individual-level genotype inference.</td>
+</tr>
+<tr>
+<td>Step3</td>
+<td><code>3_run_get_features.py</code></td>
+<td>Multi-source feature extraction (spatial, read, mappability, RNA).</td>
+</tr>
+<tr>
+<td>Step4</td>
+<td><code>4_run_model_predict.py</code></td>
+<td>Random-forest based mutation prediction.</td>
+</tr>
+<tr>
+<td>Step5</td>
+<td><code>5_remove_recurrent_mutations.sh</code></td>
+<td>Remove recurrent artifacts using public/PoN resources.</td>
+</tr>
+<tr>
+<td>Step6</td>
+<td>external <code>PhyloSOLID</code></td>
+<td>Optional phylogeny reconstruction from called mutations.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="how-to-run">How to run<a class="headerlink" href="#how-to-run" title="Permanent link">&para;</a></h2>
+<h3 id="recommended-one-command-workflow-snakemake">Recommended: one-command workflow (Snakemake)<a class="headerlink" href="#recommended-one-command-workflow-snakemake" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>snakemake<span class="w"> </span>--configfile<span class="w"> </span>config_example.txt<span class="w"> </span>-s<span class="w"> </span>run_snakemake_for_conda
+</code></pre></div>
+<h3 id="advanced-script-by-script-workflow">Advanced: script-by-script workflow<a class="headerlink" href="#advanced-script-by-script-workflow" title="Permanent link">&para;</a></h3>
+<p>Use the per-step pages directly:</p>
+<ul>
+<li><a href="../step0-preprocessing/">Step 0: Data pre-processing</a></li>
+<li><a href="../step1-quality-control/">Step 1: Quality control</a></li>
+<li><a href="../step2-genotyping/">Step 2: Genotyping</a></li>
+<li><a href="../step3-feature-extraction/">Step 3: Feature extraction</a></li>
+<li><a href="../step4-mutation-prediction/">Step 4: Mutation prediction</a></li>
+<li><a href="../step5-remove-recurrent-artifacts/">Step 5: Remove recurrent artifacts</a></li>
+<li><a href="../step6-phylogeny/">Step 6: Phylogeny (optional)</a></li>
+</ul>
+<h2 id="important-outputs-by-stage">Important outputs by stage<a class="headerlink" href="#important-outputs-by-stage" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Step1: <code>*.spot_count.out</code>, <code>*.cluster.count.out</code>, <code>*.ind_filter.count.out</code></li>
+<li>Step2: <code>*.ind_genotype_filter.out</code>, <code>*.spot_genotype.out</code>, <code>*.cluster_vaf.out</code></li>
+<li>Step3: <code>*.features.add_hFDR.txt</code></li>
+<li>Step4: <code>predict/results/*pred_truesites*.txt</code></li>
+<li>Step5: <code>$model/pred.FINAL.txt</code></li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../outputs/" class="btn btn-neutral float-left" title="Outputs"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../step0-preprocessing/" class="btn btn-neutral float-right" title="Step 0 - Data pre-processing">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../../outputs/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../step0-preprocessing/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../javascripts/copy-code.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

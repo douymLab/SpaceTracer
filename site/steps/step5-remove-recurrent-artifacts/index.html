@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/steps/step5-remove-recurrent-artifacts/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Step 5 - Remove recurrent artifacts - SpaceTracer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Step 5 - Remove recurrent artifacts";
+        var mkdocs_page_input_path = "steps/step5-remove-recurrent-artifacts.md";
+        var mkdocs_page_url = "/SpaceTracer/steps/step5-remove-recurrent-artifacts/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Step-by-step guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step0-preprocessing/">Step 0 - Data pre-processing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step1-quality-control/">Step 1 - Quality control</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step2-genotyping/">Step 2 - Genotyping</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step3-feature-extraction/">Step 3 - Feature extraction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step4-mutation-prediction/">Step 4 - Mutation prediction</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Step 5 - Remove recurrent artifacts</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#how-to-run-template">How to run (template)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-output">Example output</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#demo-command">Demo command</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step6-phylogeny/">Step 6 - Phylogeny</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Step Reference</li>
+      <li class="breadcrumb-item active">Step 5 - Remove recurrent artifacts</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/master/docs/steps/step5-remove-recurrent-artifacts.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="step-5-remove-recurrent-artifacts">Step 5: Remove recurrent artifacts<a class="headerlink" href="#step-5-remove-recurrent-artifacts" title="Permanent link">&para;</a></h1>
+<p>Script: <code>5_remove_recurrent_mutations.sh</code></p>
+<p><strong>What it does:</strong> filter predicted sites using public resources and Panel of Normals (PON).<br />
+Resource bundle: <a href="https://figshare.com/s/c7836f53c4eafb556ee1">Figshare</a></p>
+<h2 id="how-to-run-template">How to run (template)<a class="headerlink" href="#how-to-run-template" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>bash<span class="w"> </span>5_remove_recurrent_mutations.sh<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--src_path<span class="w"> </span>&lt;SRC_PATH&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pred_sites<span class="w"> </span>&lt;PRED_SITES&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--feature_path<span class="w"> </span>&lt;FEATURE_PATH&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outpath<span class="w"> </span>&lt;OUTPUT_PATH&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--germ_path<span class="w"> </span>&lt;GERM_PATH&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--genome_fa<span class="w"> </span>&lt;GENOME_FA&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--rna_editing_path<span class="w"> </span>&lt;RNA_EDITING_PATH&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtexGene<span class="w"> </span>&lt;GTEX_GENE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dbSNP<span class="w"> </span>&lt;DB_SNP&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--imprinted_genes<span class="w"> </span>&lt;IMPRINTED_GENES&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--PON_file<span class="w"> </span>&lt;PON_FILE&gt;
+</code></pre></div>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--src_path</code></td>
+<td>Working/source path</td>
+</tr>
+<tr>
+<td><code>--pred_sites</code></td>
+<td>Predicted mutation sites</td>
+</tr>
+<tr>
+<td><code>--feature_path</code></td>
+<td>Feature file used in classification</td>
+</tr>
+<tr>
+<td><code>--outpath</code></td>
+<td>Output directory</td>
+</tr>
+<tr>
+<td><code>--germ_path</code></td>
+<td>Germline information file</td>
+</tr>
+<tr>
+<td><code>--genome_fa</code></td>
+<td>Reference FASTA</td>
+</tr>
+<tr>
+<td><code>--rna_editing_path</code></td>
+<td>RNA editing data</td>
+</tr>
+<tr>
+<td><code>--gtexGene</code></td>
+<td>GTEx gene expression file</td>
+</tr>
+<tr>
+<td><code>--dbSNP</code></td>
+<td>dbSNP VCF</td>
+</tr>
+<tr>
+<td><code>--imprinted_genes</code></td>
+<td>Imprinted regions BED</td>
+</tr>
+<tr>
+<td><code>--PON_file</code></td>
+<td>Panel of Normals file</td>
+</tr>
+</tbody>
+</table>
+<h2 id="example-output">Example output<a class="headerlink" href="#example-output" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>demo/output/$model/pred.FINAL.txt</code></li>
+</ul>
+<h2 id="demo-command">Demo command<a class="headerlink" href="#demo-command" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>bash<span class="w"> </span>5_remove_recurrent_mutations.sh<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--src_path<span class="w"> </span><span class="si">${</span><span class="nv">SpaceTracer_path</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pred_sites<span class="w"> </span>demo/output/predict/results/demo_total_pred_truesites.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--feature_path<span class="w"> </span>demo/output/features_dir/demo.features.add_hFDR.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outpath<span class="w"> </span>demo/output/<span class="nv">$model</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--germ_path<span class="w"> </span><span class="nv">$germ_path</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--genome_fa<span class="w"> </span><span class="nv">$genome_fa</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--rna_editing_path<span class="w"> </span><span class="nv">$RNA_editing_path</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gtexGene<span class="w"> </span><span class="nv">$gtexGene</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dbSNP<span class="w"> </span><span class="nv">$dbSNP</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--imprinted_genes<span class="w"> </span><span class="nv">$imprinted_genes</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--PON_file<span class="w"> </span><span class="nv">$PON_file</span>
+</code></pre></div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../step4-mutation-prediction/" class="btn btn-neutral float-left" title="Step 4 - Mutation prediction"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../step6-phylogeny/" class="btn btn-neutral float-right" title="Step 6 - Phylogeny">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../step4-mutation-prediction/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../step6-phylogeny/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../javascripts/copy-code.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

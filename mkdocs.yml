@@ -1,0 +1,44 @@
+site_name: SpaceTracer
+site_url: https://douymLab.github.io/SpaceTracer/
+repo_url: https://github.com/douymLab/SpaceTracer
+repo_name: SpaceTracer
+
+theme:
+  name: readthedocs
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Resources: resources.md
+  - Configuration: configuration.md
+  - Quick Start: quickstart.md
+  - Outputs: outputs.md
+  - Step Reference:
+    - Step-by-step guide: steps/overview.md
+    - Step 0 - Data pre-processing: steps/step0-preprocessing.md
+    - Step 1 - Quality control: steps/step1-quality-control.md
+    - Step 2 - Genotyping: steps/step2-genotyping.md
+    - Step 3 - Feature extraction: steps/step3-feature-extraction.md
+    - Step 4 - Mutation prediction: steps/step4-mutation-prediction.md
+    - Step 5 - Remove recurrent artifacts: steps/step5-remove-recurrent-artifacts.md
+    - Step 6 - Phylogeny: steps/step6-phylogeny.md
+    
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/copy-code.js
+
+strict: true

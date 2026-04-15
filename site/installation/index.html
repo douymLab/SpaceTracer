@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/installation/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Installation - SpaceTracer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Installation";
+        var mkdocs_page_input_path = "installation.md";
+        var mkdocs_page_url = "/SpaceTracer/installation/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#clone-the-repository">Clone the repository</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#prepare-dependencies">Prepare dependencies</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#option-1-docker-image">Option 1: Docker image</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#option-2-conda-environment">Option 2: Conda environment</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#additional-python-packages">Additional Python packages</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/overview/">Step-by-step guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step0-preprocessing/">Step 0 - Data pre-processing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step1-quality-control/">Step 1 - Quality control</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step2-genotyping/">Step 2 - Genotyping</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step3-feature-extraction/">Step 3 - Feature extraction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step4-mutation-prediction/">Step 4 - Mutation prediction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step5-remove-recurrent-artifacts/">Step 5 - Remove recurrent artifacts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step6-phylogeny/">Step 6 - Phylogeny</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Installation</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/master/docs/installation.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<p>SpaceTracer requires <strong>Python 3.9.0</strong>, <code>samtools</code>, <code>bedtools</code>, and <code>vcftools</code>.</p>
+<h3 id="clone-the-repository">Clone the repository<a class="headerlink" href="#clone-the-repository" title="Permanent link">&para;</a></h3>
+<p>First, clone the SpaceTracer repository from GitHub:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/douymLab/SpaceTracer.git
+<span class="nb">cd</span><span class="w"> </span>SpaceTracer
+</code></pre></div>
+<h3 id="prepare-dependencies">Prepare dependencies<a class="headerlink" href="#prepare-dependencies" title="Permanent link">&para;</a></h3>
+<p>Before running SpaceTracer, make sure all required dependencies are available in your environment. We provide two recommended ways to prepare the environment.</p>
+<h4 id="option-1-docker-image">Option 1: Docker image<a class="headerlink" href="#option-1-docker-image" title="Permanent link">&para;</a></h4>
+<p>We provide a Docker image, <code>spacetracer</code>, with all required dependencies preinstalled. The image is available on <a href="https://hub.docker.com/r/xiayh17/spacetracer">Docker Hub</a>:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>pull<span class="w"> </span>xiayh17/spacetracer
+docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/mnt/workflow<span class="w"> </span>xiayh17/spacetracer<span class="w"> </span>bash
+</code></pre></div>
+<p>You can also download the container image file <code>spacetracer_latest.sif</code> from <a href="https://figshare.com/s/c7836f53c4eafb556ee1">Figshare</a>.</p>
+<p>This command runs the Docker container in interactive mode (<code>-it</code>), mounts the current working directory (<code>$(pwd)</code>) to <code>/mnt/workflow</code> inside the container, and starts a Bash shell.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Docker must be installed on your machine before using this option.
+If Docker is not installed, please follow the <a href="https://docs.docker.com/get-started/get-docker/">official Docker installation guide</a>.</p>
+</div>
+<h4 id="option-2-conda-environment">Option 2: Conda environment<a class="headerlink" href="#option-2-conda-environment" title="Permanent link">&para;</a></h4>
+<p>Alternatively, you can create your own Conda environment using the provided <code>environment.yaml</code> file:</p>
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yaml
+conda<span class="w"> </span>activate<span class="w"> </span>SpaceTracer
+</code></pre></div>
+<p>This step may take about 5 minutes on a Linux system.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Conda must be installed before running these commands.
+Please refer to the <a href="https://docs.conda.io/en/latest/">official Conda documentation</a>.</p>
+</div>
+<h4 id="additional-python-packages">Additional Python packages<a class="headerlink" href="#additional-python-packages" title="Permanent link">&para;</a></h4>
+<p>If needed, install extras from:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements_pip.txt
+</code></pre></div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../resources/" class="btn btn-neutral float-right" title="Resources">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../resources/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/copy-code.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

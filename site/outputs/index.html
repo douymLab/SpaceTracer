@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/outputs/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Outputs - SpaceTracer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Outputs";
+        var mkdocs_page_input_path = "outputs.md";
+        var mkdocs_page_url = "/SpaceTracer/outputs/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Outputs</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#key-intermediate-outputs">Key intermediate outputs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#final-output">Final output</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#visualization-and-validation">Visualization and validation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-lineage-reconstruction-with-phylosolid">1) Lineage reconstruction with PhyloSOLID</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-spatial-probability-scatter-plot">2) Spatial probability scatter plot</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-igv-validation-views">3) IGV validation views</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#recommended-checks">Recommended checks</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/overview/">Step-by-step guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step0-preprocessing/">Step 0 - Data pre-processing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step1-quality-control/">Step 1 - Quality control</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step2-genotyping/">Step 2 - Genotyping</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step3-feature-extraction/">Step 3 - Feature extraction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step4-mutation-prediction/">Step 4 - Mutation prediction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step5-remove-recurrent-artifacts/">Step 5 - Remove recurrent artifacts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/step6-phylogeny/">Step 6 - Phylogeny</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Outputs</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/master/docs/outputs.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h1>
+<p>This page summarizes important files generated by the SpaceTracer workflow.</p>
+<h2 id="key-intermediate-outputs">Key intermediate outputs<a class="headerlink" href="#key-intermediate-outputs" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p><code>bam_filter/IN_filter.bam</code><br />
+  Filtered BAM used for downstream analysis.</p>
+</li>
+<li>
+<p><code>counts_files/*.count.out</code><br />
+  Spot/cluster/individual allele count tables.</p>
+</li>
+<li>
+<p><code>geno_files/*.genotype.out</code><br />
+  Germline and somatic genotype inference outputs.</p>
+</li>
+<li>
+<p><code>features_dir/*.features*.txt</code><br />
+  Extracted and merged feature matrices for model prediction.</p>
+</li>
+<li>
+<p><code>predict/results/*pred_truesites*.txt</code><br />
+  Prediction results before final recurrent-artifact cleanup.</p>
+</li>
+</ul>
+<h2 id="final-output">Final output<a class="headerlink" href="#final-output" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>$model/pred.FINAL.txt</code><br />
+  Final high-confidence somatic mutation list.</li>
+</ul>
+<p>This file is a site list with one site per line in a <code>chr_pos_ref_alt</code> style format, for example:</p>
+<div class="highlight"><pre><span></span><code>chr10_73248973_T_C
+chr10_73249083_T_C
+chr10_88923238_T_C
+chr11_463753_A_G
+chr11_61299694_C_A
+chr11_64317070_G_A
+chr11_75402440_T_A
+chr11_78068592_T_C
+chr11_8919819_A_G
+chr12_113391324_A_G
+</code></pre></div>
+<p>You can use this site list directly for downstream analyses, including phylogeny reconstruction.</p>
+<h2 id="visualization-and-validation">Visualization and validation<a class="headerlink" href="#visualization-and-validation" title="Permanent link">&para;</a></h2>
+<h3 id="1-lineage-reconstruction-with-phylosolid">1) Lineage reconstruction with PhyloSOLID<a class="headerlink" href="#1-lineage-reconstruction-with-phylosolid" title="Permanent link">&para;</a></h3>
+<p>After obtaining final predicted sites, you can run PhyloSOLID to infer lineage relationships.</p>
+<p><img alt="Lineage tree example" src="../figures/lineage.png" /></p>
+<h3 id="2-spatial-probability-scatter-plot">2) Spatial probability scatter plot<a class="headerlink" href="#2-spatial-probability-scatter-plot" title="Permanent link">&para;</a></h3>
+<p>SpaceTracer also supports spatial visualization of mutation probability and mutant/non-mutant spot patterns.</p>
+<p><img alt="Mutation probability scatter plot" src="../figures/prob_scatter.png" /></p>
+<h3 id="3-igv-validation-views">3) IGV validation views<a class="headerlink" href="#3-igv-validation-views" title="Permanent link">&para;</a></h3>
+<p>To manually validate candidate calls, IGV snapshots can be used to compare mutant-like and non-mutant/reference-homozygous spots.</p>
+<p><strong>Mutant spots</strong></p>
+<p><img alt="IGV mutant example" src="../figures/igv_mutant.png" /></p>
+<p><strong>Non-mutant/reference-homozygous spots</strong></p>
+<p><img alt="IGV reference-homozygous example" src="../figures/igv_refhom.png" /></p>
+<h2 id="recommended-checks">Recommended checks<a class="headerlink" href="#recommended-checks" title="Permanent link">&para;</a></h2>
+<ul>
+<li>verify all expected step folders are present</li>
+<li>check non-empty key output files</li>
+<li>compare candidate-site counts between genotyping and prediction stages</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../quickstart/" class="btn btn-neutral float-left" title="Quick Start"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../steps/overview/" class="btn btn-neutral float-right" title="Step-by-step guide">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../quickstart/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../steps/overview/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/copy-code.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

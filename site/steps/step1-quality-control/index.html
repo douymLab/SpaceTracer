@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/steps/step1-quality-control/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Step 1 - Quality control - SpaceTracer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Step 1 - Quality control";
+        var mkdocs_page_input_path = "steps/step1-quality-control.md";
+        var mkdocs_page_url = "/SpaceTracer/steps/step1-quality-control/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Step-by-step guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step0-preprocessing/">Step 0 - Data pre-processing</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Step 1 - Quality control</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#how-to-run-template">How to run (template)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-outputs">Example outputs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#demo-command">Demo command</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step2-genotyping/">Step 2 - Genotyping</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step3-feature-extraction/">Step 3 - Feature extraction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step4-mutation-prediction/">Step 4 - Mutation prediction</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step5-remove-recurrent-artifacts/">Step 5 - Remove recurrent artifacts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../step6-phylogeny/">Step 6 - Phylogeny</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Step Reference</li>
+      <li class="breadcrumb-item active">Step 1 - Quality control</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/master/docs/steps/step1-quality-control.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="step-1-quality-control">Step 1: Quality control<a class="headerlink" href="#step-1-quality-control" title="Permanent link">&para;</a></h1>
+<p>Script: <code>1_run_data_process.py</code></p>
+<p><strong>What it does:</strong> for each candidate site, count alleles per spot/cluster/individual after quality, background-error, and allele-frequency checks.</p>
+<h2 id="how-to-run-template">How to run (template)<a class="headerlink" href="#how-to-run-template" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>1_run_data_process.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--posfile<span class="w"> </span>&lt;POSFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--bam<span class="w"> </span>&lt;BAMFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outdir<span class="w"> </span>&lt;OUTPUTDIRECTORY&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outprefix<span class="w"> </span>&lt;OUTPREFIX&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--barcodes<span class="w"> </span>&lt;BARCODESFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cellcluster<span class="w"> </span>&lt;CELLCLUSTERFILE&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--thread<span class="w"> </span>&lt;NUM_THREADS&gt;
+</code></pre></div>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--posfile</code></td>
+<td>Position file</td>
+</tr>
+<tr>
+<td><code>--bam</code></td>
+<td>BAM file</td>
+</tr>
+<tr>
+<td><code>--outdir</code></td>
+<td>Output directory</td>
+</tr>
+<tr>
+<td><code>--outprefix</code></td>
+<td>Optional (default <code>sample</code>). Output prefix</td>
+</tr>
+<tr>
+<td><code>--barcodes</code></td>
+<td>Spots spatial location file</td>
+</tr>
+<tr>
+<td><code>--cellcluster</code></td>
+<td>Spots cluster file</td>
+</tr>
+<tr>
+<td><code>--cellpos</code></td>
+<td>Optional (required for Stereo-seq). Barcode/name map</td>
+</tr>
+<tr>
+<td><code>--platform</code></td>
+<td>Optional (<code>visium</code>, <code>stereo</code>, <code>ST</code>; default <code>visium</code>)</td>
+</tr>
+<tr>
+<td><code>--thread</code></td>
+<td>Optional (default 2)</td>
+</tr>
+<tr>
+<td><code>--epsQ</code></td>
+<td>Optional (default 20). Consensus read quality threshold</td>
+</tr>
+<tr>
+<td><code>--alpha</code></td>
+<td>Optional (default 0.05). Confidence level</td>
+</tr>
+<tr>
+<td><code>--epsAF</code></td>
+<td>Optional (default 0.003). Background AF test threshold</td>
+</tr>
+</tbody>
+</table>
+<h2 id="example-outputs">Example outputs<a class="headerlink" href="#example-outputs" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>demo/output/count_files/demo.spot_count.out</code></li>
+<li><code>demo/output/count_files/demo.cluster_filter.count.out</code></li>
+<li><code>demo/output/count_files/demo.cluster.count.out</code></li>
+<li><code>demo/output/count_files/demo.ind_filter.count.out</code></li>
+</ul>
+<h2 id="demo-command">Demo command<a class="headerlink" href="#demo-command" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>1_run_data_process.py<span class="w">  </span><span class="se">\</span>
+<span class="w">  </span>--posfile<span class="w"> </span>demo_output/demo/mpileup.filter.result<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outprefix<span class="w"> </span>demo<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--bam<span class="w"> </span>demo_output/demo/bam_filter/IN_filter.bam<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--barcodes<span class="w">  </span>demo_input/Spaceranger_result/outs/spatial/tissue_positions.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--outdir<span class="w"> </span>demo_output/demo/counts_files<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--thread<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cellcluster<span class="w"> </span>demo_input/demo_cluster.txt
+</code></pre></div>
+<p>This step may take about 2 seconds on the demo data.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../step0-preprocessing/" class="btn btn-neutral float-left" title="Step 0 - Data pre-processing"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../step2-genotyping/" class="btn btn-neutral float-right" title="Step 2 - Genotyping">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../step0-preprocessing/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../step2-genotyping/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../javascripts/copy-code.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
