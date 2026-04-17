@@ -760,7 +760,6 @@ def handle_per_line_for_sf(barcode_dir,output_dir,in_name,spot_geno_file,barcode
     
     res=get_spatial_features(input_file,output_dir, sample_name, alpha, thr_r2, \
                         thr_prob, thr_likelihood, thr_vaf, plot_supp, fig_size, method, num_directions)
-
     if res[9] != "NA":
         out_line=list(mutation)+ [str(i) for i in res]
     else:

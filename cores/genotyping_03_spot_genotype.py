@@ -63,21 +63,24 @@ class SpotGenoCalculator:
             "l_germline", "l_mosaic", "max_spot_geno", "G_spot_max", "depth", "vaf", "p_mosaic"
         ])
 
-        mosaic_mask = count_geno_vaf_join.iloc[:, 14] == "mosaic"
-        mosaic_df = count_geno_vaf_join[mosaic_mask]
+        count_geno_vaf_join.to_csv(output_file+".tmp",index=False)
 
+        mosaic_mask = count_geno_vaf_join["genotype"].eq("mosaic")
+        mosaic_df = count_geno_vaf_join[mosaic_mask]
         data = mosaic_df.values
+
         if not isinstance(self.cell_num, int) and Path(self.cell_num).exists():
-            cell_nums = data[:, -1]
-            data = data[:, :-1]
+            cell_nums = mosaic_df.iloc[:, -1].to_numpy()
+            mosaic_df_no_cell = mosaic_df.iloc[:, :-1]
         else:
-            cell_nums = np.full(len(data), self.cell_num)
+            cell_nums = np.full(len(mosaic_df), self.cell_num)
+            mosaic_df_no_cell = mosaic_df
 
         with open(output_file, 'w') as f:
             f.write(out_colname + "\n")
-            for i in range(len(data)):
+            for i, (_, row) in enumerate(mosaic_df_no_cell.iterrows()):
                 spot_geno_info = spot_genotype(
-                    join_info=[str(x) for x in data[i]],
+                    join_info=row,   # 直接传 Series
                     cell_num=cell_nums[i],
                     epsQ=self.epsQ,
                     thr_dp=self.thr_dp,
@@ -85,8 +88,8 @@ class SpotGenoCalculator:
                 )
                 if spot_geno_info[10] != "NA":
                     f.write("\t".join(map(str, spot_geno_info)) + "\n")
-
-        df = load_spot_genotypes_data(output_file)
+                    
+        df = load_spot_genotypes_data(output_file,prefer_parquet=False)
         parquet_file = str(output_file).replace('.out', '.parquet')
         df.to_parquet(parquet_file, index=True, compression='snappy')
 
@@ -227,28 +230,62 @@ def spot_likelihood(ref_count, alt_count, qref_dict, qalt_dict, cluster_vaf, pop
     return l
 
 
+# def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
+#     qA = join_info[8]
+#     qT = join_info[9]
+#     qC = join_info[10]
+#     qG = join_info[11]
+#     cluster = join_info[12]
+#     germline = join_info[13]
+#     mutant = join_info[14]
+#     cluster_vaf = 0 if join_info[19] == "NA" else float(join_info[19])
+
+#     _, l_norm, spot_geno = spot_posterior(
+#         germline, mutant, cluster_vaf, qA, qT, qC, qG,
+#         cell_num=cell_num, epsQ=epsQ, thr_dp=thr_dp, pop_vaf=pop_vaf
+#     )
+
+#     output = join_info[0:3] + [germline, mutant, str(cluster)] + [join_info[5] , join_info[7]] + l_norm + [str(i) for i in spot_geno]
+#     return output
+
 def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
-    qA = join_info[7]
-    qT = join_info[8]
-    qC = join_info[9]
-    qG = join_info[10]
-    cluster = join_info[11]
-    germline = join_info[12]
-    mutant = join_info[13]
-    cluster_vaf = 0 if join_info[18] == "NA" else float(join_info[18])
+    """
+    must contain: chrom,pos,strand,barcode,consensus_read_count,qA,qT,qC,qG,cluster,germline,mutant,cluster_vaf
+    """
+    # 支持传入 pd.Series / dict
+    if hasattr(join_info, "to_dict"):
+        row = join_info.to_dict()
+    else:
+        row = dict(join_info)
+
+    qA = row.get("qA", "NA")
+    qT = row.get("qT", "NA")
+    qC = row.get("qC", "NA")
+    qG = row.get("qG", "NA")
+
+    cluster = row.get("cluster", "NA")
+    germline = row.get("germline", "NA")
+    mutant = row.get("mutant", "NA")
+
+    cluster_vaf_raw = row.get("cluster_vaf", "NA")
+    cluster_vaf = 0 if cluster_vaf_raw in ("NA", None, "") else float(cluster_vaf_raw)
 
     _, l_norm, spot_geno = spot_posterior(
         germline, mutant, cluster_vaf, qA, qT, qC, qG,
         cell_num=cell_num, epsQ=epsQ, thr_dp=thr_dp, pop_vaf=pop_vaf
     )
 
-    output = join_info[0:3] + [germline, mutant, str(cluster)] + join_info[5:7] + l_norm + [str(i) for i in spot_geno]
+    # 输出字段顺序保持你原来的定义：
+    # join_info[0:3] + [germline, mutant, cluster] + [barcode, consensus_read_count] + l_norm + spot_geno
+    output = [
+        str(row.get("chrom", "NA")),
+        str(row.get("pos", "NA")),
+        str(row.get("strand", "NA")),
+        str(germline),
+        str(mutant),
+        str(cluster),
+        str(row.get("barcode", "NA")),
+        str(row.get("consensus_read_count", "NA")),
+    ] + l_norm + [str(i) for i in spot_geno]
+
     return output
-
-
-def convert_tsv_to_parquet(tsv_file: str, output_parquet: str = None):
-    if output_parquet is None:
-        output_parquet = tsv_file.replace('.txt', '.parquet')
-    print(f"Converting {tsv_file} → {output_parquet}")
-    df = load_spot_genotypes_data(tsv_file, prefer_parquet=False)
-    df.to_parquet(output_parquet, index=True, compression='snappy')

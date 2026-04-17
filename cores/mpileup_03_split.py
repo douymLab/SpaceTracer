@@ -1,123 +1,114 @@
 #!/usr/bin/env python3
 """
-Split Mpileup Step - Split mpileup file when the file is so large 
+Split Mpileup Step - Split mpileup file when the file is so large
 (this will not work when you use the one-step "run" function, but when you run separately)
 """
 
-import os
 from pathlib import Path
-import sqlite3
 from typing import Dict
-import json
+import csv
 
-from collections import defaultdict
 from SpaceTracer.utils.logger import get_logger
-from SpaceTracer.utils.utils import check_dir
-model_name=__name__
+
+model_name = __name__
 logger = get_logger(model_name)
 
-class SplitMpileupStep():
+
+class SplitMpileupStep:
     """
-    split filtered_mpileup file
-    
+    Split filtered mpileup file.
+
     1. check filtered_mpileup file size
     2. if file length >= threshold, split file
-    3. split by chrom[chrM will be specific handle]
-    
+    3. split by chromosome; chrM handled with specific chunk size
+
     Parameters:
         input_file: the input mpileup file
         output_dir: the output dir
-        split_manifest: the manifest file recoding split information
+        manifest_path: the output TSV manifest file
         genome_details: the genome information
-        chrom_chunk_size: the chunk size for auto chromosome (default:5000)
-        chrM_chunk_size: the chunk size for mitochondrial (default:100)
+        config: pipeline config
     """
-    def __init__(self, input_file: str, output_dir: str, db_path:str,genome_details: Dict, config: dict):
-        self.input_file = input_file
-        self.output_dir =output_dir
-        self.db_path=db_path
-        self.genome_details=genome_details
-        self.config=config
 
+    def __init__(
+        self,
+        input_file: str,
+        output_dir: str,
+        manifest_path: str,
+        genome_details: Dict,
+        config: dict
+    ):
+        self.input_file = input_file
+        self.output_dir = output_dir
+        self.manifest_path = manifest_path
+        self.genome_details = genome_details
+        self.config = config
 
     def get_step_config(self) -> Dict:
-        return self.config.get('steps', {}).get('mpileup', {})
-    
+        return self.config.get("steps", {}).get("mpileup", {})
+
     def _run(self, chrom_chunk_size, chrM_chunk_size, read_len, max_cost):
-        """Split mpileup and write chunk index db directly."""
+        """
+        Split mpileup and write chunk manifest TSV directly.
+        """
         try:
-            split_finish = self._split_by_chromosome_and_chunk(
+            self._split_by_chromosome_and_chunk(
                 chrom_chunk_size=chrom_chunk_size,
                 chrM_chunk_size=chrM_chunk_size,
                 read_len=read_len,
                 max_cost=max_cost
             )
-
             return True
-
         except Exception:
             raise
-        
-    def _init_chunk_index_db(self, db_path: str):
-        if os.path.exists(db_path):
-            os.remove(db_path)
 
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
+    def _split_by_chromosome_and_chunk(
+        self,
+        chrom_chunk_size,
+        chrM_chunk_size,
+        read_len,
+        max_cost=10000
+    ):
+        """
+        Scan original mpileup once and write UTF-8 TSV manifest.
 
-        cur.execute("""
-        CREATE TABLE chunks (
-            chunk_id    TEXT PRIMARY KEY,
-            chrom       TEXT NOT NULL,
-            chrom_type  TEXT,
-            chunk_idx   INTEGER NOT NULL,
-            chunk_file  TEXT NOT NULL,
-            start_pos   INTEGER,
-            end_pos     INTEGER,
-            records     INTEGER,
-            span_bp     INTEGER,
-            max_depth   INTEGER,
-            mean_depth  REAL,
-            cost        REAL
-        )
-        """)
+        Chunking rules:
+          1) chromosome switch => finalize current chunk
+          2) next_count > chunk_size => finalize current chunk
+          3) next_cost > max_cost => finalize current chunk
 
-        cur.execute("""
-        CREATE TABLE chroms (
-            chrom          TEXT PRIMARY KEY,
-            chrom_type     TEXT,
-            total_records  INTEGER,
-            num_chunks     INTEGER,
-            chunk_size     INTEGER,
-            total_cost     REAL
-        )
-        """)
+        cost = depth_sum / read_len
+        """
 
-        cur.execute("CREATE INDEX idx_chunks_chrom ON chunks(chrom)")
-        cur.execute("CREATE INDEX idx_chunks_chrom_idx ON chunks(chrom, chunk_idx)")
-
-        conn.commit()
-        return conn
-
-    def _split_by_chromosome_and_chunk(self, chrom_chunk_size, chrM_chunk_size, read_len, max_cost=10000):
-        mpileup_file = self.input_file
+        mpileup_file = str(Path(self.input_file).resolve())
+        manifest_path = str(Path(self.manifest_path).resolve())
         genome_info = self.genome_details
-        db_path=self.db_path
 
-        split_dir = os.path.join(self.output_dir, "split_for_candidates")
-        check_dir(split_dir)
+        if not Path(mpileup_file).exists():
+            raise FileNotFoundError(f"Input mpileup file not found: {mpileup_file}")
 
-        conn = self._init_chunk_index_db(db_path)
-        cur = conn.cursor()
+        chrom_config = genome_info.get("chromosomes", {})
+        autosomes = set(chrom_config.get("autosomes", []))
+        sex_chromosomes = set(chrom_config.get("sex_chromosomes", []))
+        mitochondrial = set(chrom_config.get("mitochondrial", []))
+        contigs = set(chrom_config.get("contigs", []))
 
-        chrom_config = genome_info["chromosomes"]
-        autosomes = set(chrom_config["autosomes"])
-        sex_chromosomes = set(chrom_config["sex_chromosomes"])
-        mitochondrial = set(chrom_config["mitochondrial"])
-        contigs = set(chrom_config["contigs"])
-
-        handlers = {}
-        # split_files = []
+        manifest_fields = [
+            "chunk_id",
+            "chrom",
+            "chrom_type",
+            "chunk_idx",
+            "source_file",
+            "start_offset",
+            "end_offset",
+            "start_pos",
+            "end_pos",
+            "records",
+            "span_bp",
+            "max_depth",
+            "mean_depth",
+            "cost",
+        ]
 
         def infer_chrom_type_and_chunk_size(chrom: str):
             if chrom in mitochondrial:
@@ -129,194 +120,172 @@ class SplitMpileupStep():
             elif chrom in contigs:
                 return "contig", int(chrom_chunk_size)
             else:
-                logger.warning(f"Chromosome {chrom} not found in genome_info, fallback to unknown")
+                logger.warning(
+                    f"Chromosome {chrom} not found in genome_info, fallback to unknown"
+                )
                 return "unknown", int(chrom_chunk_size)
 
-        def get_handler(chrom: str):
-            if chrom not in handlers:
-                chrom_type, chunk_size = infer_chrom_type_and_chunk_size(chrom)
-                chunk_idx = 0
-                file_path = os.path.join(split_dir, f"{chrom}_chunk{chunk_idx:04d}.mpileup")
+        chrom_summaries = {}
 
-                handlers[chrom] = {
+        def ensure_chrom_summary(chrom: str):
+            if chrom not in chrom_summaries:
+                chrom_type, chunk_size = infer_chrom_type_and_chunk_size(chrom)
+                chrom_summaries[chrom] = {
                     "chrom": chrom,
                     "chrom_type": chrom_type,
                     "chunk_size": chunk_size,
-                    "chunk_idx": chunk_idx,
-                    "file_obj": open(file_path, "w"),
-                    "current_file": str(file_path),
-
-                    # current chunk runtime state
-                    "count": 0,
-                    "chunk_start_pos": None,
-                    "last_pos": None,
-                    "max_depth": 0,
-                    "depth_sum": 0,
-
-                    # chrom-level summary
                     "total_records": 0,
                     "num_chunks": 0,
                     "total_cost": 0.0,
                 }
+            return chrom_summaries[chrom]
 
-                # split_files.append(str(file_path))
+        def new_chunk_state(chrom: str, pos: int, offset: int, depth: int):
+            chrom_summary = ensure_chrom_summary(chrom)
+            chunk_idx = chrom_summary["num_chunks"]
+            return {
+                "chrom": chrom,
+                "chrom_type": chrom_summary["chrom_type"],
+                "chunk_size": chrom_summary["chunk_size"],
+                "chunk_idx": chunk_idx,
+                "start_offset": offset,
+                "start_pos": pos,
+                "last_pos": pos,
+                "count": 1,
+                "max_depth": depth,
+                "depth_sum": depth,
+            }
 
-            return handlers[chrom]
-
-        def reset_chunk_state(handler):
-            handler["count"] = 0
-            handler["chunk_start_pos"] = None
-            handler["last_pos"] = None
-            handler["max_depth"] = 0
-            handler["depth_sum"] = 0
-
-        def open_next_chunk_file(handler):
-            handler["chunk_idx"] += 1
-            file_path = os.path.join(
-                split_dir,
-                f"{handler['chrom']}_chunk{handler['chunk_idx']:04d}.mpileup"
-            )
-            handler["file_obj"] = open(file_path, "w")
-            handler["current_file"] = str(file_path)
-            # split_files.append(str(file_path))
-
-        def finalize_chunk(handler):
-            if handler["count"] == 0:
+        def finalize_chunk(writer, chunk_state, end_offset_exclusive: int):
+            if chunk_state is None or chunk_state["count"] == 0:
                 return
 
-            start_pos = handler["chunk_start_pos"]
-            end_pos = handler["last_pos"]
+            start_pos = chunk_state["start_pos"]
+            end_pos = chunk_state["last_pos"]
+            records = chunk_state["count"]
             span_bp = end_pos - start_pos + 1 if start_pos is not None and end_pos is not None else 0
-            mean_depth = handler["depth_sum"] / handler["count"] if handler["count"] > 0 else 0.0
-            cost = handler["max_depth"] * (span_bp / read_len) if read_len > 0 else 0.0
-            chunk_id = f"{handler['chrom']}_chunk{handler['chunk_idx']:04d}"
+            mean_depth = chunk_state["depth_sum"] / records if records > 0 else 0.0
+            cost = chunk_state["depth_sum"] / read_len if read_len > 0 else 0.0
+            chunk_id = f"{chunk_state['chrom']}_chunk{chunk_state['chunk_idx']:04d}"
 
-            cur.execute("""
-            INSERT INTO chunks (
-                chunk_id, chrom, chrom_type, chunk_idx, chunk_file,
-                start_pos, end_pos, records, span_bp, max_depth, mean_depth, cost
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                chunk_id,
-                handler["chrom"],
-                handler["chrom_type"],
-                handler["chunk_idx"],
-                handler["current_file"],
-                start_pos,
-                end_pos,
-                handler["count"],
-                span_bp,
-                handler["max_depth"],
-                mean_depth,
-                cost,
-            ))
+            row = {
+                "chunk_id": chunk_id,
+                "chrom": chunk_state["chrom"],
+                "chrom_type": chunk_state["chrom_type"],
+                "chunk_idx": int(chunk_state["chunk_idx"]),
+                "source_file": mpileup_file,
+                "start_offset": int(chunk_state["start_offset"]),
+                "end_offset": int(end_offset_exclusive),
+                "start_pos": int(start_pos),
+                "end_pos": int(end_pos),
+                "records": int(records),
+                "span_bp": int(span_bp),
+                "max_depth": int(chunk_state["max_depth"]),
+                "mean_depth": round(mean_depth, 6),
+                "cost": round(cost, 6),
+            }
+            writer.writerow(row)
 
-            handler["total_records"] += handler["count"]
-            handler["num_chunks"] += 1
-            handler["total_cost"] += cost
+            chrom_summary = ensure_chrom_summary(chunk_state["chrom"])
+            chrom_summary["total_records"] += records
+            chrom_summary["num_chunks"] += 1
+            chrom_summary["total_cost"] += cost
 
-            reset_chunk_state(handler)
+        current_chunk = None
+        current_chrom = None
 
-        with open(mpileup_file, "r") as f:
-            for line_num, line in enumerate(f, 1):
-                if line.startswith("#"):
-                    continue
+        Path(manifest_path).parent.mkdir(parents=True, exist_ok=True)
 
-                fields = line.rstrip("\n").split("\t")
-                if len(fields) < 9:
-                    continue
+        logger.info(f"Start splitting mpileup: {mpileup_file}")
+        logger.info(f"Manifest output: {manifest_path}")
+        logger.info(
+            f"Chunk params: chrom_chunk_size={chrom_chunk_size}, "
+            f"chrM_chunk_size={chrM_chunk_size}, read_len={read_len}, max_cost={max_cost}"
+        )
 
-                chrom = fields[0]
-                pos = int(fields[1])
-                depth = int(fields[5])
+        # manifest 强制 UTF-8 TSV
+        with open(manifest_path, "w", encoding="utf-8", newline="") as mf:
+            writer = csv.DictWriter(mf, fieldnames=manifest_fields, delimiter="\t")
+            writer.writeheader()
 
-                handler = get_handler(chrom)
+            # mpileup 用二进制读取，保证 tell()/offset 精确
+            with open(mpileup_file, "rb") as f:
+                while True:
+                    line_start = f.tell()
+                    line = f.readline()
+                    if not line:
+                        break
 
-                if handler["chunk_start_pos"] is None:
-                    next_count = 1
-                    next_span = 1
-                    next_max_depth = depth
-                else:
-                    next_count = handler["count"] + 1
-                    next_span = pos - handler["chunk_start_pos"] + 1
-                    next_max_depth = max(handler["max_depth"], depth)
+                    if line.startswith(b"#"):
+                        continue
 
-                next_cost = next_max_depth * (next_span / read_len) if read_len > 0 else 0.0
+                    try:
+                        text = line.decode("utf-8").rstrip("\n")
+                    except UnicodeDecodeError:
+                        logger.warning(
+                            f"Skip undecodable mpileup line at byte offset {line_start}"
+                        )
+                        continue
 
-                # need to split before writing current line into current chunk
-                if handler["count"] > 0 and (
-                    next_count > handler["chunk_size"] or next_cost > max_cost
-                ):
-                    finalize_chunk(handler)
-                    handler["file_obj"].close()
-                    open_next_chunk_file(handler)
+                    fields = text.split("\t")
+                    if len(fields) < 9:
+                        continue
 
-                    # current line becomes the first line of the new chunk
-                    next_count = 1
-                    next_max_depth = depth
+                    chrom = fields[0]
 
-                handler["file_obj"].write(line)
+                    try:
+                        pos = int(fields[1])
+                        depth = int(fields[5])
+                    except ValueError:
+                        continue
 
-                if handler["chunk_start_pos"] is None:
-                    handler["chunk_start_pos"] = pos
+                    # 染色体切换：先收尾旧 chunk，再开启新 chunk
+                    if current_chrom is not None and chrom != current_chrom:
+                        finalize_chunk(writer, current_chunk, line_start)
+                        current_chunk = None
+                        current_chrom = None
 
-                handler["count"] = next_count
-                handler["last_pos"] = pos
-                handler["max_depth"] = next_max_depth
-                handler["depth_sum"] += depth
+                    if current_chunk is None:
+                        current_chunk = new_chunk_state(chrom, pos, line_start, depth)
+                        current_chrom = chrom
+                        continue
 
-        # finalize remaining chunks and chromosome summaries
-        for chrom, handler in handlers.items():
-            if handler["count"] > 0:
-                finalize_chunk(handler)
+                    next_count = current_chunk["count"] + 1
+                    next_depth_sum = current_chunk["depth_sum"] + depth
+                    next_cost = next_depth_sum / read_len if read_len > 0 else 0.0
 
-            if handler["file_obj"]:
-                handler["file_obj"].close()
+                    if (
+                        next_count > current_chunk["chunk_size"]
+                        or next_cost > max_cost
+                    ):
+                        finalize_chunk(writer, current_chunk, line_start)
+                        current_chunk = new_chunk_state(chrom, pos, line_start, depth)
+                        current_chrom = chrom
+                        continue
 
-            cur.execute("""
-            INSERT INTO chroms (
-                chrom, chrom_type, total_records, num_chunks, chunk_size, total_cost
-            ) VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                handler["chrom"],
-                handler["chrom_type"],
-                handler["total_records"],
-                handler["num_chunks"],
-                handler["chunk_size"],
-                handler["total_cost"],
-            ))
+                    current_chunk["count"] += 1
+                    current_chunk["depth_sum"] += depth
+                    current_chunk["max_depth"] = max(current_chunk["max_depth"], depth)
+                    current_chunk["last_pos"] = pos
+                    current_chrom = chrom
 
-        conn.commit()
-        conn.close()
+                file_end = f.tell()
+                finalize_chunk(writer, current_chunk, file_end)
 
-        return  True
+        total_chunks = sum(summary["num_chunks"] for summary in chrom_summaries.values())
+        total_records = sum(summary["total_records"] for summary in chrom_summaries.values())
 
+        logger.info(
+            f"Split finished. Total chromosomes={len(chrom_summaries)}, "
+            f"total_chunks={total_chunks}, total_records={total_records}"
+        )
 
-# def save_manifest(manifest: Dict, output_manifest: Path):
-#     """save manifest into JSON file"""
-#     with open(output_manifest, 'w') as f:
-#         json.dump(manifest, f, indent=2)
-    
-#     logger.info(f"Manifest saved to: {output_manifest}")
-    
+        for chrom, summary in chrom_summaries.items():
+            logger.info(
+                f"[{chrom}] type={summary['chrom_type']} "
+                f"chunks={summary['num_chunks']} "
+                f"records={summary['total_records']} "
+                f"total_cost={summary['total_cost']:.4f}"
+            )
 
-def finalize_chunk(handler,read_len):
-    if handler['count'] == 0 or handler['chunk_start_pos'] is None or handler['last_pos'] is None:
-        return
-
-    span_bp = handler['last_pos'] - handler['chunk_start_pos'] + 1
-    mean_depth = handler['depth_sum'] / handler['count'] if handler['count'] > 0 else 0.0
-    cost = mean_depth * max(1.0, span_bp / read_len)
-
-    chunk_meta = {
-        'chunk_idx': handler['chunk_idx'],
-        'file': handler['files'][-1],
-        'records': handler['count'],
-        'start_pos': handler['chunk_start_pos'],
-        'end_pos': handler['last_pos'],
-        'span_bp': span_bp,
-        'max_depth': handler['max_depth'],
-        'mean_depth': mean_depth,
-        'cost': cost,
-    }
-    handler['chunks'].append(chunk_meta)
+        return True

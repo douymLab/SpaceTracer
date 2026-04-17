@@ -65,6 +65,34 @@ def read_and_filter_germline_file(germline_file, count_threshold, prior_threshol
     return filtered_df
 
 
+def annotate_dbsnp_tabix(filtered_df, dbsnp_vcf_gz):
+    import pysam
+    filtered_df = filtered_df.copy()
+    tb = pysam.TabixFile(dbsnp_vcf_gz)
+
+    ids = []
+    for chrom, pos, ref, alt in filtered_df[["chrom","pos","ref","alt"]].itertuples(index=False, name=None):
+        chrom = str(chrom)
+        pos = int(pos)
+        hit = "NA"
+        try:
+            # tabix is 0-based half-open；VCF POS is 1-based
+            for rec in tb.fetch(chrom, pos-1, pos):
+                if rec.startswith("#"):
+                    continue
+                fields = rec.split("\t")
+                v_chrom, v_pos, v_id, v_ref, v_alt = fields[0], int(fields[1]), fields[2], fields[3], fields[4]
+                if v_pos == pos and v_ref == ref and alt in v_alt.split(","):
+                    hit = v_id
+                    break
+        except ValueError:
+            hit = "NA"
+        ids.append(hit)
+
+    filtered_df["dbSNPID"] = ids
+    return filtered_df
+
+
 def annotate_dbsnp(filtered_df, dbsnp_vcf_file):
     #read dbSNP VCF
     dbsnp_cols = ['chrom', 'pos', 'dbSNPID', 'ref', 'alt', 'qual', 'filter', 'info']
@@ -96,60 +124,85 @@ def annotate_dbsnp(filtered_df, dbsnp_vcf_file):
     
     return filtered_df
 
+def annotate_genes(filtered_df, gene_bed, default_range=150):
+    filtered_df = filtered_df.copy()
 
-def annotate_genes(filtered_df, gene_bed,default_range=150):
+    # 1) 类型清洗，避免 'str' - int
+    filtered_df["chrom"] = filtered_df["chrom"].astype(str)
+    filtered_df["pos"] = pd.to_numeric(filtered_df["pos"], errors="coerce")
+    filtered_df = filtered_df.dropna(subset=["pos"])
+    filtered_df["pos"] = filtered_df["pos"].astype(int)
+
+    # 2) 如果没有 gene_bed，直接返回默认窗口
     if not gene_bed:
-        filtered_df['gene'] = 'NA'
-        filtered_df['region_chrom'] = filtered_df['chrom']
-        filtered_df['region_start'] = filtered_df['pos'] - default_range
-        filtered_df['region_end'] = filtered_df['pos'] + default_range
+        filtered_df["gene"] = "NA"
+        filtered_df["region_chrom"] = filtered_df["chrom"]
+        filtered_df["region_start"] = filtered_df["pos"] - default_range
+        filtered_df["region_end"] = filtered_df["pos"] + default_range
         return filtered_df
 
     try:
         genes = pr.read_bed(gene_bed)
-        
         if len(genes) == 0:
-            filtered_df['gene'] = 'NA'
-            filtered_df['region_chrom'] = filtered_df['chrom']
-            filtered_df['region_start'] = filtered_df['pos'] - default_range
-            filtered_df['region_end'] = filtered_df['pos'] + default_range
+            filtered_df["gene"] = "NA"
+            filtered_df["region_chrom"] = filtered_df["chrom"]
+            filtered_df["region_start"] = filtered_df["pos"] - default_range
+            filtered_df["region_end"] = filtered_df["pos"] + default_range
             return filtered_df
-        
+
+        # 3) 点位区间用 pos..pos+1，避免零长度
         sites_pr = pr.PyRanges(
-            chromosomes=filtered_df['chrom'].values,
-            starts=filtered_df['pos'].values,
-            ends=filtered_df['pos'].values
+            chromosomes=filtered_df["chrom"].values,
+            starts=filtered_df["pos"].values,
+            ends=(filtered_df["pos"] + 1).values,
         )
-        
         sites_pr.Index = filtered_df.index.values
-        intersect = genes.join(sites_pr, how="inner")
-        
-        filtered_df['gene'] = 'NA'
-        filtered_df['region_start'] = filtered_df['pos'] - default_range
-        filtered_df['region_end'] = filtered_df['pos'] + default_range
-        filtered_df['region_chrom'] = filtered_df['chrom']
-        
+
+        # 4) 用 PyRanges 支持的 how；以 sites 为主更符合“注释位点”
+        intersect = sites_pr.join(genes, how="left", apply_strand_suffix=False)
+
+
+        # 默认值
+        filtered_df["gene"] = "NA"
+        filtered_df["region_start"] = filtered_df["pos"] - default_range
+        filtered_df["region_end"] = filtered_df["pos"] + default_range
+        filtered_df["region_chrom"] = filtered_df["chrom"]
+
+        # 5) 回填：注意 genes bed 的列名通常是 Name/Score/Strand，Start/End/Chromosome
         if len(intersect) > 0:
-            gene_info = intersect.df.groupby('Index').agg({
-                'Name': lambda x: ','.join(x),
-                'Start_b': 'min',
-                'End_b': 'max',
-                'Chromosome': 'first'
-            }).reset_index()
-            
-            for _, row in gene_info.iterrows():
-                idx = row['Index']
-                filtered_df.loc[idx, 'gene'] = row['Name']
-                filtered_df.loc[idx, 'region_start'] = row['Start_b']
-                filtered_df.loc[idx, 'region_end'] = row['End_b']
-                filtered_df.loc[idx, 'region_chrom'] = row['Chromosome']
-        
+            dfj = intersect.df
+
+            # 如果没有匹配 gene，Name 可能是 NaN；先丢掉 NaN 再 groupby
+            if "Name" in dfj.columns:
+                dfj = dfj.dropna(subset=["Name"])
+
+            if len(dfj) > 0:
+                gene_info = (
+                    dfj.groupby("Index")
+                    .agg({
+                        "Name": lambda x: ",".join(map(str, x)),
+                        "Start": "min",
+                        "End": "max",
+                        "Chromosome": "first",
+                    })
+                    .reset_index()
+                )
+
+                for _, row in gene_info.iterrows():
+                    idx = row["Index"]
+                    filtered_df.loc[idx, "gene"] = row["Name"]
+                    filtered_df.loc[idx, "region_start"] = int(row["Start"])
+                    filtered_df.loc[idx, "region_end"] = int(row["End"])
+                    filtered_df.loc[idx, "region_chrom"] = row["Chromosome"]
+
     except Exception as e:
-        filtered_df['gene'] = 'NA'
-        filtered_df['region_chrom'] = filtered_df['chrom']
-        filtered_df['region_start'] = filtered_df['pos'] - default_range
-        filtered_df['region_end'] = filtered_df['pos'] + default_range
-    
+        # 兜底
+        # print("annotate_genes error:", e)
+        filtered_df["gene"] = "NA"
+        filtered_df["region_chrom"] = filtered_df["chrom"]
+        filtered_df["region_start"] = filtered_df["pos"] - default_range
+        filtered_df["region_end"] = filtered_df["pos"] + default_range
+
     return filtered_df
 
 # main get ase
@@ -162,7 +215,7 @@ def get_ase_germline_sites(germline_file,dbsnp_vcf_file,ase_germline_file,gene_b
         return pd.DataFrame()
     print("**********************",filtered_df)
     # step2: add dbSNP info
-    filtered_df=annotate_dbsnp(filtered_df, dbsnp_vcf_file)
+    filtered_df=annotate_dbsnp_tabix(filtered_df, dbsnp_vcf_file)
     
     # step3: add gene region info
     filtered_df=annotate_genes(filtered_df, gene_bed,default_range)
@@ -203,7 +256,8 @@ def intersect_somatic_with_ase(somatic_df, ase_germline_df,p_threshold=0.05):
     intersect_df = intersect.df.copy()
     intersect_df['germ_total'] = intersect_df['germ_ref_count'] + intersect_df['germ_alt_count']
     intersect_df['germ_vaf'] = intersect_df['germ_ref_count'] / intersect_df['germ_total']
-    intersect_df['somatic_key'] = intersect_df['Chromosome'] + '_' + intersect_df['End'].astype(str)
+    # intersect_df['somatic_key'] = intersect_df['Chromosome'] + '_' + intersect_df['End'].astype(str)
+    intersect_df['somatic_key'] = intersect_df['Chromosome'].astype(str) + '_' + intersect_df['End'].astype(str)
 
     somatic_key  = somatic_df['chrom'] + '_' + somatic_df['pos'].astype(str)
 

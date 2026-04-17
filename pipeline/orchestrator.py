@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from SpaceTracer.pipeline.checkpoint import CheckpointManager
-from SpaceTracer.pipeline.registry import STEP_CLASSES
+from SpaceTracer.pipeline.registry import get_step_class
 # from SpaceTracer.pipeline.validator import Validator
 from SpaceTracer.pipeline.dag import PipelineDAG
 
@@ -55,8 +55,6 @@ class PipelineOrchestrator:
         self.force = force
         self.chunk_index = chunk_index
         self.disabled=False # 默认打开CheckpointManager
-
-        self.STEP_CLASSES = STEP_CLASSES
 
         # cell number
         cell_num_str = self.config.get("steps", {}).get("cell_number")
@@ -541,11 +539,10 @@ class PipelineOrchestrator:
     # ─────────────────────────────────────────────────────────────
 
     def _get_step_instance(self, step_name: str, context: Dict[str, Any]):
-        cls = self.STEP_CLASSES.get(step_name)
+        cls = get_step_class(step_name)
         if cls is None:
             raise ValueError(
                 f"No implementation class registered for '{step_name}'. "
-                "Add it to STEP_CLASSES."
             )
         return cls(step_name, context, self.checkpoint)
 

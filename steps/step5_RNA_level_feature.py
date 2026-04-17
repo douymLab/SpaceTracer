@@ -88,10 +88,10 @@ def merge_table_files_from_list(file_list, output_file, sep="\t"):
 
 
 def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
+    df['pos']=df['pos'].astype(int)
     counts = df['consensus_read_count'].str.split(',', expand=True).astype(int)
     counts.columns = ['A_count', 'T_count', 'C_count', 'G_count']
     
-    # print("*****************df['prior_ATCG']",df['prior_ATCG'])
     priors = df['prior_ATCG'].str.split(',', expand=True).astype(float)
     priors.columns = ['A_prior', 'T_prior', 'C_prior', 'G_prior']
     
@@ -273,17 +273,19 @@ class RNAFeatureStep(BaseStep):
         RNA_feature = outputs["RNA_feature"]
 
         parameters = self.get_step_config()
-        count_threshold = parameters["min_count_for_germline"]
-        prior_threshold = parameters["min_prior_for_germline"]
-        default_range = parameters["default_range_of_gene"]
-        p_threshold = parameters["p_threshold"]
-        previous_base = parameters["previous_base"]
+        count_threshold = int(parameters["min_count_for_germline"])
+        prior_threshold = float(parameters["min_prior_for_germline"])
+        default_range = int(parameters["default_range_of_gene"])
+        p_threshold = float(parameters["p_threshold"])
+        previous_base = int(parameters["previous_base"])
 
         # logger.info(f"Using merged ind_geno_filter_file: {ind_geno_filter_file}")
         # logger.info(f"Using merged germline_file: {germline_file}")
         # logger.info(f"Using merged error_count_file: {error_count_file}")
-
+        import time
+        t = time.time()
         df = pd.read_csv(ind_geno_filter_file, sep="\t")
+        logger.info(f"read merged ind file: {time.time()-t:.2f}s, n={len(df)}")
         if df.empty:
             logger.warning("Merged ind_geno_filter_file is empty, writing empty RNA feature outputs.")
             self._write_empty_outputs(outputs)
@@ -291,7 +293,9 @@ class RNAFeatureStep(BaseStep):
                 "RNA_feature": RNA_feature
             }
 
+        t = time.time()
         df = _prepare_ind_df(df)
+        logger.info(f"_prepare_ind_df: {time.time()-t:.2f}s, n={len(df)}")
 
         # 统一列名到后续代码使用的格式
         if "germline" in df.columns and "ref" not in df.columns:
@@ -311,9 +315,11 @@ class RNAFeatureStep(BaseStep):
             names=["chrom", "pos", "ref", "alt"]
         )
 
+        t = time.time()
         df[["DNAMutationType", "RNAMutationType", "GCcontent", "cause_poly_alt", "homopolymer"]] = \
             add_features_from_fasta(df, fasta_file, previous_base)
         df["editing_AtoG"] = df["RNAMutationType"].astype(str).str.contains("A>G", na=False)
+        logger.info(f"add_features_from_fasta: {time.time()-t:.2f}s")
 
         result_df = df[
             [
@@ -348,6 +354,7 @@ class RNAFeatureStep(BaseStep):
         #     p_threshold,
         #     default_range)
 
+        t = time.time()
         # ASE
         ase_germline_df = get_ase_germline_sites(
             germline_file,
@@ -359,7 +366,11 @@ class RNAFeatureStep(BaseStep):
             p_threshold,
             default_range
         )
+        logger.info(f"get_ase_germline_sites: {time.time()-t:.2f}s, n={len(ase_germline_df)}")
+
+        t = time.time()
         result_df["ASE"] = intersect_somatic_with_ase(df, ase_germline_df, p_threshold)
+        logger.info(f"intersect_somatic_with_ase: {time.time()-t:.2f}s")
 
         # hFDR
         error_count_df = pd.read_parquet(error_count_file)
