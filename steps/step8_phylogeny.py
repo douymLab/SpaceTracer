@@ -25,8 +25,15 @@ class Phylogeny(BaseStep):
 def main():
     print_phylosolid_debug_info()
 
+    phylosolid --workdir ./results scrna \
+    --sample SAMPLE_ID \
+    --mutation-list mutations.txt \
+    --bam sample.bam \
+    --barcode barcodes.txt
+
     result = run_phylosolid_with_raw_args(
-        raw_args=["-h"],
+        raw_args=["-h"
+        ],
         capture_output=True,
         dry_run=False
     )

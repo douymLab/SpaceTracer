@@ -172,7 +172,11 @@ def wilcoxon_with_rbc(x, y, alternative='two-sided'):
     # Mann-Whitney U statistic for group x
     U = R1 - (n1 * (n1 + 1)) / 2
     # Rank Biserial Correlation (rbc)
-    rbc = (2 * U) / (n1 * n2) - 1
+    # rbc = (2 * U) / (n1 * n2) - 1
+    if n1 > 0 and n2 > 0:
+        rbc = (2 * U) / (n1 * n2) - 1
+    else:
+        rbc = np.nan
     # statistic and p-value with large number normal approximation
     statistic, p_value = stats.ranksums(x, y, alternative=alternative)
     return statistic, p_value, rbc
