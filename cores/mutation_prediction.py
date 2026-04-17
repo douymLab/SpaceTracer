@@ -867,6 +867,7 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # parquet_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.parquet")
     # tsv_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.tsv")
     vcf_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.vcf")
+    pass_mutation_list_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS_mutation_list.txt")
     # save all sites
     # df_output.to_parquet(parquet_output_file, index=False)
     # df_output.to_csv(tsv_output_file, sep="\t", index=False, float_format="%.6g")
@@ -875,12 +876,21 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # df_output_pass.to_parquet(parquet_pass_output_file, index=False)
     # df_output_pass.to_csv(tsv_pass_output_file, sep="\t", index=False, float_format="%.6g")
     write_simple_vcf(df_output_pass, vcf_pass_output_file, sample_name=sample_name)
+    # save PASS-only mutation list in chrom_pos_ref_alt format
+    with open(pass_mutation_list_file, "w") as file:
+        for _, row in df_output_pass.iterrows():
+            chrom = str(row["#CHROM"])
+            pos = int(row["POS"]) if pd.notna(row["POS"]) else row["POS"]
+            ref = str(row["REF"])
+            alt = str(row["ALT"])
+            file.write(f"{chrom}_{pos}_{ref}_{alt}\n")
     # print notes
     print(f"Total predicted true sites: {len(df_output)}")
     print(f"PASS predicted true sites: {len(df_output_pass)}")
     print("Saved output files:")
     print(f"  - All sites: {vcf_output_file}")
     print(f"  - PASS sites: {vcf_pass_output_file}")
+    print(f"  - PASS mutation list: {pass_mutation_list_file}")
 
 
     # pca scatter plot
