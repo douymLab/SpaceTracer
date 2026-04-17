@@ -5,7 +5,6 @@ Genotyping Step - DataFrame optimized version
 
 from typing import Dict
 import os
-import time
 from functools import partial
 
 import pandas as pd
@@ -107,7 +106,6 @@ class GenotypingStep(BaseStep):
         bins,
         context: Dict,
     ) -> Dict[str, str]:
-        t0 = time.perf_counter()
         chunk = row["chunk"]
         spot_count = row["parquet_file"]
 
@@ -131,28 +129,21 @@ class GenotypingStep(BaseStep):
         ind_geno_calc = IndGenoCalculator()
 
         # 1. load + cluster-level combine
-        t1 = time.perf_counter()
         spot_df = combiner_spot.load_df(spot_count)
         cluster_count_df = combiner_spot.combine_cluster_df(spot_df, cluster_df)
         combiner_spot.save_df(cluster_count_df, cluster_count_file)
-        t1 = time.perf_counter() - t1
 
         # 2. allele filter
-        t2 = time.perf_counter()
         cluster_count_filter_df = allele_filter.filter_df(cluster_count_df)
         cluster_count_filter_out = cluster_count_filter_df.rename(columns={'chrom': '#chrom'})
         cluster_count_filter_out.to_csv(cluster_count_filter_file, sep="\t", index=None, na_rep='NA')
-        t2 = time.perf_counter() - t2
 
         # 3. individual-level combine
-        t3 = time.perf_counter()
         ind_count_filter_df = combiner_cluster.combine_ind_df(cluster_count_filter_df)
         ind_count_filter_out = ind_count_filter_df.rename(columns={'chrom': '#chrom'})
         ind_count_filter_out.to_csv(ind_count_filter_file, sep="\t", index=None, na_rep='NA')
-        t3 = time.perf_counter() - t3
 
         # 4. genotype
-        t4 = time.perf_counter()
         geno_df, geno_filter_df, germ_df = ind_geno_calc.calculate_individual_genotype_df(
             ind_count_df=ind_count_filter_df,
             prior_df=prior_df,
@@ -164,21 +155,17 @@ class GenotypingStep(BaseStep):
             pop_vaf=pop_vaf,
             filter_oneallele=filter_oneallele
         )
-        t4 = time.perf_counter() - t4
 
         has_data = not geno_filter_df.empty
 
         if has_data:
-            t5 = time.perf_counter()
             cluster_count_filter_for_vaf = cluster_count_filter_df.rename(columns={'chrom': '#chrom'})
             cluster_vaf_df = ClusterVAFCalculator_from_df(
                 geno_filter_df,
                 cluster_count_filter_for_vaf,
                 outfile_path=cluster_vaf_file
             )
-            t5 = time.perf_counter() - t5
 
-            t6 = time.perf_counter()
             SpotGenoCalculator(
                 bins,
                 epsQ,
@@ -192,27 +179,12 @@ class GenotypingStep(BaseStep):
                 cluster_vaf_df=cluster_vaf_df,
                 output_file=spot_geno_file
             )
-            t6 = time.perf_counter() - t6
-
-            total = time.perf_counter() - t0
-            logger.info(
-                "[genotyping chunk=%s] combine_cluster=%.2fs allele_filter=%.2fs "
-                "combine_ind=%.2fs ind_genotype=%.2fs cluster_vaf=%.2fs "
-                "spot_genotype=%.2fs total=%.2fs",
-                chunk, t1, t2, t3, t4, t5, t6, total
-            )
             return {
                 "chunk": chunk,
                 "spot_count_file": spot_count,
                 **outputs,
             }
         else:
-            total = time.perf_counter() - t0
-            logger.info(
-                "[genotyping chunk=%s] combine_cluster=%.2fs allele_filter=%.2fs "
-                "combine_ind=%.2fs ind_genotype=%.2fs no-spot-output total=%.2fs",
-                chunk, t1, t2, t3, t4, total
-            )
             return {}
 
     def _run(self, context: Dict):

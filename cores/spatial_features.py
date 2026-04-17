@@ -402,12 +402,30 @@ def spatial_moran(df, col="mutated", alpha=0.05, \
     Perform Moran's I index to find whether the spots with mutation are locally or globally distributed
     for one cluster
     """
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['pos_x'], df['pos_y']))
-    # calculate the weight
-    # w = lps.weights.Queen.from_dataframe(gdf)
-    w = weights.Queen.from_dataframe(gdf, use_index=True)  
-    # create the pysal Moran object 
-    mi = Moran(df[col], w)
+    # keep only valid rows for spatial test and rebuild a clean index
+    # so libpysal does not fail on sparse/misaligned indices in multiprocessing.
+    moran_df = df[['pos_x', 'pos_y', col]].dropna().copy()
+    if len(moran_df) < 2 or moran_df[col].nunique() <= 1:
+        return False, np.nan, 1.0
+
+    moran_df = moran_df.reset_index(drop=True)
+    gdf = gpd.GeoDataFrame(moran_df, geometry=gpd.points_from_xy(moran_df['pos_x'], moran_df['pos_y']))
+
+    try:
+        # use a rebuilt 0..n-1 index to avoid KeyError from neighbor/cardinality lookup
+        w = weights.Queen.from_dataframe(gdf, use_index=False)
+        mi = Moran(moran_df[col], w)
+    except Exception as queen_err:
+        try:
+            # fallback for degenerate geometries / disconnected queen graph
+            k = min(4, len(moran_df) - 1)
+            w = weights.KNN.from_dataframe(gdf, k=k)
+            mi = Moran(moran_df[col], w)
+            print(f"[WARN] Queen weights failed for {sample_name}; fallback to KNN (k={k}). Error: {queen_err}")
+        except Exception as knn_err:
+            print(f"[WARN] Moran test skipped for {sample_name}; Queen and KNN failed. "
+                  f"Queen error: {queen_err}; KNN error: {knn_err}")
+            return False, np.nan, 1.0
     # verify Moran's I results
     moran_pval = mi.p_rand
     moran_stat = mi.I
