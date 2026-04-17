@@ -60,7 +60,7 @@ def UMI_combination_spot_ind_and_judge_error(check_mosaic,check_error,site_barco
     all_genos=["A","T","C","G"]
     consensus_read_count={}
     consensus_read_quality={}
-    raw_count_dict=defaultdict(int)
+    raw_count_list=[0,0,0,0]
     
     # errors
     pcr_errors,lysis_errors=0,0
@@ -70,26 +70,33 @@ def UMI_combination_spot_ind_and_judge_error(check_mosaic,check_error,site_barco
     error_allele=None
 
     for barcode in site_barcode_UMI_dict.keys():
-        consensus_read_count[barcode]=defaultdict(int)
-        consensus_read_quality[barcode]=defaultdict(dict)
+        consensus_read_count[barcode]=[0,0,0,0]
+        consensus_read_quality[barcode]={}
+
         for UMI in site_barcode_UMI_dict[barcode]:
-            count_dict=site_barcode_UMI_dict[barcode][UMI]["count"]
+            count_list=site_barcode_UMI_dict[barcode][UMI]["count"]
 
             if check_mosaic: 
                 quality_dict=site_barcode_UMI_dict[barcode][UMI]["quality"]
-                phred_dict=calculate_UMI_combine_phred(count_dict,quality_dict,weigh=0.5)
+                phred_dict=calculate_UMI_combine_phred(count_list,quality_dict,weigh=0.5)
                 candidate_allele,phred=get_most_candidate_allele(phred_dict,ref)
+                index="ATCG".index(candidate_allele) # other alleles has been removed before
 
-                consensus_read_count[barcode][candidate_allele]+=1
+                consensus_read_count[barcode][index]+=1
+
+                if candidate_allele not in consensus_read_quality[barcode].keys():
+                    consensus_read_quality[barcode][candidate_allele] = {}
+                    
                 if str(phred) not in consensus_read_quality[barcode][candidate_allele].keys():
                     consensus_read_quality[barcode][candidate_allele][str(phred)]=0
 
                 consensus_read_quality[barcode][candidate_allele][str(phred)]+=1
-                for geno in count_dict.keys():
-                    raw_count_dict[geno]+=count_dict[geno]
+
+                for index,dp in enumerate(count_list):
+                    raw_count_list[index]+=dp
 
             if check_error:
-                _, lysis_error,_,lysis_alt=check_errors(count_dict,ref,threshold)
+                _, lysis_error,_,lysis_alt=check_errors(count_list,ref,threshold)
                 # pcr_errors += pcr_error
                 lysis_errors += lysis_error
                 # pcr_alts += pcr_alt
@@ -103,12 +110,13 @@ def UMI_combination_spot_ind_and_judge_error(check_mosaic,check_error,site_barco
         consensus_read_count_list=[]
         raw_read_count_list=[]
 
-        consensus_read_qual_dict=defaultdict(str)
+        consensus_read_qual_dict={}
         for geno in all_genos:
             geno_count=0 if geno not in consensus_read_count.keys() else consensus_read_count[geno]
             consensus_read_count_list.append(str(geno_count))
+            index="ATCG".index(geno)
 
-            raw_count=0 if geno not in raw_count_dict.keys() else raw_count_dict[geno]
+            raw_count=raw_count_list[index]
             raw_read_count_list.append(str(raw_count))
 
             if geno not in consensus_read_quality.keys():
@@ -116,6 +124,7 @@ def UMI_combination_spot_ind_and_judge_error(check_mosaic,check_error,site_barco
             else:
                 geno_qual_list=[str(phred)+":"+str(consensus_read_quality[geno][phred]) for phred in consensus_read_quality[geno].keys()]
                 geno_qual_str=",".join(geno_qual_list)
+
             consensus_read_qual_dict[geno]=geno_qual_str
 
         # consensus_read_count_str=",".join(consensus_read_count_list)
@@ -133,22 +142,34 @@ def UMI_combination_spot_ind_and_judge_error(check_mosaic,check_error,site_barco
     return consensus_read_count, consensus_read_quality, error_allele
 
 
-def check_errors(count_dict,ref,threshold=3):
-    count_above_threshold = sum(1 for allele in count_dict if allele != ref and count_dict[allele] >= threshold)
-    count_nonzero = sum(1 for allele in count_dict if count_dict[allele] > 0)
+def check_errors(count_list,ref,threshold=3):
+    ref_index="ATCG".index(ref)
+    try:
+        count_above_threshold = sum(1 for index,dp in enumerate(count_list) if index != ref_index and dp >= threshold)
+    except:
+        print("*****************",[ index for index,dp in enumerate(count_list)])
+        print("*****************",[ dp for index,dp in enumerate(count_list)])
+        raise
+    
+    # count_above_threshold = sum(1 for allele in count_dict if allele != ref and count_dict[allele] >= threshold)
+
+    # count_nonzero = sum(1 for allele in count_dict if count_dict[allele] > 0)
+    count_nonzero = sum(1 for dp in count_list if dp > 0)
     pcr_error = 1 if count_above_threshold >= 1 and count_nonzero >= 2 else 0
     pcr_alt=[]
     if pcr_error:
-        pcr_alt = [allele for allele in count_dict if allele != ref and count_dict[allele] >= threshold]
+        # pcr_alt = [allele for allele in count_dict if allele != ref and count_dict[allele] >= threshold]
+        pcr_alt = ["ATCG"[index] for index,dp in enumerate(count_list) if index != ref_index and dp >= threshold]
     
     # lysis_error: require all reads in one UMI must same
     lysis_error = 0
     lysis_alt=[]
-    for allele in count_dict:
-        if allele != ref and count_dict[allele] > threshold:
-            if all(count_dict[other_allele] == 0 for other_allele in count_dict if other_allele != allele):
+    # for allele in count_dict:
+    for index,dp in enumerate(count_list):
+        if index != ref_index and dp > threshold:
+            if all(count_list[other_allele_index] == 0 for other_allele_index in [0,1,2,3] if other_allele_index != index):
                 lysis_error = 1
-                lysis_alt.append(allele)
+                lysis_alt.append("ATCG"[index])
                 break
 
     return pcr_error, lysis_error,pcr_alt,lysis_alt
@@ -200,15 +221,21 @@ def handle_reads_per_pos_read_count_and_strand(reads,pos,run_type):
                 # logger.debug(f"The site in this read {item.query_name} do not has quality, pass.")
                 continue
 
-            if barcode_name not in site_barcode_UMI_dict.keys():
-                site_barcode_UMI_dict[barcode_name]=defaultdict(dict)
-
             if UMI_name not in site_barcode_UMI_dict[barcode_name].keys():
-                site_barcode_UMI_dict[barcode_name][UMI_name]["count"]=defaultdict(int)
-                site_barcode_UMI_dict[barcode_name][UMI_name]["quality"]={"A":defaultdict(int),"T":defaultdict(int),"C":defaultdict(int),"G":defaultdict(int)}
+                site_barcode_UMI_dict[barcode_name][UMI_name] = {
+                    "count": [0,0,0,0],
+                    "quality": {}
+                }
 
-            site_barcode_UMI_dict[barcode_name][UMI_name]["count"][geno]+=1
-            site_barcode_UMI_dict[barcode_name][UMI_name]["quality"][geno][quality]+=1
+            umi_entry = site_barcode_UMI_dict[barcode_name][UMI_name]
+
+            umi_entry["count"]["ATCG".index(geno)] += 1
+
+            if geno not in umi_entry["quality"]:
+                umi_entry["quality"][geno] = {}
+
+            umi_entry["quality"][geno][quality] = umi_entry["quality"][geno].get(quality, 0) + 1
+
     
     if reverse_dp>=forward_dp:
         major_read_strand="-"
@@ -286,19 +313,22 @@ def scan_region_reads_once_for_targets(reads, sites, run_type):
             site_barcode_UMI_dict = pos_bucket["site_barcode_UMI_dict"]
 
             if barcode_name not in site_barcode_UMI_dict:
-                site_barcode_UMI_dict[barcode_name] = defaultdict(dict)
+                site_barcode_UMI_dict[barcode_name] = {}
 
-            if UMI_name not in site_barcode_UMI_dict[barcode_name]:
-                site_barcode_UMI_dict[barcode_name][UMI_name]["count"] = defaultdict(int)
-                site_barcode_UMI_dict[barcode_name][UMI_name]["quality"] = {
-                    "A": defaultdict(int),
-                    "T": defaultdict(int),
-                    "C": defaultdict(int),
-                    "G": defaultdict(int),
+            if UMI_name not in site_barcode_UMI_dict[barcode_name].keys():
+                site_barcode_UMI_dict[barcode_name][UMI_name] = {
+                    "count": [0,0,0,0],
+                    "quality": {}
                 }
 
-            site_barcode_UMI_dict[barcode_name][UMI_name]["count"][geno] += 1
-            site_barcode_UMI_dict[barcode_name][UMI_name]["quality"][geno][quality] += 1
+            umi_entry = site_barcode_UMI_dict[barcode_name][UMI_name]
+
+            umi_entry["count"]["ATCG".index(geno)] += 1
+
+            if geno not in umi_entry["quality"]:
+                umi_entry["quality"][geno] = {}
+
+            umi_entry["quality"][geno][quality] = umi_entry["quality"][geno].get(quality, 0) + 1
 
     result = {}
     for pos, bucket in per_pos_data.items():
@@ -313,6 +343,7 @@ def scan_region_reads_once_for_targets(reads, sites, run_type):
         result[pos] = (bucket["site_barcode_UMI_dict"], major_read_strand)
 
     return result
+
 
 def process_single_region_for_umi_combine(bam_handle, region_info, seq_type):
     chrom, start, end, sites = region_info
@@ -339,6 +370,7 @@ def process_single_region_for_umi_combine(bam_handle, region_info, seq_type):
             results.append((mosaic_spot_list, error_list))
 
         except Exception as exc:
+            raise 
             logger.warning(f"[UmiCombine] worker failed for {(chrom, pos, ref)}: {exc}")
             results.append((None, None))
 
@@ -364,14 +396,15 @@ def summarize_UMI_spot_for_both_mosaic_and_error(site_barcode_UMI_dict,
 
     if check_mosaic:
         for barcode in consensus_read_count.keys():
-            alt=",".join([alt_geno for alt_geno in consensus_read_count[barcode].keys() if alt_geno != ref])
+            # alt=",".join([alt_geno for alt_geno in consensus_read_count[barcode].keys() if alt_geno != ref])
+            alt=",".join([alt_geno for alt_geno,dp in zip("ATCG",consensus_read_count[barcode]) if alt_geno != ref and dp !=0])
             if alt=="":
                 alt="."
-            consensus_read_count_list=[]
+            consensus_read_count_list=[str(i) for i in consensus_read_count[barcode]]
             consensus_read_qual_dict=defaultdict(str)
             for geno in all_genos:
-                geno_count=0 if geno not in consensus_read_count[barcode].keys() else consensus_read_count[barcode][geno]
-                consensus_read_count_list.append(str(geno_count))
+                # geno_count=0 if geno not in consensus_read_count[barcode].keys() else consensus_read_count[barcode][geno]
+                # consensus_read_count_list.append(str(geno_count))
                 
                 if geno not in consensus_read_quality[barcode].keys():
                     geno_qual_str="NA" 

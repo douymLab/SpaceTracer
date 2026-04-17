@@ -190,7 +190,6 @@ class SpatialFeatureStep(BaseStep):
                 "spatial_feature_txt": out_spatial_features,
                 "spatial_feature_parquet": parquet_file,
             }
-
         spot_geno_df = load_spot_genotypes_data(spot_genotype_file)
         barcode_dict = handle_barcode(tissue_positions)
 

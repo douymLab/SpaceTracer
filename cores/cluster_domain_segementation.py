@@ -294,7 +294,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
     # check the name for tissue position (different version output from Visium) 
     position_file = os.path.join(data_dir, 'spatial/tissue_positions.csv')
     position_list_file = os.path.join(data_dir, 'spatial/tissue_positions_list.csv')
-    if type == "Visium":
+    if type in ["Visium","visium"]:
         # copy correct file
         if check_file(position_list_file):
             print("Read tissue_position_list.csv file")
@@ -317,7 +317,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
     else:
         print("Learn the representations with GraphST")
         # read data
-        if type == "Visium":
+        if type in  ["Visium","visium"]:
             adata = sc.read_visium(data_dir, count_file=h5_file_name, load_images=True)
             # mark mitochondrial genes (human + mouse safe)
             adata.var["mt"] = adata.var_names.str.upper().str.startswith("MT-")
@@ -334,7 +334,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
 
         adata.var_names_make_unique()
         # add spatial location
-        if type == "Visium":
+        if type in  ["Visium","visium"]:
             spatial = pd.read_csv(position_file, sep=",", header='infer', na_filter=False, index_col=0) 
             adata.obs["x_array"] = spatial['array_row']
             adata.obs["y_array"] = spatial['array_col']
@@ -360,7 +360,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
         # check the value type
         adata.obsm['spatial'] = adata.obsm['spatial'].astype(float)
         # define model
-        if type == "Visium":
+        if type in  ["Visium","visium"]:
             model = GraphST.GraphST(adata, device=device)
         else:
             model = GraphST.GraphST(adata, datatype='Stereo', device=device)
@@ -379,7 +379,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
     elif tool in ['leiden', 'louvain']:
         clustering(adata, n_clusters, radius=radius, method=tool, start=0.1, end=2.0, increment=0.01, refinement=refinement)
     # rename the cluster result columns
-    if type == "Visium":
+    if type in  ["Visium","visium"]:
         adata.obs.rename(columns={
                         tool: 'pred',
                         'domain': 'refined_pred'
@@ -393,7 +393,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
     adata.obs["UMI_counts"] = adata.obs["total_counts"]
     adata.obs["gene_counts"] = adata.obs["n_genes_by_counts"]
     adata.obs['mt_counts'] = adata.obs["total_counts_mt"]
-    if type == "Visium":
+    if type in  ["Visium","visium"]:
         adata.obs["cluster"] = adata.obs["refined_pred"]
     else:
         adata.obs["cluster"] = adata.obs["domain"]
@@ -412,7 +412,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
     final_output_df.to_csv(out_cell_num_file, index=True,sep="\t")
     
     # Plot the results
-    if plot and type == "Visium":
+    if plot and typein  ["Visium","visium"]:
         # Set colors used
         plot_color=["#F56867","#FEB915","#C798EE","#59BE86","#7495D3","#D1D1D1","#6D1A9C",
                     "#15821E","#3A84E6","#997273","#787878","#DB4C6C","#9E7A7A","#554236",

@@ -1,52 +1,90 @@
-# Mutation Caller Default Configuration
+# SpaceTracer Default Configuration
 
-# Pipeline-level settings
-pipeline:
-  name: "SpaceTracer"
-  version: "1.0.0"
+# input (for visium, not contain HD data)
+genome: hg38
+resource_dir: # if provided, all resource will be found in the directory
+sequence_type: visium # choice: visium, stereo-seq, ST, visium-HD
+bin_size: # only work for stereo-seq data. If use stereo-seq data, the cluster file must be provided!
+spaceranger_dir: # Please provide the "{prefix}/outs" dir. If None or not provided, please give the bam file and tissue_position file 
+regions_file: /storage/douyanmeiLab/yangzhirui/01.Data_download/Callable_region_compare/all_callable_merge.bed
+output_dir: /storage/douyanmeiLab/yangzhirui/SpaceTracer_new/
 
-## Required
-# Runtime settings
-runtime:
-  threads: 8
-  max_parallel: 8
-  parallel_backend: "thread"  # "thread" (safe default) or "process" (often faster for CPU-heavy genotyping)
-  memory: "32G"
-  keep_intermediates: false
-  skip_validation: false
+input_details: # if visium data and spaceranger dir have been provided, the following could be ignored
+  bam_file: 
+  tissue_position: 
+  barcode_key: # this may not work for stereo-seq
 
-# Reference genome settings
-genome: "hg38"  
-genome_fasta: "/storage/douyanmeiLab/yangzhirui/Reference/Cellranger/refdata-gex-GRCh38-2020-A/fasta/genome.fa"  
-reference_dir: null #
+resource_details: # if resource dir provided, the below config could be ignored, or each would be 
+  genome_fasta: /storage/douyanmeiLab/yangzhirui/Reference/Cellranger/refdata-gex-GRCh38-2020-A/fasta/genome.fa
+  gnomad_path: /storage/douyanmeiLab/yangzhirui/Reference/resource/only_af/ 
+  mappability_path: /storage/douyanmeiLab/yangzhirui/Reference/MapScore_umap_multiRead/k24.umap.bedgraph
+  gene_bed: /storage/douyanmeiLab/yangzhirui/Reference/gtexGene.txt
+  dbsnp_vcf_file: /storage/douyanmeiLab/yangzhirui/Reference/dbSNP/Homo_sapiens_assembly38.dbsnp138.vcf
+  imprinted_bed: /storage/douyanmeiLab/yangzhirui/Reference/Cellranger/refdata-gex-GRCh38-2020-A/imprinted_genes.region.bed
+  editing_bed: /storage/douyanmeiLab/yangzhirui/Reference/COMBINED_RADAR_REDIprotal_DARNED_hg38_all_sites.bed
+  PON_file: /storage/douyanmeiLab/yangzhirui/01.Data_download/PON/PON_new_model_250921_33samples_251224.only_sites.txt
+  reference_error_profile: /storage/douyanmeiLab/yangzhirui/01.Data_download/Mutation_signatures_new_creteria/use_not_validated_low_freq_001_251021/lysis_Signatures_split3.Sigprofile.txt
 
+run:
+  threads: 20 
+  memory: "200G"
+  max_parallel: 40
+  keep_intermediates: true # all intermediate files will be exported as files
+  skip_validation: true
+  
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_file: "pipeline.log"
 
-## Optional
-# Step-specific configurations
+# Step-specific configurations (optional)
 steps:
-    
+  # Step 0: Cluster [if not provided, the cluster function will run]
+  cluster:
+    cluster_file:  # [if provided, the cluster function will be ignored]
+    ncluster: 8
+    plot: true
+    method: "SpaGCN"          # 原 --method
+    init_method: "louvain"    # 原 --init_method
+    data_type: "Visium" 
+    h5_file_name: "filtered_feature_bc_matrix.h5"
+    histology: true
+    spot_area: 49             # 原 --b，改成更清晰的名字
+    weight_histology: 1
+    distance_threshold: 2
+    min_samples: 1
+    num_threshold: 30
+    percentage: 0.5           # 原 --pertentage（修正拼写）
+    seed: 100
+    tol: 5e-3
+    lr: 0.05
+    max_epochs: 200           # 原 --max_epochs_run
+    # GraphST 专用
+    graphst_tool: "louvain"   # 原 --tool
+    radius: 6
+    refinement: true
+
   # Step 1: BAM Processing
   bam_processing:
-    remove_duplicates: true
-    mark_duplicates: true
-    realign_indels: false  # 是否进行indel realignment
-    sort_by: "coordinate"  # coordinate or queryname
-    create_index: true
+    nm_threshold: 5
+    mapq_threshold: 255
   
   # Step 2: Mpileup
   mpileup:
-    min_depth: 30
-    max_depth: 200000
+    min_depth: 30 # strongly recommended
+    max_depth: 200000 # strongly recommended
     min_mapq: 0
     min_baseq: 0
     exclude_flag:  0 # strongly recommended
+    enable_split: True
+    split_threshold: 4000
+    chrom_chunk_size: 2000
+    chrM_chunk_size: 100
 
-  # Step 3 Calculate background error(optional)
-  bkg: 
-    filter_count: true
-
-  # Step 4: UMI combine
-  reads_processing:
+  # Step 3 Calculate cell number (optional)
+  cell_number: 
+  
+  # Step 3: UMI combine
+  UMI_combine:
     filter_duplicates: true
     filter_secondary: true
     filter_qcfail: true
@@ -60,52 +98,49 @@ steps:
   
   # Step 5: Genotyping
   genotyping:
-    algorithm: "bayesian"  # bayesian, ml, custom
-    prior: 0.001  # 突变的先验概率
-    min_likelihood: 0.95
-    min_depth: 10
-    min_alt_depth: 3
-    het_prior: 0.001
-  
-  # Step 6: Feature Extraction
-  feature_extraction:
-    features:
-      - "depth"
-      - "base_quality"
-      - "mapping_quality"
-      - "strand_bias"
-      - "position_bias"
-      - "nearby_variants"
-      - "complexity"
-    window_size: 100  # 用于计算nearby features
-  
-  # Step 7: Prediction
-  prediction:
-    model: "default"  # default, 或自定义模型路径
-    model_type: "random_forest"  # random_forest, xgboost, neural_network
-    threshold: 0.8  # 预测概率阈值
-    use_features:
-      - "all"  # 或指定特定features
-  
-  # Step 8: Remove recurrent error
-  final_filter:
-    hard_filters:
-      min_prediction_score: 0.8
-      max_missing_features: 2
-    output_format: "vcf"  # vcf, tsv, bed
-    compress: true
-    create_index: true
+    alpha: 0.05
+    epsQ: 20
+    epsAF: 0.003
+    mu: 1e-5
+    thr_dp: 1000
+    pop_vaf: 1e-5
+    filter_oneallele: True
 
-# Output settings
-output:
-  vcf_format: "4.2"
-  include_filters: true
-  include_info: true
-  include_genotypes: true
-  compress_output: true
+  spatial_feature:
+    alpha: 0.05
+    thr_r2: 0.3
+    thr_prob: 0.9
+    thr_likelihood: 0.9
+    thr_vaf: 0
+    plot_supp: False
+    fig_size: 5
+    method: LDA
+    num_directions: 8
 
-# Logging
-logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  log_file: "pipeline.log"
-  verbose_steps: false
+  read_feature:
+    cell_info: None 
+    downsample: True
+    downsample_target_depth: 2000
+    max_region_size: 20000
+    max_variants_per_region: 100
+    seed: 42
+    
+  RNA_feature:
+    min_count_for_germline: 50
+    min_prior_for_germline: 0.0001
+    default_range_of_gene: 150
+    p_threshold: 0.05
+    previous_base: 5
+
+  feature_filtration:
+      ASE: True
+      hFDR: True
+      imprinted: True
+      homopolymer: True
+      PON: True
+      RNA_editing: True
+      ABNORMAL_MISMATCHES: True
+      LOW_READ_DIVERSITY: True
+      HIGH_MULTIPLE_MAPPIN: True
+      WIDE_DISTRIBUTION: True
+      NEAR_READ_END: True

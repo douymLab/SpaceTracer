@@ -1,3 +1,4 @@
+import csv
 from pathlib import Path
 from typing import List, Optional
 import pyranges as pr
@@ -144,7 +145,7 @@ def load_spot_genotypes_data(file: str, prefer_parquet: bool = True) -> pd.DataF
     # parquet
     if prefer_parquet and parquet_path.exists():
         # print(f"Loading Parquet: {parquet_path}")
-        df = pd.read_parquet(parquet_path)
+        df = pd.read_parquet(str(parquet_path))
         return df
     
     colnames = [
@@ -267,3 +268,38 @@ def load_chunk_files_from_db(db_path):
 
     return chunk_files
 
+def load_manifest_files_for_chunk_tasks_only_umi_combine(manifest_path):
+    tasks = []
+
+    with open(manifest_path, "r", newline="") as f:
+        reader = csv.DictReader(f,delimiter="\t")
+        for row in reader:
+            task = {
+                "chunk_id": row["chunk_id"],
+                "chrom": row["chrom"],
+                "chrom_type": row["chrom_type"],
+                "chunk_idx": int(row["chunk_idx"]),
+                "source_file": row["source_file"],
+                "start_offset": int(row["start_offset"]),
+                "end_offset": int(row["end_offset"]),
+                "start_pos": int(row["start_pos"]) if row["start_pos"] != "" else None,
+                "end_pos": int(row["end_pos"]) if row["end_pos"] != "" else None,
+                "records": int(row["records"]) if row["records"] != "" else 0,
+                "span_bp": int(row["span_bp"]) if row["span_bp"] != "" else None,
+                "max_depth": int(row["max_depth"]) if row["max_depth"] != "" else None,
+                "mean_depth": float(row["mean_depth"]) if row["mean_depth"] != "" else None,
+                "cost": float(row["cost"]) if row["cost"] != "" else 0.0,
+            }
+            tasks.append(task)
+
+    # sort by cost
+    tasks.sort(key=lambda x: (-x["cost"], x["chrom"], x["chunk_idx"]))
+
+    return tasks
+
+
+def read_chunk_bytes_by_offset(source_file, start_offset, end_offset):
+    with open(source_file, "rb") as f:
+        f.seek(start_offset)
+        raw = f.read(end_offset - start_offset)
+    return raw

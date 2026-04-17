@@ -10,7 +10,7 @@ import statsmodels.stats.multitest as smm
 
 # from SpaceTracer.cores.read_feature_02_extract import process_reads_for_variant
 from SpaceTracer.utils.get_read_level_feature import check_UMIconsistence_for_each_geno, combine_info_from_cigar, do_wilicox_sum_test, get_indel_info, judge_pos_in_indel
-from SpaceTracer.utils.handle_UMI_combine import handle_pos, handle_quality_matrix, handle_seq,calculate_UMI_combine_phred, get_most_candidate_allele, handle_seq_type
+from SpaceTracer.utils.handle_UMI_combine import handle_pos, handle_quality_matrix, handle_seq,calculate_UMI_combine_phred_count_dict, get_most_candidate_allele, handle_seq_type
 
 
 def handel_bam_file_for_region(bam_file,region_dict,run_type,bins,cell_dict={},readLen=120,downsample=False,target_depth=2000,seed=42):
@@ -236,7 +236,7 @@ def process_reads_for_variant(sampled_reads,var,run_type,bins,cell_dict={},readL
         for UMI in site_barcode_UMI_dict[barcode]:             
             count_dict=site_barcode_UMI_dict[barcode][UMI]["count"]
             quality_dict=site_barcode_UMI_dict[barcode][UMI]["quality"]
-            phred_dict=calculate_UMI_combine_phred(count_dict,quality_dict,weigh=0.5)
+            phred_dict=calculate_UMI_combine_phred_count_dict(count_dict,quality_dict,weigh=0.5)
             candidate_allele,phred=get_most_candidate_allele(phred_dict,one_ref)
             result_dict[candidate_allele]["dp_consensus"]+=1
             UMI_count_by_allele["ATCG".index(candidate_allele)]+=1

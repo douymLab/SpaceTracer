@@ -4,6 +4,7 @@ UMI combine
 """
 
 from functools import partial
+import io
 import json
 import time
 import pyarrow as pa
@@ -17,7 +18,8 @@ import csv
 import pandas as pd
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.utils.logger import get_logger
-from SpaceTracer.utils.read_files import load_chunk_files_from_db, read_bam
+from SpaceTracer.utils.parallel import parallel_map
+from SpaceTracer.utils.read_files import load_manifest_files_for_chunk_tasks_only_umi_combine, read_bam, read_chunk_bytes_by_offset
 
 from SpaceTracer.cores.UMI_combine import process_single_region_for_umi_combine
 from SpaceTracer.utils.utils import build_region_tasks_for_UMI_combine
@@ -38,6 +40,24 @@ COLUMNS_MAIN = [
 # error_allele file: one row per allele observation at each position
 COLUMNS_ERROR_ALLELE = ["#chrom", "pos", "ref", "alt", "strand"]
 
+normal_cfg = {
+    "task_type": "normal",
+    "thread_per_chunk": 2,
+    "main_flush_rows": 100000,
+    "err_flush_rows": 5000,
+    "max_region_size": 20000,
+    "max_variants_per_region": 100,
+}
+
+mito_cfg = {
+    "task_type": "mito",
+    "thread_per_chunk": 1,
+    "main_flush_rows": 5000,
+    "err_flush_rows": 1000,
+    "max_region_size": 150,
+    "max_variants_per_region": 10,
+}
+
 # ── Step class ────────────────────────────────────────────────────────────────
 class UMICombineStep(BaseStep):
     def get_inputs(self, context: Dict) -> Dict[str, str]:
@@ -46,7 +66,7 @@ class UMICombineStep(BaseStep):
             'in_filter_bam': context.get('in_filter_bam'),
             'reference': self.config.get('genome_fasta'),
             'filter_mpileup_file':context.get('filter_mpileup_file'),
-            'db_path': context.get('db_path','')
+            'manifest_path': context.get('manifest_path','')
         }
 
         return inputs
@@ -68,7 +88,7 @@ class UMICombineStep(BaseStep):
         inputs=self.get_inputs(context)
         bam_file=inputs["in_filter_bam"]
         mpileup_file=inputs["filter_mpileup_file"]
-        db_path=inputs['db_path']
+        manifest_path=inputs['manifest_path']
 
         
         seq_type=self.config.get('sequence_type')
@@ -81,14 +101,6 @@ class UMICombineStep(BaseStep):
 
         # df = pd.read_csv(mpileup_file, sep="\t")
         
-        max_region_size=20000000 # 20M
-        max_variants_per_region=5000 
-        chunksize=5
-        max_workers=self.threads
-        thread_per_chunk=2
-        main_flush_rows=100000
-        err_flush_rows=5000
-        compression="snappy"
 
         chunk_output_dir = os.path.join(self.step_dir, "chunk_outputs")
         final_output_dir = os.path.join(self.step_dir, "final_outputs")
@@ -98,19 +110,19 @@ class UMICombineStep(BaseStep):
         t0 = time.time()
 
         spot_files, error_files = _run_umi_combine_parallel(
-            db_path=db_path,
-            bam_file=bam_file,
-            seq_type=seq_type,
-            output_dir=chunk_output_dir,
-            max_workers=max_workers,
-            thread_per_chunk=thread_per_chunk,
-            main_flush_rows=main_flush_rows,
-            err_flush_rows=err_flush_rows,
-            max_region_size=max_region_size,
-            max_variants_per_region=max_variants_per_region,
-            chunksize=chunksize,
-            compression=compression
+                manifest_path=manifest_path,
+                bam_file=bam_file,
+                seq_type=seq_type,
+                output_dir=chunk_output_dir,
+                max_workers=self.threads,
+                normal_cfg=normal_cfg,
+                mito_cfg=mito_cfg,
+                compression="snappy",
+                progress_interval=0.05,
+                logger=logger,
+
         )
+        
         logger.info(f"[parallel umi_combine] {time.time()-t0:.2f}s")
         final_spot = spot_count_file
         final_error = error_count_file
@@ -126,8 +138,41 @@ class UMICombineStep(BaseStep):
 
       
 
-def _build_region_tasks_from_one_chunk_file_for_UMI_combine(chunk_file,max_region_size,max_variants_per_region):
-    df=pd.read_csv(chunk_file,sep="\t",header=None,names=["#chrom", "pos", "type", "ref", "alt1", "total_depth", "ref_depth", "alt1_depth", "vaf"],comment='#')
+def _build_region_tasks_from_one_chunk_file_for_UMI_combine(chunk_task,max_region_size,max_variants_per_region):
+    raw = read_chunk_bytes_by_offset(
+        source_file=chunk_task["source_file"],
+        start_offset=chunk_task["start_offset"],
+        end_offset=chunk_task["end_offset"],
+    )
+
+    if not raw:
+        return pd.DataFrame(columns=[
+            "#chrom", "pos", "type", "ref", "alt1",
+            "total_depth", "ref_depth", "alt1_depth", "vaf"
+        ])
+
+    df = pd.read_csv(
+        io.BytesIO(raw),
+        sep="\t",
+        header=None,
+        names=[
+            "#chrom", "pos", "type", "ref", "alt1",
+            "total_depth", "ref_depth", "alt1_depth", "vaf"
+        ],
+        comment="#",
+        dtype={
+            "#chrom": "string",
+            "pos": "int64",
+            "type": "string",
+            "ref": "string",
+            "alt1": "string",
+            "total_depth": "int64",
+            "ref_depth": "int64",
+            "alt1_depth": "int64",
+            "vaf": "float64",
+        }
+    )
+
     region_tasks=build_region_tasks_for_UMI_combine(df,max_region_size,max_variants_per_region)
     return region_tasks
 
@@ -216,45 +261,8 @@ def _umi_combine_to_parquet_buffered(
             err_writer.close()
 
 
-    # bam_handle = read_bam(bam_file)
-
-    # for region_task in region_tasks:
-    #     result = process_single_region_for_umi_combine(
-    #         bam_handle, region_task, seq_type
-    #     )
-
-    #     if result is None:
-    #         continue
-
-    #     for spot_count_list, error_list in result:
-    #         if spot_count_list:
-    #             main_buffer.extend(spot_count_list)
-    #         if error_list:
-    #             err_buffer.append(error_list)
-
-    #     if len(main_buffer) >= main_flush_rows:
-    #         main_writer = _flush_rows_to_parquet(
-    #             rows=main_buffer,
-    #             columns=COLUMNS_MAIN,
-    #             writer=main_writer,
-    #             out_file=spot_count_parquet,
-    #             compression=compression
-    #         )
-    #         main_buffer.clear()
-
-    #     if len(err_buffer) >= err_flush_rows:
-    #         err_writer = _flush_rows_to_parquet(
-    #             rows=err_buffer,
-    #             columns=COLUMNS_ERROR_ALLELE,
-    #             writer=err_writer,
-    #             out_file=error_count_parquet,
-    #             compression=compression
-    #         )
-    #         err_buffer.clear()
-
-
 def _run_umi_combine_one_chunk(
-    chunk_file,
+    chunk_task,
     bam_file,
     seq_type,
     thread_per_chunk,
@@ -267,23 +275,26 @@ def _run_umi_combine_one_chunk(
     compression
 ):
     os.makedirs(output_dir, exist_ok=True)
-    chunk_base = os.path.basename(chunk_file)
-    chunk_prefix = os.path.splitext(chunk_base)[0]
+
+    chunk_id = chunk_task["chunk_id"]
+    chunk_prefix = chunk_id
 
     spot_count_parquet = os.path.join(output_dir, f"{chunk_prefix}.spot.parquet")
     error_count_parquet = os.path.join(output_dir, f"{chunk_prefix}.error.parquet")
-    
-    t0 = time.time()
-    # logger.info(f"chunk start: {chunk_file}")
 
-    region_tasks = _build_region_tasks_from_one_chunk_file_for_UMI_combine(chunk_file,max_region_size,max_variants_per_region)
+    t0 = time.time()
+
+    region_tasks = _build_region_tasks_from_one_chunk_file_for_UMI_combine(
+        chunk_task,
+        max_region_size,
+        max_variants_per_region
+    )
 
     t1 = time.time()
-    # logger.info(f"chunk={chunk_file} build_region_tasks done, n={len(region_tasks)}, elapsed={t1-t0:.2f}s")
 
     if not region_tasks:
         return {
-            "chunk_file": chunk_file,
+            "chunk_id": chunk_id,
             "spot_parquet": None,
             "error_parquet": None
         }
@@ -302,75 +313,113 @@ def _run_umi_combine_one_chunk(
     )
 
     t2 = time.time()
-    # logger.info(f"chunk={chunk_file} processing done, elapsed={t2-t1:.2f}s total={t2-t0:.2f}s")
 
     return {
-        "chunk_file": chunk_file,
+        "chunk_id": chunk_id,
         "spot_parquet": spot_count_parquet,
         "error_parquet": error_count_parquet,
     }
 
 
-def _run_umi_combine_parallel(
-    db_path,
+def _build_umi_combine_tasks(manifest_path, normal_cfg, mito_cfg):
+    tasks = load_manifest_files_for_chunk_tasks_only_umi_combine(manifest_path)
+    if not tasks:
+        return []
+
+    merged = []
+    for task in tasks:
+        chrom = task.get("chrom", "")
+        is_mito = chrom in ("chrM", "MT", "M")
+
+        new_task = dict(task)
+        new_task["is_mito"] = is_mito
+        new_task["runtime_cfg"] = mito_cfg if is_mito else normal_cfg
+        merged.append(new_task)
+
+    merged.sort(key=lambda x: (-x["cost"], x["chrom"], x["chunk_idx"]))
+    return merged
+
+  
+def _run_single_umi_combine_task(
+    task,
     bam_file,
     seq_type,
     output_dir,
-    max_workers=4,
-    thread_per_chunk=1,
-    main_flush_rows=100000,
-    err_flush_rows=50000,
-    max_region_size=20000,
-    max_variants_per_region=100,
-    chunksize=20,
-    compression="snappy"
+    compression="snappy",
 ):
-    chunk_files = load_chunk_files_from_db(db_path)
+    cfg = task["runtime_cfg"]
 
-    if not chunk_files:
-        print("[warn] no chunk files found in db")
+    return _run_umi_combine_one_chunk(
+        chunk_task=task,
+        bam_file=bam_file,
+        seq_type=seq_type,
+        output_dir=output_dir,
+        thread_per_chunk=cfg["thread_per_chunk"],
+        main_flush_rows=cfg["main_flush_rows"],
+        err_flush_rows=cfg["err_flush_rows"],
+        max_region_size=cfg["max_region_size"],
+        max_variants_per_region=cfg["max_variants_per_region"],
+        compression=compression,
+        chunksize=1,  # make sure in each task, regions were run one by one
+    )
+
+def _run_umi_combine_parallel(
+    manifest_path,
+    bam_file,
+    seq_type,
+    output_dir,
+    max_workers,
+    normal_cfg,
+    mito_cfg,
+    compression="snappy",
+    progress_interval=0.05,
+    logger=None,
+):
+    tasks = _build_umi_combine_tasks(
+        manifest_path=manifest_path,
+        normal_cfg=normal_cfg,
+        mito_cfg=mito_cfg,
+    )
+
+    if not tasks:
+        if logger:
+            logger.warning("[umi_combine] no tasks found")
         return [], []
 
-    # print(f"[info] total chunk files = {len(chunk_files)}")
+    if logger:
+        mito_n = sum(1 for t in tasks if t["is_mito"])
+        logger.info(
+            f"[umi_combine] unified queue: total={len(tasks)}, mito={mito_n}, "
+            f"normal={len(tasks) - mito_n}, max_workers={max_workers}"
+        )
+
+    results = parallel_map(
+        items=[(task, bam_file, seq_type, output_dir, compression) for task in tasks],
+        worker_fn=_run_single_umi_combine_task,
+        max_workers=max_workers,
+        desc="umi_combine",
+        raise_on_error=True,
+        backend="process",
+        progress_interval=progress_interval,
+        logger=logger,
+        worker_takes_tuple=True,
+    )
 
     all_spot_parquets = []
     all_error_parquets = []
 
-    with ProcessPoolExecutor(max_workers=max_workers) as exe:
-        futures = []
-
-        for chunk_file in chunk_files:
-            futures.append(
-                exe.submit(
-                    _run_umi_combine_one_chunk,
-                    chunk_file,
-                    bam_file,
-                    seq_type,
-                    thread_per_chunk,
-                    output_dir,
-                    max_region_size,
-                    max_variants_per_region,
-                    main_flush_rows,
-                    err_flush_rows,
-                    chunksize,
-                    compression
-                )
-            )
-
-        for f in as_completed(futures):
-            result = f.result()
-
-            if result["spot_parquet"] is not None:
-                all_spot_parquets.append(result["spot_parquet"])
-
-            if result["error_parquet"] is not None:
-                all_error_parquets.append(result["error_parquet"])
+    for r in results:
+        if not r:
+            continue
+        if r.get("spot_parquet") is not None:
+            all_spot_parquets.append(r["spot_parquet"])
+        if r.get("error_parquet") is not None:
+            all_error_parquets.append(r["error_parquet"])
 
     return all_spot_parquets, all_error_parquets
 
-    
-    
 # ── Module-level worker (must NOT be inside the class) ───────────────────────
+    
 _bam_handle = None
 def _init_worker(bam_file):
     global _bam_handle
@@ -491,36 +540,3 @@ def merge_parquet_files(parquet_files, output_file, compression="snappy"):
     finally:
         if writer is not None:
             writer.close()
-# def _process_single_region_for_umi_combine(bam_handle,region_info,seq_type):
-#     """
-#     sites:
-#         [(pos, ref, alt, check_mosaic, check_error), ...]
-#     """
-
-#     chrom,start,end,sites = region_info
-#     reads=bam_handle.fetch(chrom,start,end)
-
-#     results=[]
-#     for site in sites:
-#         pos, ref, _, check_mosaic, check_error=site
-
-#         try:
-#             mosaic_spot_list, error_list = combine_UMI_spot_for_both_mosaic_and_error(
-#                 reads,
-#                 check_mosaic,   # "" when this position is not candidate_mosaic
-#                 check_error,    # "" when this position is not candidate_error
-#                 seq_type,
-#                 (chrom,pos,ref),
-#             )
-#             # new_list  : list of rows (multiple barcodes per position)
-#             # error_allele : single char, e.g. "A"  — or "" if not applicable
-#             # strand       : single char, e.g. "+"  — or "" if not applicable
-#             results.append([ mosaic_spot_list, error_list])
-        
-#         except Exception as exc:
-#             identifier=(chrom,pos,ref)
-#             logger.warning(f"[UmiCombine] worker failed for {identifier}: {exc}")
-#             results.append([ None, None])
-
-#     return results
-

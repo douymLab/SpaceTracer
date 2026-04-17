@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import subprocess
-import tempfile
+import shlex
 
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.utils.read_files import load_parquet, load_text_file
@@ -20,31 +20,19 @@ def collect_files_from_manifest(manifest_file: str, column_name: str):
     return files
 
 
-def load_single_feature_file(path, sep="\t"):
+def _ensure_variant_multiindex(df: pd.DataFrame) -> pd.DataFrame:
     """
-    读取单个 feature 文件：
-    - 优先读取同名 parquet
-    - 否则读取 txt/csv
-    并统一设置 MultiIndex
+    统一把 df 设置成 MultiIndex:
+    (#chrom, pos, ref, alt)
     """
-    if not path:
-        return pd.DataFrame()
-
-    parquet_path = str(path).replace(".txt", ".parquet")
-    if os.path.exists(parquet_path):
-        df = load_parquet(parquet_path)
-        return df
-
-    if not os.path.exists(path):
-        return pd.DataFrame()
-
-    df = load_text_file(path, sep=sep, header=0)
     if df is None or df.empty:
         return pd.DataFrame()
 
+    required_cols = ["#chrom", "pos", "ref", "alt"]
+
     if not isinstance(df.index, pd.MultiIndex):
-        required_cols = ["#chrom", "pos", "ref", "alt"]
         if all(col in df.columns for col in required_cols):
+            df = df.copy()
             df.index = pd.MultiIndex.from_arrays(
                 [df["#chrom"], df["pos"], df["ref"], df["alt"]],
                 names=["#chrom", "pos", "ref", "alt"]
@@ -52,14 +40,109 @@ def load_single_feature_file(path, sep="\t"):
     return df
 
 
+def load_single_feature_file(path, sep="\t"):
+    """
+    读取单个 feature 文件：
+    - 优先读取同名 parquet
+    - 否则读取 txt/csv
+    - 无论哪种方式都统一设置 MultiIndex
+    """
+    if not path:
+        return pd.DataFrame()
+
+    parquet_path = str(path).replace(".txt", ".parquet")
+
+    df = None
+    if os.path.exists(parquet_path):
+        df = load_parquet(parquet_path)
+    elif os.path.exists(path):
+        df = load_text_file(path, sep=sep, header=0)
+    else:
+        return pd.DataFrame()
+
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    df = _ensure_variant_multiindex(df)
+    return df
+
+
+def _is_nonempty_file(path: str) -> bool:
+    return bool(path) and os.path.exists(path) and os.path.getsize(path) > 0
+
+
+def _newer_than_all(target_file: str, deps: list) -> bool:
+    """
+    target_file 是否新于所有依赖文件
+    """
+    if not os.path.exists(target_file):
+        return False
+    target_mtime = os.path.getmtime(target_file)
+    for dep in deps:
+        if dep and os.path.exists(dep) and os.path.getmtime(dep) > target_mtime:
+            return False
+    return True
+
+def _merge_files(valid_files, output_file):
+    if not valid_files:
+        with open(output_file, "w"):
+            pass
+        return
+
+    header_written = False
+
+    with open(output_file, "w") as out_f:
+        for file_path in valid_files:
+            with open(file_path, "r") as in_f:
+                for line_no, line in enumerate(in_f):
+                    if not line.strip():
+                        continue
+
+                    if not header_written:
+                        out_f.write(line.rstrip("\n") + "\n")
+                        header_written = True
+                        continue
+
+                    if line_no == 0:
+                        continue
+
+                    out_f.write(line.rstrip("\n") + "\n")
+
+def _awk_merge_files(valid_files, output_file):
+    """
+    用 awk 合并多个带表头 txt：
+    - 保留第一个文件表头
+    - 跳过后续文件表头
+    - 去空行
+    """
+    if not valid_files:
+        with open(output_file, "w"):
+            pass
+        return
+
+    files_quoted = " ".join(shlex.quote(f) for f in valid_files)
+    out_quoted = shlex.quote(output_file)
+
+    awk_script = r'NR==1{print;next} FNR==1{next} $0 !~ /^[[:space:]]*$/ {print}'
+    cmd = f"awk {shlex.quote(awk_script)} {files_quoted} > {out_quoted}"
+    subprocess.run(["bash", "-lc", cmd], check=True,shell=True)
+
+
 def merge_feature_files_from_manifest(
     manifest_file: str,
     manifest_column: str,
     output_file: str,
-    sep="\t" 
+    sep="\t",
+    return_df=True,
 ):
+    """
+    从 manifest 合并多个 chunk feature 文件：
+    - 优先命中 parquet 缓存
+    - 否则 awk 合并 txt（去空行、去重复表头）
+    - 生成 parquet 缓存
+    """
     files = collect_files_from_manifest(manifest_file, manifest_column)
-    
+
     valid_files = []
     for f in files:
         if not f or not os.path.exists(f):
@@ -73,49 +156,70 @@ def merge_feature_files_from_manifest(
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
 
+    parquet_file = output_file.replace(".txt", ".parquet")
+
+    # 先命中 parquet 缓存
+    # deps = [manifest_file] + valid_files
+    # if _newer_than_all(parquet_file, deps):
+    #     if return_df:
+    #         df = load_parquet(parquet_file)
+    #         df = _ensure_variant_multiindex(df)
+    #         return df
+        # return pd.DataFrame()
+
     if not valid_files:
         empty_df = pd.DataFrame()
         empty_df.to_csv(output_file, sep=sep, index=False)
-        return empty_df
-
-    with open(output_file, 'w') as out_f:
-        for i, file_path in enumerate(valid_files):
-            with open(file_path, 'r') as in_f:
-                if i == 0:
-                    out_f.write(in_f.read())
-                else:
-                    next(in_f, None)  # 安全跳过
-                    out_f.write(in_f.read())
-                    if not out_f.write('\n'):
-                        out_f.write('\n')
-
-    merged_df = pd.read_csv(output_file, sep=sep)
-    
-    if not isinstance(merged_df.index, pd.MultiIndex):
-        required_cols = ["#chrom", "pos", "ref", "alt"]
-    if all(col in merged_df.columns for col in required_cols):
-        merged_df.index = pd.MultiIndex.from_arrays(
-            [merged_df["#chrom"], merged_df["pos"], merged_df["ref"], merged_df["alt"]],
-            names=["#chrom", "pos", "ref", "alt"]
-        )
-    parquet_file = output_file.replace('.txt', '.parquet')
-    if not merged_df.empty:
         try:
-            merged_df.to_parquet(parquet_file, index=False)
+            empty_df.to_parquet(parquet_file, index=False)
         except Exception:
             pass
-            
-    return merged_df
+        return empty_df
+
+    # 用 awk 快速合并 txt
+    _merge_files(valid_files, output_file)
+
+    # 读合并结果并补索引
+    merged_df = pd.read_csv(output_file, sep=sep)
+    if merged_df is None or merged_df.empty:
+        empty_df = pd.DataFrame()
+        try:
+            empty_df.to_parquet(parquet_file, index=False)
+        except Exception:
+            pass
+        return empty_df
+
+    merged_df = _ensure_variant_multiindex(merged_df)
+
+    # 写 parquet 缓存
+    try:
+        merged_df.to_parquet(parquet_file, index=False, engine="pyarrow", compression="snappy")
+    except Exception as e:
+        print(f"Warning: failed to write parquet cache: {e}")
+
+    if return_df:
+        return merged_df
+    return pd.DataFrame()
+
+
+def _log_df_index_info(name, df):
+    if df is None or df.empty:
+        print(f"[{name}] empty")
+        return
+    try:
+        n_rows = len(df)
+        n_unique = df.index.nunique()
+        n_dup = n_rows - n_unique
+        print(f"[{name}] rows={n_rows}, unique_index={n_unique}, duplicated_index={n_dup}")
+    except Exception as e:
+        print(f"[{name}] failed to inspect index: {e}")
 
 
 class MergeFeatureStep(BaseStep):
     def get_inputs(self, context):
         return {
-            # 这两个是已经合并好的 sample-level 文件
             "RNA_feature": context.get("RNA_feature", ""),
             "mappability_feature": context.get("mappability_feature", ""),
-
-            # 这两个现在是 chunk manifest
             "spatial_feature_results": (
                 context.get("spatial_feature_results", "")
                 or context.get("spatial_feature", "")
@@ -143,32 +247,32 @@ class MergeFeatureStep(BaseStep):
         inputs = self.get_inputs(context)
         outputs = self.get_outputs(context)
 
-        # 1. RNA_feature: 已经是总文件，直接读
+        # 1. RNA_feature
         RNA_feature_df = self._load_single_feature(inputs["RNA_feature"]) \
             if inputs.get("RNA_feature") else pd.DataFrame()
 
-        # 2. mappability_feature: 已经是总文件，直接读
+        # 2. mappability_feature
         mappability_feature_df = self._load_single_feature(inputs["mappability_feature"]) \
             if inputs.get("mappability_feature") else pd.DataFrame()
 
-        # 3. spatial_feature_results: manifest，需要先合并
+        # 3. spatial_feature_results
         spatial_feature_df = pd.DataFrame()
         spatial_input = inputs.get("spatial_feature_results", "")
         if spatial_input:
             if str(spatial_input).endswith(".tsv"):
                 rows = load_manifest_tsv(spatial_input)
                 if rows:
-                    sample_row = rows[0]
                     spatial_feature_df = merge_feature_files_from_manifest(
                         manifest_file=spatial_input,
                         manifest_column="spatial_feature_txt",
                         output_file=outputs["merged_spatial_feature"],
-                        sep="\t"
+                        sep="\t",
+                        return_df=True,
                     )
             else:
                 spatial_feature_df = self._load_single_feature(spatial_input)
 
-        # 4. read_feature_results: manifest，需要先合并
+        # 4. read_feature_results
         read_feature_df = pd.DataFrame()
         read_input = inputs.get("read_feature_results", "")
         if read_input:
@@ -179,10 +283,23 @@ class MergeFeatureStep(BaseStep):
                         manifest_file=read_input,
                         manifest_column="read_feature_txt",
                         output_file=outputs["merged_read_feature"],
-                        sep="\t"
+                        sep="\t",
+                        return_df=True,
                     )
             else:
                 read_feature_df = self._load_single_feature(read_input)
+
+        # 确保索引统一
+        RNA_feature_df = _ensure_variant_multiindex(RNA_feature_df)
+        spatial_feature_df = _ensure_variant_multiindex(spatial_feature_df)
+        read_feature_df = _ensure_variant_multiindex(read_feature_df)
+        mappability_feature_df = _ensure_variant_multiindex(mappability_feature_df)
+
+        # 打印 index 唯一性，帮助排查 join 扩行
+        _log_df_index_info("RNA_feature", RNA_feature_df)
+        _log_df_index_info("spatial_feature", spatial_feature_df)
+        _log_df_index_info("read_feature", read_feature_df)
+        _log_df_index_info("mappability_feature", mappability_feature_df)
 
         output_feature = outputs["combine_feature"]
 
@@ -196,20 +313,29 @@ class MergeFeatureStep(BaseStep):
             "mut_vs_nonmut_spots_MI_p", "mut_vs_nonmut_spots_MI_s"
         ]] if not spatial_feature_df.empty else pd.DataFrame()
 
-        dfs_to_merge = [
-            df for df in [
-                RNA_feature_df,
-                short_spatial_feature_df,
-                read_feature_df,
-                mappability_feature_df
-            ]
-            if df is not None and not df.empty
-        ]
-
-        if dfs_to_merge:
-            merged_df = pd.concat(dfs_to_merge, axis=1, join="outer")
+        # 以 spatial 为主表
+        if not short_spatial_feature_df.empty:
+            merged_df = short_spatial_feature_df.copy()
         else:
             merged_df = pd.DataFrame()
+
+        # 按 spatial index 左连接
+        for name, df in [
+            ("RNA_feature", RNA_feature_df),
+            ("read_feature", read_feature_df),
+            ("mappability_feature", mappability_feature_df),
+        ]:
+
+            if df is not None and not df.empty:
+                # 去掉和主表重复的列，避免 join 冲突
+                duplicate_cols = [c for c in df.columns if c in merged_df.columns]
+                if duplicate_cols:
+                    print(f"[{name}] dropping duplicated columns before join: {duplicate_cols}")
+                    df = df.drop(columns=duplicate_cols)
+
+                merged_df = merged_df.join(df, how="left")
+
+        print(f"[merged_df] rows={len(merged_df)}")
 
         if "mappabilityScore" in merged_df.columns:
             merged_df["mappabilityScore"] = merged_df["mappabilityScore"].apply(list2min)
@@ -289,9 +415,15 @@ class MergeFeatureStep(BaseStep):
             parquet_file = str(output_feature).replace(".txt", ".parquet")
             merged_df.to_parquet(parquet_file, index=True, engine="pyarrow", compression="snappy")
 
-        for col in merged_df.columns:
+        # 只处理 object/string 列，避免把数值列全转成 object
+        object_cols = merged_df.select_dtypes(include=["object"]).columns
+        for col in object_cols:
             merged_df[col] = merged_df[col].fillna("no")
             merged_df[col] = merged_df[col].replace("", "no")
+
+        # Filtration 单独补一下
+        if "Filtration" in merged_df.columns:
+            merged_df["Filtration"] = merged_df["Filtration"].fillna("PASS").replace("", "PASS")
 
         merged_df.to_csv(output_feature, sep="\t", index=True)
 
@@ -314,7 +446,11 @@ def compute_group_filtration(df, condition_groups, all_filter_conditions, enable
             if sub_key not in all_filter_conditions:
                 continue
 
-            mask = all_filter_conditions[sub_key](df).fillna(False)
+            try:
+                mask = all_filter_conditions[sub_key](df).fillna(False)
+            except Exception:
+                mask = pd.Series(False, index=df.index)
+
             group_mask = mask if group_mask is None else (group_mask | mask)
 
         if group_mask is not None:

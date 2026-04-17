@@ -11,7 +11,7 @@ def test_two_steps():
     config = LoadConfig().load_config(
         # genome='hg38',
         # genome_fasta='/storage/douyanmeiLab/yangzhirui/Reference/Cellranger/refdata-gex-GRCh38-2020-A/fasta/genome.fa',
-        custom_config='/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/test/test_config.yaml'  # 你的测试配置
+        custom_config='/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/Test_chrM/test_config.yaml'  # 你的测试配置
         # custom_config='/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/BCC-1_test/config.yaml'
         # custom_config='/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/BCC-1_test_cmd/config.yaml'
     )
@@ -36,7 +36,7 @@ def test_two_steps():
         # 'prior': PriorCalculator
                 
     # results = pipeline.run()
-    results = pipeline.run(only_steps=["genotyping"])
+    results = pipeline.run(only_steps=["umi_combine"])
 
     # pipeline.run(start_from="genotyping", stop_at="merge_feature", enable_parallel=True)
 

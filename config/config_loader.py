@@ -158,14 +158,15 @@ class LoadConfig:
     def _load_custom_config(self,custom_config_path: str = None) -> Dict[str, Any]:
         """load config file"""
         if not custom_config_path or not os.path.exists(custom_config_path):
-            return {}
+            raise FileNotFoundError(f'Cannot find {custom_config_path}, please check!')
         
         try:
             with open(custom_config_path) as f:
                 config = yaml.safe_load(f)
                 return config if isinstance(config, dict) else {}
         except Exception:
-            return {}
+            raise
+            # return {}
         
 
 step_default_config={}
