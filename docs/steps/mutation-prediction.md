@@ -4,27 +4,48 @@
 
 Runs model-based mutation classification from merged features and produces VCF outputs.
 
-## Current status
-
-- Implemented in `steps/step7_mutation_prediction.py`
-- Currently **not enabled in the active default DAG** in `pipeline/dag.py` / orchestrator registration
-
-## Upstream dependency (when enabled)
+## Upstream
 
 - `merge_feature`
 
 ## Required inputs
 
-- `combine_feature` (`all_feature.txt` or equivalent)
+- `combine_feature_parquet` (`all_feature.parquet` from `merge_feature`)
 
-## Key parameters
+### Input interpretation
 
-From `steps.mutation_prediction`:
+| Input key | Source step | Required | Interpretation |
+| --- | --- | --- | --- |
+| `combine_feature_parquet` | `merge_feature` output | Yes | Integrated feature matrix used for model inference; schema must match model expectations. |
+| `model_dir` | config (`steps.mutation_prediction`) | Yes | Directory containing trained model artifacts for prediction. |
+| `model_name` | config (`steps.mutation_prediction`) | Yes | Selected model artifact name/version under `model_dir`. |
 
-- `model_dir`
-- `model_name`
+## Parameters
 
-The current implementation also uses internal defaults for many model options (training mode, plotting, SHAP/PCA export, RF hyperparameters, and class balancing strategy).
+### Effective runtime keys (current implementation)
+
+| Parameter | Location | Type | Interpretation |
+| --- | --- | --- | --- |
+| `model_dir` | `steps.mutation_prediction` | path string | Directory containing trained model artifacts used for inference. |
+| `model_name` | `steps.mutation_prediction` | string | Model identifier/name loaded from `model_dir`. |
+
+Common pretrained model names shipped in `SpaceTracer_new_github/models`:
+
+- `spatial_free_model`
+- `spatial_feature_preserved_model`
+
+### Present in template but not fully wired in current step runner
+
+| Parameter | Location | Note |
+| --- | --- | --- |
+| `random_seed` | `steps.mutation_prediction` | Template key exists; current step uses internal constant seed. |
+| `plot` | `steps.mutation_prediction` | Template key exists; current step uses internal plotting setting. |
+
+## Tuning notes
+
+- Ensure model artifacts match the feature schema in `combine_feature`.
+- Keep model versioning explicit (`model_dir` + `model_name`) for reproducibility.
+- If extending this step, expose internal hardcoded options as config keys progressively.
 
 ## Outputs
 

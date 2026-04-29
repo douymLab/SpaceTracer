@@ -4,7 +4,7 @@
 
 Performs cluster-level and spot-level genotype inference from UMI counts and priors.
 
-## Upstream dependencies
+## Upstream
 
 - `cluster`
 - `prior`
@@ -17,17 +17,33 @@ Performs cluster-level and spot-level genotype inference from UMI counts and pri
 - `cluster` information
 - `cell_num`
 
-## Key parameters
+### Input interpretation
 
-From `steps.genotyping`:
+| Input key | Source step/config | Required | Interpretation |
+| --- | --- | --- | --- |
+| `spot_count_file` | `umi_combine` manifest output | Yes | Chunk manifest pointing to spot-level count parquet files used for genotype inference. |
+| `prior_file` | `prior` output (or fixed/empty mode) | Yes | Prior-frequency table for genotype calculations; behavior differs if fixed/empty prior is used. |
+| `cluster` | `cluster` output (`cluster_file`) | Yes | Spot-to-cluster mapping used for cluster-level aggregation before individual calls. |
+| `cell_num` | `steps.cell_number` / context | Yes | Cell-number support used in spot-level genotype refinement logic. |
 
-- `alpha`
-- `epsQ`
-- `epsAF`
-- `mu`
-- `thr_dp`
-- `pop_vaf`
-- `filter_oneallele`
+## Parameters (`steps.genotyping`)
+
+| Parameter | Type | Typical/default | Interpretation |
+| --- | --- | --- | --- |
+| `alpha` | float | `0.05` | Statistical significance threshold used in allele-level filtering logic. |
+| `epsQ` | int | `20` | Quality-to-error conversion scale for UMI/read evidence aggregation. |
+| `epsAF` | float | `0.003` | Allele-frequency error floor used during cluster allele filtering. |
+| `mu` | float | `1e-5` | Prior mutation-rate term used in individual genotype inference. |
+| `thr_dp` | int | `1000` | Depth threshold for robust genotype calling/retention. |
+| `pop_vaf` | float | `1e-5` | Population-AF threshold used in genotype filtering logic. |
+| `filter_oneallele` | bool | `true` | If true, applies one-allele style filtering for stricter genotype selection. |
+
+## Tuning notes
+
+- `alpha`, `epsAF`, and `mu` jointly control strictness of candidate retention.
+- Raise `thr_dp` for more conservative calls on noisy/high-depth data.
+- Lower `pop_vaf` for stricter rare-variant emphasis.
+- Keep `filter_oneallele=true` unless you explicitly want a more permissive candidate set.
 
 ## Outputs
 
@@ -41,7 +57,7 @@ Main outputs:
 
 When `run.keep_intermediates` is true, extra intermediate count/genotype files are also emitted.
 
-## Notes
+## Tuning notes
 
 - This step is the key bridge from evidence aggregation to multi-feature extraction.
 - Downstream feature steps all depend directly on these genotype outputs.
