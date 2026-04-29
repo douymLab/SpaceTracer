@@ -52,10 +52,9 @@ class mappabilityFeatures:
         opener = gzip.open if is_gzipped else open
         open_mode = 'rt' if is_gzipped else 'r'
         
-        # 流式处理：分批写入
         CHUNK_SIZE = 1_000_000
         chrom_buffers = {}
-        chrom_chunk_counts = {}  # 记录每个染色体写了多少个chunk
+        chrom_chunk_counts = {}  
         total_lines = 0
         
         try:
@@ -88,7 +87,6 @@ class mappabilityFeatures:
                     
                     total_lines += 1
                     
-                    # 当缓冲区达到阈值时，写入磁盘
                     if len(chrom_buffers[chrom]) >= CHUNK_SIZE:
                         self._write_chunk(chrom, chrom_buffers[chrom], output_dir, chrom_chunk_counts[chrom])
                         chrom_chunk_counts[chrom] += 1
@@ -97,13 +95,11 @@ class mappabilityFeatures:
                     if total_lines % 10_000_000 == 0:
                         logger.debug(f"Processed {total_lines:,} lines, {len(chrom_buffers)} chromosomes...")
             
-            # 写入剩余数据
             for chrom, buffer in chrom_buffers.items():
                 if buffer:
                     self._write_chunk(chrom, buffer, output_dir, chrom_chunk_counts[chrom])
                     chrom_chunk_counts[chrom] += 1
             
-            # 合并每个染色体的所有chunk
             saved_chroms = self._merge_chunks(chrom_chunk_counts, output_dir)
         
         except Exception as e:
@@ -115,7 +111,6 @@ class mappabilityFeatures:
         if len(saved_chroms) == 0:
             raise RuntimeError(f"Failed to save any chromosome data to {output_dir}")
         
-        # 创建完成标记
         try:
             with open(complete_marker, 'w') as f:
                 f.write(f"Conversion completed at: {pd.Timestamp.now()}")
@@ -130,7 +125,6 @@ class mappabilityFeatures:
         return str(output_dir)
 
     def _write_chunk(self, chrom, buffer, output_dir, chunk_id):
-        """将缓冲区数据写入临时chunk文件"""
         if not buffer:
             return
         
@@ -139,28 +133,23 @@ class mappabilityFeatures:
         df.to_parquet(chunk_file, engine='pyarrow', compression='snappy', index=False)
 
     def _merge_chunks(self, chrom_chunk_counts, output_dir):
-        """合并每个染色体的所有chunk文件"""
         saved_chroms = []
         
         for chrom, num_chunks in chrom_chunk_counts.items():
             if num_chunks == 0:
                 continue
             
-            # 读取所有chunk
             dfs = []
             for i in range(num_chunks):
                 chunk_file = output_dir / f'{chrom}.chunk_{i}.parquet'
                 dfs.append(pd.read_parquet(chunk_file))
             
-            # 合并并排序
             df = pd.concat(dfs, ignore_index=True)
             df = df.sort_values('start').reset_index(drop=True)
             
-            # 写入最终文件
             final_file = output_dir / f'{chrom}.parquet'
             df.to_parquet(final_file, engine='pyarrow', compression='snappy', index=False)
             
-            # 删除临时chunk文件
             for i in range(num_chunks):
                 chunk_file = output_dir / f'{chrom}.chunk_{i}.parquet'
                 chunk_file.unlink()
@@ -205,36 +194,4 @@ class mappabilityFeatures:
         
         return results.tolist()
     
-    # def _extract_chromosome_features(self, chrom: str, positions_df: pd.DataFrame, 
-    #                                 context: Dict) -> pd.DataFrame:
-    #     """提取单条染色体的所有特征"""
-    #     import pysam
-        
-    #     logger.info(f"Processing chromosome {chrom}...")
-        
-    #     positions = sorted(positions_df['position'].tolist())
-        
-    #     # 1. 加载该染色体的 mappability 数据（只加载一次）
-    #     mappability_df = self._load_mappability_for_chrom(
-    #         chrom, context['mappability_parquet']
-    #     )
-        
-    #     # 2. 批量查询 mappability
-    #     mappability_values = self._query_mappability(mappability_df, positions)
-        
-    #     # 3. 提取 BAM features（分chunk处理）
-    #     bam_features = self._extract_bam_features_chunked(
-    #         chrom, positions, context['bam_file']
-    #     )
-        
-    #     # 4. 合并所有特征
-    #     result_df = positions_df.copy()
-    #     result_df['mappability'] = mappability_values
-        
-    #     # 添加 BAM features
-    #     for key in bam_features[0].keys():
-    #         result_df[f'bam_{key}'] = [f[key] for f in bam_features]
-        
-    #     logger.info(f"Completed {chrom}: {len(result_df)} positions")
-    #     return result_df
-    
+  

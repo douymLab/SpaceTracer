@@ -13,10 +13,6 @@ logger = get_logger(model_name)
 
 
 def merge_text_files(file_list, output_file, deduplicate=True):
-    """
-    合并多个文本文件为一个文件。
-    默认去重，并跳过空文件/不存在文件。
-    """
     valid_files = [f for f in file_list if f and os.path.exists(f) and os.path.getsize(f) > 0]
 
     out_dir = os.path.dirname(output_file)
@@ -88,7 +84,7 @@ class MappabilityFeatureStep(BaseStep):
     def _run(self, context):
         mappability_path = self.config["mappability_path"]
 
-        # 预初始化一次，触发 chrom parquet 准备逻辑
+        # initialization
         mappability_infos = mappabilityFeatures(mappability_path)
         del mappability_infos
         gc.collect()
@@ -154,26 +150,6 @@ class MappabilityFeatureStep(BaseStep):
         results = [df for df in results if df is not None and not df.empty]
         gc.collect()
 
-        # with ThreadPoolExecutor(max_workers=self.threads) as executor:
-        #     future_to_chrom = {
-        #         executor.submit(
-        #             process_chromosome_mutations_for_mappable,
-        #             chrom,
-        #             group,
-        #             mappability_path
-        #         ): chrom
-        #         for chrom, group in chrom_groups
-        #     }
-
-            # for future in tqdm(as_completed(future_to_chrom), total=len(future_to_chrom), desc="mappability_feature"):
-            #     chrom = future_to_chrom[future]
-            #     try:
-            #         result_df = future.result()
-            #         if result_df is not None and not result_df.empty:
-            #             results.append(result_df)
-            #     except Exception as e:
-            #         logger.error(f"Failed to process {chrom}: {e}")
-            #         raise
 
         if not results:
             logger.warning("No mappability results generated, writing empty outputs.")

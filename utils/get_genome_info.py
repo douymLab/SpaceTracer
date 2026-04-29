@@ -25,7 +25,7 @@ GENOME_CONFIGS = {
         'species': 'human',
         'description': 'Human (hg19)',
         'chromosomes': {
-            'autosomes': [str(i) for i in range(1, 23)],  # 注意：无chr前缀
+            'autosomes': [str(i) for i in range(1, 23)],  
             'sex_chromosomes': ['X', 'Y'],
             'mitochondrial': ['MT', 'M'],
             'contigs' : [],
@@ -80,37 +80,6 @@ class GenomeDetails:
     def __init__(self,genome, genome_fasta):
         self.genome=genome
         self.genome_fasta=genome_fasta
-    
-    # def _find_fai_file(self):
-    #     """ find raw fai file """
-    #     fasta_path=self.genome_fasta
-    #     dir_name = os.path.dirname(fasta_path)
-    #     file_name = os.path.basename(fasta_path)
-    #     # 1. most common fai file     
-    #     path1 = str(fasta_path) + '.fai'
-    #     if os.path.exists(path1):
-    #         logger.debug(f"Found fai: {path1}")
-    #         return path1
-        
-    #     # if not, try other path
-    #     suffixes_to_try = ['.fa', '.fasta', '.fna', '.fas']
-    #     # 2. add fai
-    #     for suffix in suffixes_to_try:
-    #         if fasta_path.endswith(suffix):
-    #             path2 = fasta_path+'.fai'
-    #             if path2.exists():
-    #                 logger.debug(f"Found fai: {path2}")
-    #                 return path2
-        
-    #     # 3. remove .fa .fasta; and add .fai
-    #     if fasta_path.endswith(('.fa', '.fasta')):
-    #         path3 = os.path.join(dir_name, file_name + '.fai') 
-    #         if path3.exists():
-    #             logger.debug(f"Found fai: {path3}")
-    #             return path3
-        
-    #     logger.error(f"No fai file found for {fasta_path}")
-    #     return None
     
     def _find_fai_file(self):
         """find raw fai file"""

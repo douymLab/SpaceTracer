@@ -306,79 +306,7 @@ def calculate_UMI_combine_phred(count_list, quality_dict, weigh=0.5):
     
     return phred_dict
 
-# def calculate_UMI_combine_phred(count_list, quality_dict,weigh=0.5):
-#     """
-#     The function is used to get all candidate allele and their phred score,
-#     based on count and quality dict per UMI.
-#     """
-#     all_genos=["A","T","C","G"]
-#     pcr_error = 1e-6
-#     #no_pcr_error = 1.0 - 3e-5 the reference from smcount
-#     no_pcr_error = (1.0 - pcr_error) ** 100 # median cycle in RNA-seq is 100 (50-150)
-#     rightP = 1.0
-#     sumP = 0.0
-   
-#     # try:
-#     dp=sum(count_list)
-#     # except:
-#         # print("***********",count_list)
-#     proP_dict=defaultdict(lambda : 1.0)
-#     pcrP_dict=defaultdict(float)
-#     likelihood_dict=defaultdict(float)
-#     phred_dict=defaultdict(float)
-#     for geno,one_dp in zip("ATCG",count_list):
-#         if one_dp==0:
-#             continue
-#         ## proP_value means no sequencing error for each geno
-#         # the likelihood whose allele equal to geno, here the quality is the right prob for one base
-#         # try:
-#         qual_geno_list=[phred_2_q(key)**int(quality_dict[geno][key]) for key in quality_dict[geno].keys()]
-#         # except:
-#             # print("***********************",quality_dict)
-#             # raise
-#         qual_geno=reduce(lambda x, y: x*y, qual_geno_list)
-#         proP_dict[geno]*=qual_geno
-#         # the likelihood whose allele not equal to geno
-#         for other_geno in quality_dict.keys()-set([geno]):
-#             other_qual_geno_list = [(1-phred_2_q(key))**int(quality_dict[other_geno][key]) for key in quality_dict[other_geno].keys()]
-#             if other_qual_geno_list == []:
-#                 continue
-#             other_qual_geno=reduce(lambda x, y: x*y, other_qual_geno_list)
-#             proP_dict[geno]*=other_qual_geno
-        
-#         ## rightP means no sequencing error, or no base calling error for all base
-#         rightP = rightP * qual_geno
-        
-#     for index, geno in enumerate("ATCG"):
-#         count_geno = count_list[index]
-#         ratio = (count_geno + 0.5) / (dp + 0.5 * 4)
-#         pcrP = 10.0 ** (-6.0 * ratio)
-#         pcrP_dict[geno] = pcrP
-    
-#     # after obtaining [sequencing_error, no_pcr_error, no_sequencing_error, pcr_error], the likelihood of each geno will be calculate
-#     # for geno in all_genos:
-#     for index in range(0,4):
-#         geno=all_genos[index]
-#         if count_list[index]!=0:
-#             base_calling_error = proP_dict[geno]
-#             no_base_calling_error=rightP
-#             pcr_error=min([pcrP_dict[char] for char in pcrP_dict.keys() if char != geno])
-#             likelihood_value = weigh * no_pcr_error * base_calling_error + (1-weigh) * no_base_calling_error * pcr_error 
-#         else:
-#             likelihood_value = rightP
-#             for char in set(all_genos) - set([geno]):
-#                 likelihood_value *= pcrP_dict[char]
-                    
-#         likelihood_dict[geno]=likelihood_value
-#         sumP += likelihood_value
-    
-#     for geno in likelihood_dict.keys():
-#         phred_dict[geno] = 0 if sumP <= 0 else q_2_phred(likelihood_dict[geno] / sumP)
 
-#     return phred_dict
-
-
-# following the last function, 
 def get_most_candidate_allele(phred_dict,ref_allele):
     """
     To get the most candidate allele and it's phred

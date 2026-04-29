@@ -209,18 +209,18 @@ __marimo__/
 # Custom
 */__pycache__
 external_tools/
+external/
 
 # old and beifen
 **/*old*py
+*copy*py
 **/*copy*py
-
 **/__pycache__
+resources
+cli/test*
 
 
 # Mac OS specific files
 .DS_Store
 **/.DS_Store
 
-resources
-
-cli/test*

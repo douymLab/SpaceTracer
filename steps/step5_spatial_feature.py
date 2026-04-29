@@ -166,7 +166,6 @@ class SpatialFeatureStep(BaseStep):
             sep="\t"
         ).iloc[:, 0].tolist()
 
-        # 空 chunk 直接生成空结果
         colnames = [
             '#chrom', 'pos', 'ref', 'alt', 'pass_spatial_test',
             'early_mutation', 'late_mutation',
@@ -219,15 +218,6 @@ class SpatialFeatureStep(BaseStep):
             open(out_spatial_features, "w") as f
         ):
             f.write("\t".join(colnames) + "\n")
-
-            # for values in tqdm(
-            #     pool.imap(worker, mutation_identifier_list, chunksize=2),
-            #     total=len(mutation_identifier_list),
-            #     desc=f"spatial_feature {chunk}"
-            # ):
-            #     if values:
-            #         f.write("\t".join(map(str, values)) + "\n")
-
             for values in pool.imap(worker, mutation_identifier_list, chunksize=2):
                 if values:
                     f.write("\t".join(map(str, values)) + "\n")
@@ -275,7 +265,6 @@ class SpatialFeatureStep(BaseStep):
         if not rows:
             raise ValueError(f"No chunk records found in manifest: {manifest_file}")
 
-        # 只保留有必要输入的 chunk
         valid_rows = []
         for row in rows:
             if not row:

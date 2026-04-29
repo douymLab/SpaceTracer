@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SpaceTracer"
+version = "1.0.0"
+description = "A tool for calling mutations from spatial transcriptome data"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Zhirui Yang" },
+    { name = "Mengdie Yao" }
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["SpaceTracer*"]
+
+[project.scripts]
+spacetracer = "SpaceTracer.cli.main:main"

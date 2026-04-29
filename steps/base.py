@@ -39,7 +39,7 @@ class BaseStep(ABC):
         self.context = context
         self.checkpoint = checkpoint_manager
         
-        # 从context获取基本信息
+        # get the basic context from contig
         self.config = context['config']
         self.work_dir = self.config.get('output_dir')
         self.threads=int(self.config.get('run').get('threads'))
@@ -54,78 +54,37 @@ class BaseStep(ABC):
         logger.debug(f"Initialized step: {self.name}")
     
     def execute(self, context: Dict, skip_validation: bool = True) -> Dict:
-        # logger.info(f"[{self.name}] Executing...")
-        # 验证输入
+        # validate input
         if not self.validate_inputs(context):
             raise ValueError(f"Step {self.name}: Input validation failed")
         
-        # 运行核心逻辑
+        # run func
         self._run(context)
         result_context = self.get_outputs(context)
         
-        # 验证输出
+        # validate output
         if not skip_validation and not self.validate_outputs(result_context):
             raise ValueError(f"Something wrong in {self.name}")
 
-        # logger.info(f'++++++++++++++++++raw:{context}')
-        # 更新context
+        # update context
         context.update(result_context)
-        # logger.info(f'=================update:{context}')
         return context
-
-    # def execute(self, context):
-    #     self.validate_inputs(context)
-    #     self._run(context)
-    #     new_outputs = self.get_outputs(context)
-    #     self.validate_output_files(new_outputs)
-    #     return new_outputs
-
-    # def validate_output_files(self, outputs: Dict[str, str]):
-    #     for key, path in outputs.items():
-    #         if not os.path.exists(path):
-    #             raise FileNotFoundError(f"Output {key} not found: {path}")
 
     @abstractmethod
     def _run(self, context: Dict) -> Dict:
-        """
-        核心处理逻辑（子类必须实现）
-        
-        Args:
-            context: 输入上下文
-        
-        Returns:
-            包含输出的字典
-        """
         pass
     
     def get_inputs(self, context: Dict) -> Dict[str, str]:
-        """
-        定义输入文件
-        
-        Returns:
-            {input_name: file_path} 字典
-        """
         return {}
     
     def get_outputs(self, context: Dict) -> Dict[str, str]:
-        """
-        定义输出文件
-        
-        Returns:
-            {output_name: file_path} 字典
-        """
         return {}
     
     def validate_inputs(self, context: Dict) -> bool:
-        """
-        验证输入文件
-        
-        默认实现：检查所有输入文件是否存在
-        """
         inputs = self.get_inputs(context)
-        logger.debug(f'###The inputs is :{inputs}')
+        # logger.debug(f'###The inputs is :{inputs}')
         for input_name, input_path in inputs.items():
-            if isinstance(input_path,int):
+            if isinstance(input_path,int): # the int output was used to pass some step 
                 return True
             
             elif isinstance(input_path,str) and not Path(input_path).exists():
@@ -135,19 +94,13 @@ class BaseStep(ABC):
         return True
     
     def validate_outputs(self, context: Dict) -> bool:
-        """
-        验证输出文件
-        
-        默认实现：检查所有输出文件是否存在且非空
-        """
         outputs = self.get_outputs(context)
         
         for output_name, output_path in outputs.items():
-            if isinstance(output_path,int):
+            if isinstance(output_path,int): # the int output was used to pass some step 
                 continue
             
             path = Path(output_path)
-            # print(output_path)
             if not os.path.exists(output_path):
                 logger.error(f"Output file not created: {output_name} -> {output_path}")
                 return False
@@ -159,30 +112,14 @@ class BaseStep(ABC):
         return True
     
     def load_outputs(self, context: Dict) -> Dict:
-        """
-        从之前的运行中加载输出
-        
-        用于checkpoint恢复
-        """
         outputs = self.get_outputs(context)
         
-        # 将输出路径添加到context
         for output_name, output_path in outputs.items():
             context[output_name] = output_path
         
         return context
     
     def run_command(self, cmd: str, description: str = None) -> int:
-        """
-        运行外部命令
-        
-        Args:
-            cmd: 命令字符串
-            description: 命令描述
-        
-        Returns:
-            返回码
-        """
         import subprocess
         
         if description:
@@ -204,7 +141,7 @@ class BaseStep(ABC):
         return result.returncode
     
     def get_step_config(self) -> Dict:
-        """获取该步骤的配置"""
+        """get the step configurations from config file"""
         return self.config.get('steps', {}).get(self.name, {})
 
     def get_executor(self) -> str:

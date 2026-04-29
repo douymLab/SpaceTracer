@@ -1,13 +1,14 @@
 import os
 import pandas as pd
-import subprocess
-import shlex
 
 from SpaceTracer.cores.phasing_summary import build_phase_summary_df
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.utils.read_files import load_parquet, load_text_file
 from SpaceTracer.utils.utils import list2min, load_manifest_tsv
+from SpaceTracer.utils.logger import get_logger
 
+model_name=__name__
+logger = get_logger(model_name)
 
 def collect_files_from_manifest(manifest_file: str, column_name: str):
     rows = load_manifest_tsv(manifest_file)
@@ -20,25 +21,6 @@ def collect_files_from_manifest(manifest_file: str, column_name: str):
             files.append(f)
     return files
 
-
-# def _ensure_variant_multiindex(df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     统一把 df 设置成 MultiIndex:
-#     (#chrom, pos, ref, alt)
-#     """
-#     if df is None or df.empty:
-#         return pd.DataFrame()
-
-#     required_cols = ["#chrom", "pos", "ref", "alt"]
-
-#     if not isinstance(df.index, pd.MultiIndex):
-#         if all(col in df.columns for col in required_cols):
-#             df = df.copy()
-#             df.index = pd.MultiIndex.from_arrays(
-#                 [df["#chrom"], df["pos"], df["ref"], df["alt"]],
-#                 names=["#chrom", "pos", "ref", "alt"]
-#             )
-#     return df
 
 def _ensure_variant_multiindex(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -59,12 +41,6 @@ def _ensure_variant_multiindex(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def load_single_feature_file(path, sep="\t"):
-    """
-    读取单个 feature 文件：
-    - 优先读取同名 parquet
-    - 否则读取 txt/csv
-    - 无论哪种方式都统一设置 MultiIndex
-    """
     if not path:
         return pd.DataFrame()
 
@@ -84,22 +60,6 @@ def load_single_feature_file(path, sep="\t"):
     df = _ensure_variant_multiindex(df)
     return df
 
-
-# def _is_nonempty_file(path: str) -> bool:
-#     return bool(path) and os.path.exists(path) and os.path.getsize(path) > 0
-
-
-# def _newer_than_all(target_file: str, deps: list) -> bool:
-#     """
-#     target_file 是否新于所有依赖文件
-#     """
-#     if not os.path.exists(target_file):
-#         return False
-#     target_mtime = os.path.getmtime(target_file)
-#     for dep in deps:
-#         if dep and os.path.exists(dep) and os.path.getmtime(dep) > target_mtime:
-#             return False
-#     return True
 
 def _merge_files(valid_files, output_file):
     if not valid_files:
@@ -126,25 +86,6 @@ def _merge_files(valid_files, output_file):
 
                     out_f.write(line.rstrip("\n") + "\n")
 
-# def _awk_merge_files(valid_files, output_file):
-#     """
-#     用 awk 合并多个带表头 txt：
-#     - 保留第一个文件表头
-#     - 跳过后续文件表头
-#     - 去空行
-#     """
-#     if not valid_files:
-#         with open(output_file, "w"):
-#             pass
-#         return
-
-#     files_quoted = " ".join(shlex.quote(f) for f in valid_files)
-#     out_quoted = shlex.quote(output_file)
-
-#     awk_script = r'NR==1{print;next} FNR==1{next} $0 !~ /^[[:space:]]*$/ {print}'
-#     cmd = f"awk {shlex.quote(awk_script)} {files_quoted} > {out_quoted}"
-#     subprocess.run(["bash", "-lc", cmd], check=True,shell=True)
-
 
 def merge_feature_files_from_manifest(
     manifest_file: str,
@@ -153,12 +94,7 @@ def merge_feature_files_from_manifest(
     sep="\t",
     return_df=True,
 ):
-    """
-    从 manifest 合并多个 chunk feature 文件：
-    - 优先命中 parquet 缓存
-    - 否则 awk 合并 txt（去空行、去重复表头）
-    - 生成 parquet 缓存
-    """
+   
     files = collect_files_from_manifest(manifest_file, manifest_column)
 
     valid_files = []
@@ -176,14 +112,6 @@ def merge_feature_files_from_manifest(
 
     parquet_file = output_file.replace(".txt", ".parquet")
 
-    # 先命中 parquet 缓存
-    # deps = [manifest_file] + valid_files
-    # if _newer_than_all(parquet_file, deps):
-    #     if return_df:
-    #         df = load_parquet(parquet_file)
-    #         df = _ensure_variant_multiindex(df)
-    #         return df
-        # return pd.DataFrame()
 
     if not valid_files:
         empty_df = pd.DataFrame()
@@ -194,10 +122,8 @@ def merge_feature_files_from_manifest(
             pass
         return empty_df
 
-    # 用 awk 快速合并 txt
     _merge_files(valid_files, output_file)
 
-    # 读合并结果并补索引
     merged_df = pd.read_csv(output_file, sep=sep)
     if merged_df is None or merged_df.empty:
         empty_df = pd.DataFrame()
@@ -209,7 +135,7 @@ def merge_feature_files_from_manifest(
 
     merged_df = _ensure_variant_multiindex(merged_df)
 
-    # 写 parquet 缓存
+    # save parquet 
     try:
         merged_df.to_parquet(parquet_file, index=False, engine="pyarrow", compression="snappy")
     except Exception as e:
@@ -218,19 +144,6 @@ def merge_feature_files_from_manifest(
     if return_df:
         return merged_df
     return pd.DataFrame()
-
-
-# def _log_df_index_info(name, df):
-#     if df is None or df.empty:
-#         # print(f"[{name}] empty")
-#         return
-#     try:
-#         n_rows = len(df)
-#         n_unique = df.index.nunique()
-#         n_dup = n_rows - n_unique
-#         # print(f"[{name}] rows={n_rows}, unique_index={n_unique}, duplicated_index={n_dup}")
-#     except Exception as e:
-#         print(f"[{name}] failed to inspect index: {e}")
 
 
 class MergeFeatureStep(BaseStep):
@@ -291,6 +204,7 @@ class MergeFeatureStep(BaseStep):
                         return_df=True,
                     )
             else:
+                logger.info("The spatial_feature_df is empty! Please check!")
                 spatial_feature_df = self._load_single_feature(spatial_input)
 
         # 4. read_feature_results
@@ -344,13 +258,6 @@ class MergeFeatureStep(BaseStep):
         phase_summary_df = _ensure_variant_multiindex(phase_summary_df)
         cluster_event_df = _ensure_variant_multiindex(cluster_event_df)
 
-        # chech df info 
-        # _log_df_index_info("RNA_feature", RNA_feature_df)
-        # _log_df_index_info("spatial_feature", spatial_feature_df)
-        # _log_df_index_info("read_feature", read_feature_df)
-        # _log_df_index_info("mappability_feature", mappability_feature_df)
-        # _log_df_index_info("phasing",phase_summary_df)
-        # _log_df_index_info("cluster_event",cluster_event_df)
 
         output_feature = outputs["combine_feature"]
 
@@ -363,7 +270,7 @@ class MergeFeatureStep(BaseStep):
             "mut_vs_nonmut_spots_KS_p", "mut_vs_nonmut_spots_KS_s",
             "mut_vs_nonmut_spots_MI_p", "mut_vs_nonmut_spots_MI_s"
         ]] if not spatial_feature_df.empty else pd.DataFrame()
-        # 以 spatial 为主表
+        # combine by spatial feature
         if not short_spatial_feature_df.empty:
             merged_df = short_spatial_feature_df.copy()
         else:
@@ -378,23 +285,18 @@ class MergeFeatureStep(BaseStep):
             if df is None:
                 continue
             
-
             if not df.empty:
                 merged_df = merged_df.join(df, how="left")
             else:
-                # 空 df 但保留其列到 merged_df
                 for col in df.columns:
                     if col not in merged_df.columns:
                         merged_df[col] = pd.NA
-
 
         if not cluster_event_df.empty:
             merged_df = merged_df.join(cluster_event_df, how="left")
             merged_df["cluster_event"] = merged_df["cluster_event"].fillna(False).astype(bool)
         else:
             merged_df["cluster_event"]=False
-
-        # print(f"[merged_df] rows={len(merged_df)}")
 
         if "mappabilityScore" in merged_df.columns:
             merged_df["mappabilityScore"] = merged_df["mappabilityScore"].apply(list2min)
