@@ -2,7 +2,7 @@
 
 SpaceTracer is an open-source algorithm capable of accurately detecting mosaic SNVs, including both nuclear SNVs and mitochondria SNVs, directly from spatial transcriptomics data. 
 
-![flowchart](./figures/flowchart.png)
+flowchart
 
 ## Release Notes
 
@@ -16,11 +16,11 @@ feature substantial performance improvements, the **most important update** in t
 
 **Key Improvements for Upcoming Release**
 
-- Integrated Lysis Error Calculation   
+- Integrated Lysis Error Calculation  
 Lysis error calculation for single samples will be incorporated directly into the full algorithm pipeline, providing more comprehensive and streamlined analysis.
-- One-Command Execution Mode   
+- One-Command Execution Mode  
 A simplified execution option will allow users to run SpaceTracer with a single command, removing the Snakemake dependency and making the workflow more accessible.
-- Improved Running Speed   
+- Improved Running Speed  
 Major performance optimizations will significantly accelerate processing compared with the previous version.
 
 ## Documentation
@@ -44,22 +44,18 @@ cd SpaceTracer
 ```bash
 conda env create -f environment.yml
 conda activate SpaceTracer
+pip install .
+spacetracer --help
 ```
 
-Alternative (container):  
-Docker image is available at [xiayh17/spacetracer](https://hub.docker.com/r/xiayh17/spacetracer).
-
-```bash
-docker pull xiayh17/spacetracer
-docker run -it -v $(pwd):/mnt/workflow xiayh17/spacetracer bash
-```
+If install failed, you can try to add the pythonpath, and run the command by SpaceTracer/cli/run.py --config config.yaml
 
 ### 3) Run the pipeline (most efficient path)
 
 Run with your config:
 
 ```bash
-SpaceTracer run --config config.yaml
+spacetracer run --config config.yaml
 ```
 
 Fallback command:
@@ -84,6 +80,8 @@ For complete parameter descriptions and resource guidance, see:
 - Config reference: [Config Reference](https://douymLab.github.io/SpaceTracer/config-reference/)
 - Resources: [Resources](https://douymLab.github.io/SpaceTracer/resources/)
 - Quick start: [Quick Start](https://douymLab.github.io/SpaceTracer/quickstart/)
+
+You can also download the packaged resource files (for mm10 and hg38) and the `demo_input` archive to quickly get started with SpaceTracer from [zendo].
 
 ### 5) Main outputs
 

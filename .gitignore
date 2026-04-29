@@ -218,7 +218,7 @@ external/
 **/__pycache__
 resources
 cli/test*
-
+installer
 
 # Mac OS specific files
 .DS_Store

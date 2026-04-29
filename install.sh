@@ -14,7 +14,7 @@ Usage:
 
 Options:
   --conda-env NAME    Create/use this conda environment
-  --skip-pip          Skip 'pip install -e .'
+  --skip-pip          Skip package installation
   -h, --help          Show this help message
 
 Examples:
@@ -61,9 +61,6 @@ done
 log "Installing ${PROJECT_NAME}"
 log "Project directory: ${SCRIPT_DIR}"
 
-# ---------------------------
-# Detect Python
-# ---------------------------
 if command -v python >/dev/null 2>&1; then
     PYTHON_BIN="python"
 elif command -v python3 >/dev/null 2>&1; then
@@ -74,15 +71,11 @@ fi
 
 log "Detected Python: $(${PYTHON_BIN} --version)"
 
-# ---------------------------
-# Optional conda setup
-# ---------------------------
 if [[ -n "${CONDA_ENV}" ]]; then
     if ! command -v conda >/dev/null 2>&1; then
         err "conda not found, but --conda-env was provided"
     fi
 
-    # shellcheck disable=SC1091
     eval "$(conda shell.bash hook)"
 
     if conda env list | awk '{print $1}' | grep -qx "${CONDA_ENV}"; then
@@ -109,16 +102,18 @@ if [[ -n "${CONDA_ENV}" ]]; then
     log "Using Python in conda env: $(${PYTHON_BIN} --version)"
 fi
 
-# ---------------------------
-# Install package
-# ---------------------------
 if [[ "${SKIP_PIP}" -eq 0 ]]; then
     if [[ -f "${SCRIPT_DIR}/pyproject.toml" || -f "${SCRIPT_DIR}/setup.py" ]]; then
         log "Upgrading pip/setuptools/wheel"
         "${PYTHON_BIN}" -m pip install --upgrade pip setuptools wheel
 
-        log "Installing ${PROJECT_NAME} with pip install -e ."
-        "${PYTHON_BIN}" -m pip install -e "${SCRIPT_DIR}"
+        log "Installing ${PROJECT_NAME} (editable mode preferred)"
+        if "${PYTHON_BIN}" -m pip install -e "${SCRIPT_DIR}"; then
+            log "Editable installation succeeded"
+        else
+            warn "Editable installation failed, falling back to regular installation"
+            "${PYTHON_BIN}" -m pip install "${SCRIPT_DIR}"
+        fi
     else
         warn "No pyproject.toml or setup.py found, skipping pip install"
     fi
@@ -126,9 +121,6 @@ else
     log "Skipping pip install"
 fi
 
-# ---------------------------
-# Done
-# ---------------------------
 echo
 echo "======================================"
 echo "${PROJECT_NAME} installation completed"

@@ -2,7 +2,11 @@
 
 This page lists reference resources commonly used with SpaceTracer.
 
-## Human reference genome
+To help users get started quickly, we provide two prebuilt reference packages for **mm10** and **hg38**, which can be downloaded from [Zenodo](https://zenodo.org/records/19896967).
+
+If you would like to build your own reference, please refer to the resources below.
+
+## Human reference genome example
 
 ### GRCh37 / hg19
 
@@ -27,8 +31,3 @@ NCBI reference page: [NCBI human datasets](https://www.ncbi.nlm.nih.gov/datasets
 - GTEx expression: [GTEx Portal](https://gtexportal.org/home/) or [dbGaP website](https://www.ncbi.nlm.nih.gov/gap/)
 - dbSNP bundle: [GATK resources](https://gatk.broadinstitute.org/)
 
-## Figshare bundle
-
-Many SpaceTracer-ready files are provided in this collection:
-
-[https://figshare.com/s/c7836f53c4eafb556ee1](https://figshare.com/s/c7836f53c4eafb556ee1)

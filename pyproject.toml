@@ -4,13 +4,30 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SpaceTracer"
-version = "1.0.0"
+version = "2.0.0"
 description = "A tool for calling mutations from spatial transcriptome data"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
     { name = "Zhirui Yang" },
     { name = "Mengdie Yao" }
+]
+dependencies = [
+    "PyYAML",
+    "pandas",
+    "numpy",
+    "scipy",
+    "pysam",
+    "pyarrow",
+    "scikit-learn",
+    "joblib",
+    "matplotlib",
+    "seaborn",
+    "tqdm",
+    "psutil",
+    "colorama",
+    "pyfaidx",
+    "biopython"
 ]
 
 [tool.setuptools]
@@ -20,5 +37,9 @@ include-package-data = true
 where = ["."]
 include = ["SpaceTracer*"]
 
+[tool.setuptools.package-data]
+SpaceTracer = ["cores/*.R", "config/*.yaml", "installer/*.json", "resources/**/*", "models/**/*"]
+
 [project.scripts]
 spacetracer = "SpaceTracer.cli.main:main"
+
