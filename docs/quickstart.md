@@ -1,25 +1,25 @@
 # Quick Start
 
-This page gives the fastest path to your first SpaceTracer run.
+This page gives the fastest path to run SpaceTracer on your data.
 
-## 1) Install and prepare resources
+## 1) Prepare environment
 
-Complete:
+Complete [Installation](installation.md) first.
 
-- [Installation](installation.md)
-- [Resources](resources.md)
+## 2) Prepare inputs and references
 
-## 2) Create a config file
+At minimum you need:
 
-Create `config.yaml` using the minimal template from [Configuration](configuration.md).
+- aligned BAM file from spatial transcriptomics
+- tissue position file (for Visium)
+- reference genome FASTA and required resources from [Resources](resources.md)
+- writable output directory
 
-At minimum, provide valid paths for:
+## 3) Edit config file
 
-- input BAM and tissue position file (`input_details`)
-- all required references (`resource_details`)
-- `output_dir`
+Create `config.yaml` from the template in [Configuration](configuration.md), then update all sample-specific paths and run parameters.
 
-## 3) Run SpaceTracer
+## 4) Run full workflow
 
 ```bash
 SpaceTracer run --config config.yaml
@@ -31,17 +31,17 @@ Fallback command:
 python -m SpaceTracer.cli.run --config config.yaml
 ```
 
-## 4) Resume or rerun if needed
+## 5) Resume or rerun when needed
 
 ```bash
 SpaceTracer run --config config.yaml --start-from genotyping
 SpaceTracer run --config config.yaml --force
 ```
 
-## 5) Understand outputs
+## 6) Check outputs and step details
 
-For result interpretation and debugging, see:
+Use these pages for interpretation and debugging:
 
-- [Running Tutorial](running-pipeline.md)
-- [Algorithm Walkthrough](algorithm.md)
-- [Outputs & Troubleshooting](outputs.md)
+- [Outputs](outputs.md)
+- [Step-by-step guide](steps/overview.md)
+- [Single-Step Debug Cookbook](steps/debug-cookbook.md)

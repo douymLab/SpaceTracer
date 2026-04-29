@@ -1,65 +1,59 @@
-# Step Reference Overview
+# Step-by-step guide
 
-This section documents each SpaceTracer pipeline step in practical terms:
+This page combines the algorithm-level view and step-level execution map, so you can understand both **why** and **how** the full workflow runs.
 
-- what the step does
-- required upstream dependencies
-- key input files and configuration parameters
-- output files written to the run directory
-- how to rerun/debug that step
+## Main algorithm logic
 
-## Active DAG Order
+1. **Candidate generation**  
+   Generate candidate variant sites from mpileup and basic depth/VAF filters.
+2. **Allele counting and quality control**  
+   Build spot, cluster, and individual-level count tables after quality checks.
+3. **Bayesian/statistical genotyping**  
+   Infer genotypes using allele counts, prior frequencies, and confidence thresholds.
+4. **Feature extraction**  
+   Extract spatial, read-level, mappability, and transcriptomic features.
+5. **Mutation prediction**  
+   Use random-forest models to classify true somatic mutations.
+6. **Artifact removal**  
+   Remove recurrent artifacts using dbSNP, editing databases, imprinted regions, and PON resources.
 
-The default execution order is:
+## Full workflow steps
 
-1. `cluster`
-2. `bam_processing`
-3. `mpileup`
-4. `umi_combine`
-5. `cell_num`
-6. `prior`
-7. `genotyping`
-8. `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature` (parallel branch)
-9. `merge_feature`
+| Step | Main SpaceTracer modules | Purpose |
+| --- | --- | --- |
+| Step0 | `cluster`, `bam_processing`, `mpileup` | Data pre-processing: cluster metadata preparation, BAM filtering, and mpileup candidate generation. |
+| Step1 | `umi_combine`, `cell_num`, `prior` | Quality-control-oriented evidence aggregation and prior preparation for robust genotyping. |
+| Step2 | `genotyping` | Spot/cluster/individual-level genotype inference. |
+| Step3 | `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `merge_feature` | Multi-source feature extraction and integrated feature matrix generation. |
+| Step4 | `mutation_prediction` (optional) | Model-based mutation prediction and VCF export. |
+| Step5 | external filtering stage | Remove recurrent artifacts using public/PoN-style resources. |
+| Step6 | external phylogeny tools | Optional lineage tree reconstruction from high-confidence mutation calls. |
 
-`mutation_prediction` exists as an optional implementation step, but it is currently not enabled in the active orchestrator DAG by default.
+## How to run
 
-## At-a-Glance Table
-
-| Step | Depends on | Main output key(s) | Main parameter section |
-| --- | --- | --- | --- |
-| `cluster` | none | `cluster_file`, `cell_num` | `steps.cluster` |
-| `bam_processing` | none | `in_bam`, `in_filter_bam` | `steps.bam_processing` |
-| `mpileup` | `bam_processing` | `mpileup_file`, `filter_mpileup_file`, `db_path` | `steps.mpileup` |
-| `umi_combine` | `mpileup` | `spot_count_file`, `error_count_file` | internal + `run.threads` |
-| `cell_num` | `cluster`, `umi_combine` | `cell_num` | `steps.cell_number` |
-| `prior` | `umi_combine` | `prior_file` | resource-driven |
-| `genotyping` | `cluster`, `prior`, `cell_num` | `ind_geno_filter_file`, `spot_geno_file`, etc. | `steps.genotyping` |
-| `spatial_feature` | `genotyping` | `spatial_feature` | `steps.spatial_feature` |
-| `mappability_feature` | `genotyping` | `mappability_feature` | resource-driven |
-| `read_feature` | `genotyping` | `read_feature` | `steps.read_feature` |
-| `RNA_feature` | `genotyping` | `RNA_feature` | `steps.RNA_feature` |
-| `merge_feature` | all feature branches | `combine_feature` | `steps.feature_filtration` |
-
-## Important Conventions
-
-- **Step outputs are written into context keys.** Downstream steps read these keys.
-- **Step directories are created under `output_dir/<step_name>/`.**
-- **Checkpoint files control resume behavior.** Use `--force` when you want a full recompute.
-- **Validation defaults to path existence and non-empty outputs** (unless validation is skipped).
-
-## Rerun Patterns
-
-Run from a specific stage:
+### Recommended: one-command workflow
 
 ```bash
-SpaceTracer run --config config.yaml --start-from genotyping
+SpaceTracer run --config config.yaml
 ```
 
-Recompute even if checkpoint says complete:
+### Advanced: script-by-script workflow
 
-```bash
-SpaceTracer run --config config.yaml --start-from genotyping --force
-```
+Use the per-step pages directly:
 
-For practical recipes (for example, rerun only RNA or spatial branches), see [Single-Step Debug Cookbook](debug-cookbook.md).
+- [Step 0: Data pre-processing](step0-preprocessing.md)
+- [Step 1: Quality control](step1-quality-control.md)
+- [Step 2: Genotyping](step2-genotyping.md)
+- [Step 3: Feature extraction](step3-feature-extraction.md)
+- [Step 4: Mutation prediction](step4-mutation-prediction.md)
+- [Step 5: Remove recurrent artifacts](step5-remove-recurrent-artifacts.md)
+- [Step 6: Phylogeny (optional)](step6-phylogeny.md)
+
+## Important outputs by stage
+
+- Step1/2: genotype evidence files (for example `ind_geno_filter_file`, `spot_geno_file`, `cluster_vaf_file`)
+- Step3: merged feature table (`all_feature.txt` and parquet mirror)
+- Step4: predicted VCFs when mutation prediction is enabled
+- Step5/6: curated high-confidence loci used for downstream lineage/phylogeny analyses
+
+For practical rerun recipes (for example, rerun only RNA or spatial branches), see [Single-Step Debug Cookbook](debug-cookbook.md).
