@@ -2,7 +2,7 @@
 
 SpaceTracer is an open-source algorithm capable of accurately detecting mosaic SNVs, including both nuclear SNVs and mitochondria SNVs, directly from spatial transcriptomics data. 
 
-flowchart
+![flowchart](./figures/flowchart.png)
 
 ## Release Notes
 
