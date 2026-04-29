@@ -41,12 +41,25 @@ conda env create -f environment.yaml
 conda activate SpaceTracer
 ```
 
-This step may take about 5 minutes on a Linux system.
+For faster dependency solving, you can use `mamba` instead:
+
+```bash
+mamba env create -f environment.yaml
+conda activate SpaceTracer
+```
+
+This step may take some time with Conda on Linux, while mamba is usually much faster.
 
 !!! note
     Conda must be installed before running these commands.
     Please refer to the [official Conda documentation](https://docs.conda.io/en/latest/).
+    If you plan to use mamba, please install it first from the [mamba documentation](https://mamba.readthedocs.io/en/latest/).
 
-#### Requirements
 
-All required dependencies are listed in `environment.yaml`. Alternatively, you may install the packages manually using `pip` or other package managers if needed.
+#### Additional Python packages
+
+If needed, install extras from:
+
+```bash
+pip install -r requirements_pip.txt
+```

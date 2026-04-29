@@ -2,6 +2,8 @@
 
 This page explains the main fields in the SpaceTracer config YAML and provides a minimal template you can copy.
 
+For full parameter-by-parameter interpretation, see [Config Reference](config-reference.md).
+
 ## Minimal runnable template
 
 Save as `config.yaml` and replace all placeholder paths.
@@ -29,8 +31,6 @@ resource_details:
 run:
   threads: 8
   memory: "32G"
-  chunk_size: 1000000
-  keep_intermediates: false
   skip_validation: false
 
 output_dir: "/absolute/path/to/output"
@@ -56,10 +56,17 @@ All resource paths are validated at startup. Missing files will stop the run imm
 ### `run`
 
 - `threads`: CPU threads used by the pipeline
-- `memory`: memory string for runtime tools
-- `chunk_size`: genomic chunk size used in splitting/parallelization
-- `keep_intermediates`: keep or clean temporary files
+- `memory`: memory limit string parsed as `<integer>G` (for example `32G`)
 - `skip_validation`: disable output validation checks (use carefully)
+
+### `runtime`
+
+```yaml
+runtime:
+  max_parallel: 4
+```
+
+- `max_parallel`: controls parallel execution width for independent DAG layers.
 
 ### `steps`
 
@@ -67,6 +74,11 @@ All resource paths are validated at startup. Missing files will stop the run imm
 - `cell_number`: can be a fixed integer or a file path
 
 If `cluster_file` is not provided and `sequence_type` is `visium`, SpaceTracer can compute clusters internally.
+
+Model settings for mutation prediction:
+
+- `model_dir`: directory containing trained models (for example `SpaceTracer_new_github/models`)
+- `model_name`: model identifier (for example `spatial_free_model` or `spatial_feature_preserved_model`)
 
 For full step-level parameter details, see:
 
@@ -76,6 +88,7 @@ For full step-level parameter details, see:
 - [genotyping](steps/genotyping.md)
 - [RNA_feature](steps/rna-feature.md)
 - [merge_feature](steps/merge-feature.md)
+- [phasing](steps/phasing.md)
 
 ## Override behavior and path shortcuts
 
@@ -86,15 +99,8 @@ SpaceTracer supports directory-level shortcuts:
 
 You can still override any specific file in `input_details` or `resource_details`.
 
-## Common config mistakes
+## Active step names for CLI control
 
-- relative paths that point to the wrong working directory
-- using `sequence_type: visium` without a valid tissue position file
-- missing one of the required files under `resource_details`
-- setting too many threads for your machine
+Use these names with `--start-from`, `--stop-at`, and `--only-steps`:
 
-## Suggested practice
-
-- keep one validated baseline config per dataset
-- copy and edit it for parameter experiments
-- record changed parameters per run (for reproducibility)
+`cluster`, `bam_processing`, `mpileup`, `umi_combine`, `cell_num`, `prior`, `genotyping`, `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `phasing`, `merge_feature`

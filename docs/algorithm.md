@@ -16,7 +16,9 @@ The current core execution flow is:
 6. `prior`
 7. `genotyping`
 8. `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature` (parallel branch)
-9. `merge_feature`
+9. `phasing`
+10. `merge_feature`
+11. `mutation_prediction`
 
 For a detailed per-step reference (inputs, parameters, and outputs), see [Step Reference Overview](steps/overview.md). For practical rerun/debug patterns, see [Single-Step Debug Cookbook](steps/debug-cookbook.md).
 
@@ -59,9 +61,13 @@ From genotyping outputs, SpaceTracer computes multiple complementary feature fam
 - `read_feature`: read-level quality/bias signal
 - `RNA_feature`: RNA-level context (including expression-related cues)
 
-### 9) `merge_feature`
+### 9) `phasing`
 
-Merges all feature families into an integrated feature representation for mutation prediction and downstream filtering.
+Refines candidate evidence with RNA-informed phasing information and cluster-level event summaries.
+
+### 10) `merge_feature`
+
+Merges all feature families (plus phasing outputs) into an integrated feature representation for downstream prioritization.
 
 ## Step detail index
 
@@ -76,8 +82,9 @@ Merges all feature families into an integrated feature representation for mutati
 - [mappability_feature](steps/mappability-feature.md)
 - [read_feature](steps/read-feature.md)
 - [RNA_feature](steps/rna-feature.md)
+- [phasing](steps/phasing.md)
 - [merge_feature](steps/merge-feature.md)
-- [mutation_prediction (optional)](steps/mutation-prediction.md)
+- [mutation_prediction](steps/mutation-prediction.md)
 
 ## Why this structure works
 
@@ -97,6 +104,7 @@ SpaceTracer supports:
 - parallel execution for independent feature steps
 - checkpoint-aware resume (skip completed steps)
 - partial execution with `--start-from` and `--stop-at`
+- explicit subset execution with `--only-steps` (no automatic dependency completion outside the listed subset)
 
 These capabilities make iterative analysis and parameter tuning practical on real datasets.
 

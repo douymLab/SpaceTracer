@@ -1,65 +1,33 @@
 # Public Resources
 
-This page lists public datasets and reference files commonly used with SpaceTracer.
+This page lists reference resources commonly used with SpaceTracer.
 
-## Reference data
+To help users get started quickly, we provide two prebuilt reference packages for **mm10** and **hg38**, which can be downloaded from [Zenodo](https://zenodo.org/records/19896967).
 
-### Human reference genome
+If you would like to build your own reference, please refer to the resources below.
 
-Human reference genome files can be downloaded from public repositories.
+## Human reference genome example
 
-#### GRCh37 / hg19
+### GRCh37 / hg19
 
-??? note "Download commands"
-    ```bash
-    wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz.fai
-    ```
+```bash
+wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz
+wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz.fai
+```
 
-#### GRCh38 / hg38
+### GRCh38 / hg38
 
-??? note "Download commands"
-    ```bash
-    wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa
-    wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.fai
-    ```
+```bash
+wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa
+wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.fai
+```
 
-Reference genome files are also available from the [NCBI human datasets page](https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9606/).
+NCBI reference page: [NCBI human datasets](https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9606/).
 
-### Human genome annotation
+## Annotation and supporting resources
 
-Human genome annotation files can be downloaded directly from the [GENCODE website](https://www.gencodegenes.org/human/#).
+- gene annotation (Gencode): [GENCODE human](https://www.gencodegenes.org/human/#)
+- mappability resources: [UCSC Genome Browser](https://genome.ucsc.edu/)
+- GTEx expression: [GTEx Portal](https://gtexportal.org/home/) or [dbGaP website](https://www.ncbi.nlm.nih.gov/gap/)
+- dbSNP bundle: [GATK resources](https://gatk.broadinstitute.org/)
 
-### dbSNP
-
-The dbSNP138 VCF file for hg38 (`Homo_sapiens_assembly38.dbsnp138.vcf`) can be obtained from the [Broad Institute GATK Resource Bundle](https://gatk.broadinstitute.org/).
-
-## Supporting data
-
-### Mappability score
-
-Mappability resources can be obtained from the [UCSC Genome Browser](https://genome.ucsc.edu/) or downloaded using the commands below.
-
-#### Umap score (k = 24, GRCh37 / hg19)
-
-??? note "Download commands"
-    ```bash
-    wget https://bismap.hoffmanlab.org/raw/hg19.umap.tar.gz
-    tar -zxvf hg19.umap.tar.gz
-    ```
-
-#### Umap score (k = 24, GRCh38 / hg38)
-
-??? note "Download commands"
-    ```bash
-    wget https://bismap.hoffmanlab.org/raw/hg38.umap.tar.gz
-    tar -zxvf hg38.umap.tar.gz
-    ```
-
-### GTEx gene expression data
-
-GTEx gene expression data can be accessed through the [GTEx Portal](https://gtexportal.org/home/) or the [dbGaP website](https://www.ncbi.nlm.nih.gov/gap/).
-
-## Resource collection
-
-For convenience, we provide a [Figshare collection](https://figshare.com/s/c7836f53c4eafb556ee1) that includes many of the resources listed on this page.
