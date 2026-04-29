@@ -2,6 +2,7 @@ from collections import Counter
 import os
 import pandas as pd
 import pyarrow.parquet as pq
+import gc
 
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.cores.RNA_features_00_from_fasta import add_features_from_fasta
@@ -27,7 +28,6 @@ def collect_files_from_manifest(manifest_file: str, column_name: str):
             files.append(file_path)
     return files
 
-
 def merge_parquet_files_from_list(parquet_files, output_file, compression="snappy"):
     parquet_files = [f for f in parquet_files if f and os.path.exists(f) and os.path.getsize(f) > 0]
 
@@ -51,6 +51,9 @@ def merge_parquet_files_from_list(parquet_files, output_file, compression="snapp
                 )
 
             writer.write_table(table)
+
+            del table
+            gc.collect()
     finally:
         if writer is not None:
             writer.close()
@@ -59,10 +62,6 @@ def merge_parquet_files_from_list(parquet_files, output_file, compression="snapp
 
 
 def merge_table_files_from_list(file_list, output_file, sep="\t"):
-    """
-    合并多个表格文件（默认 tab 分隔）为一个文件。
-    自动跳过不存在/空文件。
-    """
     file_list = [f for f in file_list if f and os.path.exists(f) and os.path.getsize(f) > 0]
 
     out_dir = os.path.dirname(output_file)
@@ -72,32 +71,46 @@ def merge_table_files_from_list(file_list, output_file, sep="\t"):
     if not file_list:
         raise ValueError(f"No valid table files to merge for {output_file}")
 
-    dfs = []
+    wrote_any = False
+    header_written = False
+
     for f in file_list:
         df = pd.read_csv(f, sep=sep)
-        if df is not None and not df.empty:
-            dfs.append(df)
+        if df is None or df.empty:
+            del df
+            continue
 
-    if not dfs:
+        mode = "w" if not wrote_any else "a"
+        df.to_csv(output_file, sep=sep, index=False, mode=mode, header=not header_written)
+
+        wrote_any = True
+        header_written = True
+
+        del df
+        gc.collect()
+
+    if not wrote_any:
         pd.DataFrame().to_csv(output_file, sep=sep, index=False)
-        return output_file
 
-    merged_df = pd.concat(dfs, ignore_index=True)
-    merged_df.to_csv(output_file, sep=sep, index=False)
     return output_file
 
 
 def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
-    df['pos']=df['pos'].astype(int)
-    counts = df['consensus_read_count'].str.split(',', expand=True).astype(int)
-    counts.columns = ['A_count', 'T_count', 'C_count', 'G_count']
-    
-    priors = df['prior_ATCG'].str.split(',', expand=True).astype(float)
-    priors.columns = ['A_prior', 'T_prior', 'C_prior', 'G_prior']
-    
-    df = pd.concat([df, counts, priors], axis=1)
-    
-    df['count'] = counts.sum(axis=1)
+    df["pos"] = df["pos"].astype(int)
+
+    counts = df["consensus_read_count"].str.split(",", expand=True).astype(int)
+    counts.columns = ["A_count", "T_count", "C_count", "G_count"]
+
+    priors = df["prior_ATCG"].str.split(",", expand=True).astype(float)
+    priors.columns = ["A_prior", "T_prior", "C_prior", "G_prior"]
+
+    df = pd.concat([df, counts, priors], axis=1, copy=False)
+
+    counts_np = counts.to_numpy()
+    priors_np = priors.to_numpy()
+
+    df["count"] = counts.sum(axis=1)
+
     def get_max_other_count(row):
         ref = row['germline'] 
         alt = row['mutant']
@@ -112,37 +125,40 @@ def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
     df['alt2_count'] = df.apply(get_max_other_count, axis=1)
     
     base_to_idx = {'A': 0, 'T': 1, 'C': 2, 'G': 3}
-    alt_idx = df['mutant'].map(base_to_idx)
-    df['alt_count'] = counts.to_numpy()[range(len(df)), alt_idx]
-    df['alt_prior'] = priors.to_numpy()[range(len(df)), alt_idx]
-    
+    alt_idx = df["mutant"].map(base_to_idx).to_numpy()
+    row_idx = range(len(df))
+    df["alt_count"] = counts_np[row_idx, alt_idx]
+    df["alt_prior"] = priors_np[row_idx, alt_idx]
+
     single_mask = ~df['germline'].str.contains(',')
     
     df['ref_count'] = df.apply(
         lambda r: sum(r[f"{b}_count"] for b in r['germline'].split(',')), axis=1
     )
     # if germline has 1 allele
-    ref_idx = df.loc[single_mask, 'germline'].map(base_to_idx)
-    df.loc[single_mask, 'ref_count'] = counts.to_numpy()[
-        df.index[single_mask], ref_idx
-    ]
+    ref_idx = df.loc[single_mask, "germline"].map(base_to_idx).to_numpy()
+    df.loc[single_mask, "ref_count"] = counts_np[df.index[single_mask], ref_idx]
+
     
     # if germline has 2 alleles
     df['ref_prior'] = df.apply(
         lambda r: ','.join(str(r[f"{b}_prior"]) for b in r['germline'].split(',')), axis=1
     )
     
+    del counts
+    del priors
+    del counts_np
+    del priors_np
     return df
 
 
 class RNAFeatureStep(BaseStep):
     def get_inputs(self, context):
         return {
-            # GenotypingStep 输出的 chunk manifest
+            # GenotypingStep chunk manifest
             "genotype_results": context.get("genotype_results", ""),
 
-            # UMICombineStep 输出的 error count list/manifest
-            # 你当前上游 key 就叫 error_count_file，但其实它是 list 文件
+            # UMICombineStep error count list/manifest
             "error_count_results": (
                 context.get("error_count_results", "")
                 or context.get("error_count_file", "")
@@ -157,6 +173,7 @@ class RNAFeatureStep(BaseStep):
         return {
             "RNA_feature": os.path.join(out_dir, "RNA_feature.txt"),
             "merged_ind_geno_filter_file": os.path.join(out_dir, "merged_ind_geno_filter_file.txt"),
+            "merged_ind_geno_file": os.path.join(out_dir, "merged_ind_geno_file.txt"),
             "merged_germline_file": os.path.join(out_dir, "merged_germline.txt"),
             "merged_error_count_file": os.path.join(out_dir, "merged_error_count.parquet"),
         }
@@ -173,6 +190,13 @@ class RNAFeatureStep(BaseStep):
         if not table_files:
             raise ValueError(f"No ind_geno_filter_file found in manifest: {genotype_results}")
 
+        table_files_raw = collect_files_from_manifest(genotype_results, "ind_geno_file")
+        merge_table_files_from_list(
+            table_files_raw,
+            outputs["merged_ind_geno_file"],
+            sep="\t"
+        )
+        
         return merge_table_files_from_list(
             table_files,
             outputs["merged_ind_geno_filter_file"],
@@ -246,11 +270,15 @@ class RNAFeatureStep(BaseStep):
         empty_df.to_parquet(parquet_file, index=True)
 
     def _run(self, context: dict):
-        gene_bed = self.config["gene_bed"]
-        dbsnp_vcf_file = self.config["dbsnp_vcf_file"]
-        imprinted_bed = self.config["imprinted_bed"]
-        editing_bed = self.config["editing_bed"]
-        PON_file = self.config["PON_file"]
+        genome_details=self.config['genome_details']
+        species=genome_details['species']
+        # optional
+        gene_bed = self.config.get("gene_bed","")
+        dbsnp_vcf_file = self.config.get("dbsnp_vcf_file","")
+        imprinted_bed = self.config.get("imprinted_bed","")
+        editing_bed = self.config.get("editing_bed","")
+        PON_file = self.config.get("PON_file","")
+
         fasta_file = self.config.get("genome_fasta")
         reference_error_profile = self.config.get("reference_error_profile")
 
@@ -285,19 +313,21 @@ class RNAFeatureStep(BaseStep):
         import time
         t = time.time()
         df = pd.read_csv(ind_geno_filter_file, sep="\t")
-        logger.info(f"read merged ind file: {time.time()-t:.2f}s, n={len(df)}")
+        # logger.info(f"read merged ind file: {time.time()-t:.2f}s, n={len(df)}")
         if df.empty:
             logger.warning("Merged ind_geno_filter_file is empty, writing empty RNA feature outputs.")
             self._write_empty_outputs(outputs)
+            del df
+            gc.collect()
             return {
                 "RNA_feature": RNA_feature
             }
 
         t = time.time()
         df = _prepare_ind_df(df)
-        logger.info(f"_prepare_ind_df: {time.time()-t:.2f}s, n={len(df)}")
+        # logger.info(f"_prepare_ind_df: {time.time()-t:.2f}s, n={len(df)}")
 
-        # 统一列名到后续代码使用的格式
+        # rename
         if "germline" in df.columns and "ref" not in df.columns:
             df = df.rename(columns={"germline": "ref"})
         if "mutant" in df.columns and "alt" not in df.columns:
@@ -319,7 +349,7 @@ class RNAFeatureStep(BaseStep):
         df[["DNAMutationType", "RNAMutationType", "GCcontent", "cause_poly_alt", "homopolymer"]] = \
             add_features_from_fasta(df, fasta_file, previous_base)
         df["editing_AtoG"] = df["RNAMutationType"].astype(str).str.contains("A>G", na=False)
-        logger.info(f"add_features_from_fasta: {time.time()-t:.2f}s")
+        # logger.info(f"add_features_from_fasta: {time.time()-t:.2f}s")
 
         result_df = df[
             [
@@ -355,43 +385,58 @@ class RNAFeatureStep(BaseStep):
         #     default_range)
 
         t = time.time()
-        # ASE
-        ase_germline_df = get_ase_germline_sites(
-            germline_file,
-            dbsnp_vcf_file,
-            ase_germline_file,
-            gene_bed,
-            count_threshold,
-            prior_threshold,
-            p_threshold,
-            default_range
-        )
-        logger.info(f"get_ase_germline_sites: {time.time()-t:.2f}s, n={len(ase_germline_df)}")
+        # ASE (not work for non-human species)
+        if species == "human":
+            ase_germline_df = get_ase_germline_sites(
+                germline_file,
+                dbsnp_vcf_file,
+                ase_germline_file,
+                gene_bed,
+                count_threshold,
+                prior_threshold,
+                p_threshold,
+                default_range
+                )
+            # logger.info(f"get_ase_germline_sites: {time.time()-t:.2f}s, n={len(ase_germline_df)}")
 
-        t = time.time()
-        result_df["ASE"] = intersect_somatic_with_ase(df, ase_germline_df, p_threshold)
-        logger.info(f"intersect_somatic_with_ase: {time.time()-t:.2f}s")
+            t = time.time()
+            result_df["ASE"] = intersect_somatic_with_ase(df, ase_germline_df, p_threshold)
+            # logger.info(f"intersect_somatic_with_ase: {time.time()-t:.2f}s")
+            del ase_germline_df
+            gc.collect()
+        else:
+            result_df["ASE"] = "unknown"
 
-        # hFDR
-        error_count_df = pd.read_parquet(error_count_file)
-        if error_count_df.empty:
-            logger.warning("Merged error_count_file is empty, hFDR may not be meaningful.")
+        # hFDR (this version not support non-human species)
+        if species == "human": 
+            error_count_df = pd.read_parquet(error_count_file)
+            if error_count_df.empty:
+                logger.warning("Merged error_count_file is empty, hFDR may not be meaningful.")
 
-        if "#chrom" in error_count_df.columns:
-            error_count_df = error_count_df.rename(columns={"#chrom": "chrom"})
+            if "#chrom" in error_count_df.columns:
+                error_count_df = error_count_df.rename(columns={"#chrom": "chrom"})
 
-        error_count_profile_list = get_mutation_type(error_count_df, fasta_file, "RNA")["RNAMutationType"].tolist()
-        error_profile = reorder_mutation_df(Counter(error_count_profile_list))
-        error_profile_file = os.path.join(self.step_dir, "error_profile.txt")
-        error_profile.to_csv(error_profile_file, sep="\t", index=False)
+            mutation_type_df = get_mutation_type(error_count_df, fasta_file, "RNA")
+            error_profile = reorder_mutation_df(Counter(mutation_type_df["RNAMutationType"]))
+            error_profile_file = os.path.join(self.step_dir, "error_profile.txt")
+            error_profile.to_csv(error_profile_file, sep="\t", index=False)
 
-        result_df["hFDR"] = add_hFDR(df, error_profile_file, reference_error_profile, self.step_dir)
+            del mutation_type_df
+            del error_count_df
+            gc.collect()
 
-        # others
+            result_df["hFDR"] = add_hFDR(df, error_profile_file, reference_error_profile, self.step_dir)
+        else:
+            result_df["hFDR"] = "unknown"
+
+        # others (if file is '', will return unknown)
         result_df["imprinted"] = add_col_from_bed(df, imprinted_bed)
         result_df["editing_database"] = add_col_from_bed(df, editing_bed)
         result_df["PON"] = add_col_from_mutant(df, PON_file)
 
+        del df
+        gc.collect()
+        
         result_df["RNA_editing"] = (
             (result_df["editing_database"] == True) |
             (result_df["editing_AtoG"] == True)

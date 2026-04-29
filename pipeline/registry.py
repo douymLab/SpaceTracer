@@ -17,8 +17,9 @@ STEP_CLASS_PATHS: Dict[str, str] = {
     "mappability_feature": "SpaceTracer.steps.step5_mappability_feature:MappabilityFeatureStep",
     "read_feature": "SpaceTracer.steps.step5_read_feature:ReadFeatureStep",
     "RNA_feature": "SpaceTracer.steps.step5_RNA_level_feature:RNAFeatureStep",
+    "phasing": "SpaceTracer.steps.step5_phasing:PhasingCandidateStep",
     "merge_feature": "SpaceTracer.steps.step6_merge_all_features:MergeFeatureStep",
-    # "mutation_prediction": "SpaceTracer.steps.step7_mutation_prediction:MutationPredictionStep",
+    "mutation_prediction": "SpaceTracer.steps.step7_mutation_prediction:MutationPredictionStep",
 }
 
 def _load_symbol(path: str):

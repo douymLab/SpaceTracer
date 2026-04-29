@@ -14,14 +14,14 @@ def predict_mutation(args):
 class MutationPredictionStep(BaseStep):
     def get_inputs(self, context):
         inputs={
-            'combine_feature': context.get('combine_feature')
+            'combine_feature_parquet': context.get('combine_feature_parquet')
         }
         return inputs
 
     def get_outputs(self, context):
         sample_name="Sample"
-        vcf_output_file = os.path.join(self.step_dir, sample_name + "_total_pred_truesites.vcf")
-        vcf_pass_output_file = os.path.join(self.step_dir, sample_name + "_total_pred_truesites_PASS.vcf")
+        vcf_output_file = os.path.join(self.step_dir, "results",sample_name + "_total_pred_truesites.vcf")
+        vcf_pass_output_file = os.path.join(self.step_dir, "results", sample_name + "_total_pred_truesites_PASS.vcf")
         outputs={
             'raw_pred_vcf':vcf_output_file,
             'final_vcf':vcf_pass_output_file
@@ -69,7 +69,7 @@ class MutationPredictionStep(BaseStep):
         max_depth=None
         min_samples_split=2
 
-        mutation_classification(inputs['combine_feature'], 
+        mutation_classification(inputs['combine_feature_parquet'], 
                 self.step_dir, 
                 "Sample",
                 model_dir=model_dir, 

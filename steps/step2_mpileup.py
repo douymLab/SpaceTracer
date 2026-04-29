@@ -47,11 +47,11 @@ class MpileupStep(BaseStep):
     def get_inputs(self, context: Dict) -> Dict[str, str]:
         """input"""
         inputs = {
-            'in_filter_bam': context.get('bam_file'),
+            'in_filter_bam': context.get('in_filter_bam'),
             'reference': self.config.get('genome_fasta')
         }
-        if context.get('regions_file'):
-            inputs['regions'] = context.get('regions_file')
+        if self.config.get("regions_file",""):
+            inputs['regions'] = self.config["regions_file"]
         return inputs
     
     def get_outputs(self,context: Dict) -> Dict[str, str]:

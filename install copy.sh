@@ -2,13 +2,12 @@
 set -euo pipefail
 
 ########################################
-# SpaceTracer install.sh v2
+# SpaceTracer install.sh v1
 #
 # Features:
 #   - multi-genome support
 #   - incremental manifest update
 #   - PhyloSOLID managed as source tool
-#   - supports clone / update / force-reinstall for PhyloSOLID
 #   - ANNOVAR presence + db validation
 #   - genome-specific resources download
 ########################################
@@ -26,11 +25,7 @@ BIN_DIR="${BIN_DIR:-${SCRIPT_DIR}/bin}"
 GENOMES="${GENOMES:-hg38}"
 
 ANNOVAR_DIR="${ANNOVAR_DIR:-/storage/douyanmeiLab/yangzhirui/00.Softwares/annovar}"
-
-PHYLOSOLID_GIT_URL="${PHYLOSOLID_GIT_URL:-https://github.com/douymLab/PhyloSOLID.git}"
-PHYLOSOLID_BRANCH="${PHYLOSOLID_BRANCH:-main}"
 PHYLOSOLID_SOURCE_DIR="${PHYLOSOLID_SOURCE_DIR:-${EXTERNAL_ROOT}/PhyloSOLID}"
-
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python || true)}"
 
 FORCE_REDOWNLOAD="${FORCE_REDOWNLOAD:-false}"
@@ -45,9 +40,6 @@ PHYLOSOLID_HEALTHCHECK="not_checked"
 PHYLOSOLID_INVOKE_MODE=""
 PHYLOSOLID_MODULE="cli.main"
 PHYLOSOLID_WRAPPER="${BIN_DIR}/phylosolid_wrapper.sh"
-PHYLOSOLID_GIT_COMMIT=""
-PHYLOSOLID_GIT_BRANCH=""
-PHYLOSOLID_GIT_REMOTE=""
 
 ANNOVAR_FOUND="false"
 ANNOVAR_TABLE=""
@@ -95,14 +87,6 @@ parse_args() {
                 PHYLOSOLID_SOURCE_DIR="$2"
                 shift 2
                 ;;
-            --phylosolid-git-url)
-                PHYLOSOLID_GIT_URL="$2"
-                shift 2
-                ;;
-            --phylosolid-branch)
-                PHYLOSOLID_BRANCH="$2"
-                shift 2
-                ;;
             --python-bin)
                 PYTHON_BIN="$2"
                 shift 2
@@ -129,8 +113,6 @@ Options:
   --resource-root /path/to/resources
   --manifest /path/to/manifest.json
   --phylosolid-source /path/to/PhyloSOLID
-  --phylosolid-git-url https://github.com/douymLab/PhyloSOLID.git
-  --phylosolid-branch main
   --python-bin /path/to/python
   --force-redownload
   --force-reinstall
@@ -280,64 +262,15 @@ check_phylosolid_source() {
     [[ -f "${PHYLOSOLID_SOURCE_DIR}/cli/main.py" ]] || die "PhyloSOLID cli/main.py not found: ${PHYLOSOLID_SOURCE_DIR}"
 }
 
-install_or_update_phylosolid() {
-    check_command git
-    [[ -n "${PYTHON_BIN}" ]] || die "python not found; please use --python-bin"
-
-    local parent_dir
-    parent_dir="$(dirname "${PHYLOSOLID_SOURCE_DIR}")"
-
-    if [[ "${FORCE_REINSTALL}" == "true" ]]; then
-        log "Force reinstall enabled for PhyloSOLID"
-        if [[ -e "${PHYLOSOLID_SOURCE_DIR}" ]]; then
-            log "Removing existing path: ${PHYLOSOLID_SOURCE_DIR}"
-            rm -rf "${PHYLOSOLID_SOURCE_DIR}"
-        fi
-    fi
-
-    if [[ ! -e "${PHYLOSOLID_SOURCE_DIR}" ]]; then
-        log "Cloning PhyloSOLID from ${PHYLOSOLID_GIT_URL}"
-        mkdir -p "${parent_dir}"
-        git clone -b "${PHYLOSOLID_BRANCH}" "${PHYLOSOLID_GIT_URL}" "${PHYLOSOLID_SOURCE_DIR}" \
-            || die "Failed to clone PhyloSOLID from ${PHYLOSOLID_GIT_URL}"
-        return 0
-    fi
-
-    if [[ ! -d "${PHYLOSOLID_SOURCE_DIR}/.git" ]]; then
-        die "PHYLOSOLID_SOURCE_DIR exists but is not a git repository: ${PHYLOSOLID_SOURCE_DIR}. Use --force-reinstall to replace it."
-    fi
-
-    log "Existing PhyloSOLID repository found: ${PHYLOSOLID_SOURCE_DIR}"
-    log "Updating PhyloSOLID to latest ${PHYLOSOLID_BRANCH}"
-    (
-        cd "${PHYLOSOLID_SOURCE_DIR}" || exit 1
-        git fetch origin || exit 1
-        git checkout "${PHYLOSOLID_BRANCH}" || exit 1
-        git pull --ff-only origin "${PHYLOSOLID_BRANCH}" || exit 1
-    ) || die "Failed to update PhyloSOLID repository"
-}
-
-record_phylosolid_git_state() {
-    if [[ -d "${PHYLOSOLID_SOURCE_DIR}/.git" ]]; then
-        PHYLOSOLID_GIT_COMMIT="$(cd "${PHYLOSOLID_SOURCE_DIR}" && git rev-parse HEAD 2>/dev/null || true)"
-        PHYLOSOLID_GIT_BRANCH="$(cd "${PHYLOSOLID_SOURCE_DIR}" && git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-        PHYLOSOLID_GIT_REMOTE="$(cd "${PHYLOSOLID_SOURCE_DIR}" && git remote get-url origin 2>/dev/null || true)"
-    else
-        PHYLOSOLID_GIT_COMMIT=""
-        PHYLOSOLID_GIT_BRANCH=""
-        PHYLOSOLID_GIT_REMOTE=""
-    fi
-}
-
 check_phylosolid_health() {
     check_phylosolid_source
     [[ -n "${PYTHON_BIN}" ]] || die "python not found"
 
-    if (cd "${PHYLOSOLID_SOURCE_DIR}" && "${PYTHON_BIN}" "${PHYLOSOLID_SOURCE_DIR}/cli/main.py" -h >/dev/null 2>&1); then
+    if (cd "${PHYLOSOLID_SOURCE_DIR}" && "${PYTHON_BIN}" -m cli.main -h >/dev/null 2>&1); then
         PHYLOSOLID_FOUND="true"
         PHYLOSOLID_HEALTHCHECK="ok"
         PHYLOSOLID_INVOKE_MODE="python_module"
-        log "PhyloSOLID healthcheck passed via: ${PYTHON_BIN} "${PHYLOSOLID_SOURCE_DIR}/cli/main.py""
+        log "PhyloSOLID healthcheck passed via: ${PYTHON_BIN} -m cli.main"
     else
         PHYLOSOLID_FOUND="false"
         PHYLOSOLID_HEALTHCHECK="failed"
@@ -354,7 +287,7 @@ PHYLOSOLID_SRC="${PHYLOSOLID_SOURCE_DIR}"
 PYTHON_BIN="${PYTHON_BIN}"
 export PYTHONPATH="\${PHYLOSOLID_SRC}:\${PYTHONPATH:-}"
 cd "\${PHYLOSOLID_SRC}"
-exec "\${PYTHON_BIN}" "${PHYLOSOLID_SOURCE_DIR}/cli/main.py" "\$@"
+exec "\${PYTHON_BIN}" -m cli.main "\$@"
 EOF
     chmod +x "${PHYLOSOLID_WRAPPER}"
     log "Created wrapper: ${PHYLOSOLID_WRAPPER}"
@@ -449,9 +382,6 @@ path = "${MANIFEST_PATH}"
 with open(path) as f:
     manifest = json.load(f)
 
-def to_bool(x):
-    return str(x).strip().lower() == "true"
-
 manifest.setdefault("project", {})
 manifest["project"]["name"] = "${PROJECT_NAME}"
 manifest["project"]["version"] = "${PROJECT_VERSION}"
@@ -459,13 +389,8 @@ manifest["project"]["install_time"] = datetime.now().isoformat(timespec="seconds
 
 manifest.setdefault("tools", {})
 manifest["tools"]["phylosolid"] = {
-    "found": to_bool("${PHYLOSOLID_FOUND}"),
+    "found": ${PHYLOSOLID_FOUND},
     "source_dir": "${PHYLOSOLID_SOURCE_DIR}",
-    "git_url": "${PHYLOSOLID_GIT_URL}",
-    "git_remote": "${PHYLOSOLID_GIT_REMOTE}",
-    "git_branch_requested": "${PHYLOSOLID_BRANCH}",
-    "git_branch_actual": "${PHYLOSOLID_GIT_BRANCH}",
-    "git_commit": "${PHYLOSOLID_GIT_COMMIT}",
     "python_bin": "${PYTHON_BIN}",
     "invoke_mode": "${PHYLOSOLID_INVOKE_MODE}",
     "module": "${PHYLOSOLID_MODULE}",
@@ -475,7 +400,7 @@ manifest["tools"]["phylosolid"] = {
 }
 
 manifest["tools"]["annovar"] = {
-    "found": to_bool("${ANNOVAR_FOUND}"),
+    "found": ${ANNOVAR_FOUND},
     "script_dir": "${ANNOVAR_DIR}",
     "table_annovar": "${ANNOVAR_TABLE}",
     "annotate_variation": "${ANNOVAR_ANNOTATE}",
@@ -618,23 +543,21 @@ main() {
     init_manifest_if_needed
 
     if [[ "${SKIP_PHYLOSOLID}" != "true" ]]; then
-        install_or_update_phylosolid
-        record_phylosolid_git_state
         check_phylosolid_health
         create_phylosolid_wrapper
     else
-        warn "Skipping PhyloSOLID setup/check by user request"
+        warn "Skipping PhyloSOLID check by user request"
     fi
 
     check_annovar
     update_manifest_tools
 
-    # IFS=',' read -r -a genome_array <<< "${GENOMES}"
-    # for genome in "${genome_array[@]}"; do
-    #     genome="$(echo "$genome" | xargs)"
-    #     [[ -n "${genome}" ]] || continue
-    #     process_one_genome "${genome}"
-    # done
+    IFS=',' read -r -a genome_array <<< "${GENOMES}"
+    for genome in "${genome_array[@]}"; do
+        genome="$(echo "$genome" | xargs)"
+        [[ -n "${genome}" ]] || continue
+        process_one_genome "${genome}"
+    done
 
     log "Installation finished successfully."
     log "Manifest written to: ${MANIFEST_PATH}"

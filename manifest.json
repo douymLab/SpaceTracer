@@ -1,0 +1,33 @@
+{
+  "project": {
+    "name": "SpaceTracer",
+    "version": "0.1.0",
+    "install_time": "2026-04-17T16:59:07"
+  },
+  "tools": {
+    "phylosolid": {
+      "found": true,
+      "source_dir": "/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/SpaceTracer/external_tools/PhyloSOLID",
+      "git_url": "https://github.com/douymLab/PhyloSOLID.git",
+      "git_remote": "https://github.com/douymLab/PhyloSOLID.git",
+      "git_branch_requested": "main",
+      "git_branch_actual": "main",
+      "git_commit": "1c68c0b4b6c74df77af1e4c5c1e11867c7e4cbe4",
+      "python_bin": "/home/douyanmeiLab/yangzhirui/conda/envs/SpaceTracer/bin/python",
+      "invoke_mode": "python_module",
+      "module": "cli.main",
+      "cwd": "/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/SpaceTracer/external_tools/PhyloSOLID",
+      "wrapper": "/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/SpaceTracer/bin/phylosolid_wrapper.sh",
+      "healthcheck": "ok"
+    },
+    "annovar": {
+      "found": true,
+      "script_dir": "/storage/douyanmeiLab/yangzhirui/00.Softwares/annovar",
+      "table_annovar": "/storage/douyanmeiLab/yangzhirui/00.Softwares/annovar/table_annovar.pl",
+      "annotate_variation": "/storage/douyanmeiLab/yangzhirui/00.Softwares/annovar/annotate_variation.pl",
+      "humandb": "/storage/douyanmeiLab/yangzhirui/00.Softwares/annovar/humandb"
+    }
+  },
+  "genomes": {},
+  "downloads": []
+}

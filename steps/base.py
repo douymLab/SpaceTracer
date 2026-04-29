@@ -43,6 +43,8 @@ class BaseStep(ABC):
         self.config = context['config']
         self.work_dir = self.config.get('output_dir')
         self.threads=int(self.config.get('run').get('threads'))
+        self.memory=self.config.get('run').get('memory')
+        
         self.genome_details=self.config['genome_details']
         
         # 创建步骤专用目录
@@ -123,7 +125,10 @@ class BaseStep(ABC):
         inputs = self.get_inputs(context)
         logger.debug(f'###The inputs is :{inputs}')
         for input_name, input_path in inputs.items():
-            if not Path(input_path).exists():
+            if isinstance(input_path,int):
+                return True
+            
+            elif isinstance(input_path,str) and not Path(input_path).exists():
                 logger.error(f"Input file not found: {input_name} -> {input_path}")
                 return False
         

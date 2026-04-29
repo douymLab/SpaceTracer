@@ -29,23 +29,34 @@ class PriorCalculator(BaseStep):
     
     def get_outputs(self,context: Dict) -> Dict[str, str]:
         """output"""
-        return {
-            'prior_file': os.path.join(self.work_dir, 'prior.txt')
-        }
+        genome_details=self.config['genome_details']
+        species=genome_details['species']
+        if species != "human":
+            return {'prior_file': 0}
+        else:
+            return {
+                'prior_file': os.path.join(self.work_dir, 'prior.txt')
+            }
     
     def _run(self,context: Dict):
-        gnomad_path=self.get_inputs(context)['gnomad_path']
-        query_file=self.get_inputs(context)['filter_mpileup_file']
-        gnomAD_dict=gnomAD(gnomad_path).get_chrom_list_from_file()
-        auto_chrom=self.genome_details['chromosomes']['autosomes']
-        
-        prior_dict=query_sites_for_prior(query_file, gnomAD_dict,auto_chrom)
+        genome_details=self.config['genome_details']
+        species=genome_details['species']
+        if species != "human":
+            logger.info("No population allele fraction information could be provided, prior would be target as same.")
 
-        out_prior_file=self.get_outputs(context)['prior_file']
-        try:
-            prior_dict_to_file(prior_dict,out_prior_file)
-        except:
-            raise
+        else:
+            gnomad_path=self.get_inputs(context)['gnomad_path']
+            query_file=self.get_inputs(context)['filter_mpileup_file']
+            gnomAD_dict=gnomAD(gnomad_path).get_chrom_list_from_file()
+            auto_chrom=self.genome_details['chromosomes']['autosomes']
+            
+            prior_dict=query_sites_for_prior(query_file, gnomAD_dict,auto_chrom)
+
+            out_prior_file=self.get_outputs(context)['prior_file']
+            try:
+                prior_dict_to_file(prior_dict,out_prior_file)
+            except:
+                raise
 
 
 def prior_dict_to_file(prior_dict: dict,output_file: str):

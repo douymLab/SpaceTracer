@@ -12,7 +12,6 @@ warnings.filterwarnings(
     message="This package has been superseded by the `leidenalg` package.*"
 )
 
-import torch
 import pandas as pd
 import numpy as np
 import scanpy as sc

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import sys
 from pathlib import Path
 
 from SpaceTracer.pipeline.orchestrator import PipelineOrchestrator
@@ -84,7 +83,6 @@ def run_command(args: argparse.Namespace):
     only_steps = parse_only_steps(args.only_steps)
     
     if only_steps:
-        # print(f"📌 Running only steps: {only_steps}")
         results = pipeline.run(
             only_steps=only_steps,
         )
@@ -102,12 +100,6 @@ def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
     run_command(args)
-
-    # try:
-    #     run_command(args)
-    # except Exception as e:
-    #     print(f"[SpaceTracer run] ERROR: {e}", file=sys.stderr)
-    #     sys.exit(1)
 
 
 if __name__ == "__main__":

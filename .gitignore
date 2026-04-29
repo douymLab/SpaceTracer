@@ -220,3 +220,7 @@ external_tools/
 # Mac OS specific files
 .DS_Store
 **/.DS_Store
+
+resources
+
+cli/test*

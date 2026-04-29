@@ -13,11 +13,11 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from SpaceTracer.pipeline.checkpoint import CheckpointManager
 from SpaceTracer.pipeline.registry import get_step_class
-# from SpaceTracer.pipeline.validator import Validator
 from SpaceTracer.pipeline.dag import PipelineDAG
-
+from SpaceTracer.utils.parallel import memory_checkpoint
 
 logger = logging.getLogger(__name__)
+os.environ["NUMBA_THREADING_LAYER"] = "workqueue"
 
 
 _PATH_LIKE_EXTENSIONS = {
@@ -57,7 +57,7 @@ class PipelineOrchestrator:
         self.disabled=False # 默认打开CheckpointManager
 
         # cell number
-        cell_num_str = self.config.get("steps", {}).get("cell_number")
+        cell_num_str = self.config.get("steps", {}).get("cell_number","")
         if cell_num_str and os.path.exists(cell_num_str):
             cell_num = cell_num_str
         else:
@@ -73,13 +73,7 @@ class PipelineOrchestrator:
             if self.config.get("sequence_type") == "visium":
                 self.config["cluster"] = 0 # 0 means the cluster stpe will run
             else:
-                raise ValueError(
-                    'Unsupported sequence_type for cluster (only "visium" supported). '
-                    "Please provide cluster file in steps.cluster.cluster_file"
-                )
-
-
-        self.keep_intermediates = self.config.get("run", {}).get("keep_intermediates", False)
+                pass
 
         output_dir = Path(self.config.get("output_dir"))
         if chunk_index is not None:
@@ -133,6 +127,7 @@ class PipelineOrchestrator:
         if context_override: # override from outside
             resolved = _resolve_paths(context_override)
             context.update(resolved)
+
             logger.info(f"Context override keys: {sorted(resolved.keys())}")
 
         # Run
@@ -184,7 +179,6 @@ class PipelineOrchestrator:
     def _build_base_context(self) -> Dict[str, Any]:
         return {
             "bam_file": self.config["bam_file"],
-            "regions_file": self.config["regions_file"],
             "config": self.config,
             "chunk_index": self.chunk_index,
         }
@@ -316,6 +310,7 @@ class PipelineOrchestrator:
 
     def _execute_step(self, step_name: str, step, context: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"[{step_name}] starting ...")
+
         t0 = time.time()
         # logger.info(f"@@@@@@@@ base_keys: {self.base_keys}")
         
@@ -329,7 +324,9 @@ class PipelineOrchestrator:
             # logger.info(f"++++++++ run context: {context_dict}")
 
             new_outputs = step.get_outputs(context)
-            # context_dict={k: v for k, v in new_outputs.items() if k not in self.base_keys}
+
+            memory_checkpoint(step_name,logger=logger, top_n=8, do_gc=True)
+            
             # logger.info(f"-------- only outputs: {context_dict}")
 
             if not isinstance(new_outputs, dict):
@@ -408,14 +405,14 @@ class PipelineOrchestrator:
         context: Dict[str, Any],
     ) -> Dict[str, Any]:
         groups = self.dag.get_parallel_groups(steps_to_run)
-        logger.info(f'{groups}')
+        # logger.info(f'{groups}')
         max_workers = self.config.get("runtime", {}).get("max_parallel", 4)
 
         for group in groups:
             if len(group) == 1:
                 step_name = group[0]
                 check=self.checkpoint.is_complete(step_name)
-                logger.info(f"{self.force}  {check}")
+                # logger.info(f"{self.force}  {check}")
                 if not self.force and self.checkpoint.is_complete(step_name):
                     logger.info(f"Step {step_name} already complete, skipping")
                     # context = self.checkpoint.load_outputs_to_context(step_name, context)
@@ -423,9 +420,16 @@ class PipelineOrchestrator:
                     continue
 
                 step = self._get_step_instance(step_name, context)
+
                 new_outputs = self._execute_step(step_name, step, context)
+
                 self._merge_new_outputs(context, step_name, new_outputs)
-                self.checkpoint.mark_complete(step_name, new_outputs)
+                if new_outputs:
+                    self.checkpoint.mark_complete(step_name, new_outputs)
+                else:
+                    self.checkpoint.mark_failed(step_name, "No outputs.")
+                    raise RuntimeError(f"Step '{step_name}' has no outputs!")
+
 
                 if not self.skip_validation:
                     if not new_outputs:
@@ -526,8 +530,12 @@ class PipelineOrchestrator:
 
             new_outputs = self._execute_step(step_name, step, context)
             self._merge_new_outputs(context, step_name, new_outputs)
-            self.checkpoint.mark_complete(step_name, new_outputs)
 
+            if new_outputs:
+                self.checkpoint.mark_complete(step_name, new_outputs)
+            else:
+                self.checkpoint.mark_failed(step_name,"The output is empty, please check the log info.")
+                    
             if not self.skip_validation:
                 if not new_outputs:
                     raise ValueError(f"Output validation failed: {step_name}")

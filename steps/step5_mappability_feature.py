@@ -1,7 +1,6 @@
 import os
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
+import gc
 
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.cores.mappability_features import mappabilityFeatures
@@ -92,6 +91,7 @@ class MappabilityFeatureStep(BaseStep):
         # 预初始化一次，触发 chrom parquet 准备逻辑
         mappability_infos = mappabilityFeatures(mappability_path)
         del mappability_infos
+        gc.collect()
 
         inputs = self.get_inputs(context)
         outputs = self.get_outputs(context)
@@ -132,7 +132,7 @@ class MappabilityFeatureStep(BaseStep):
                 "merged_ind_geno_filter_mutation_list": outputs["merged_ind_geno_filter_mutation_list"],
             }
 
-        chrom_groups = mutation_identifier_list.groupby("chrom")
+        chrom_groups = list(mutation_identifier_list.groupby("chrom"))
 
         results = []
         def process_chrom_wrapper(chrom_group):
@@ -147,7 +147,12 @@ class MappabilityFeatureStep(BaseStep):
             raise_on_error=True
         )
 
+        del chrom_groups
+        del mutation_identifier_list
+        gc.collect()
+
         results = [df for df in results if df is not None and not df.empty]
+        gc.collect()
 
         # with ThreadPoolExecutor(max_workers=self.threads) as executor:
         #     future_to_chrom = {
@@ -193,6 +198,8 @@ class MappabilityFeatureStep(BaseStep):
             engine="pyarrow",
             compression="snappy"
         )
+        del mutation_with_mappability
+        gc.collect()
 
         return {
             "mappability_feature": out_mappability_features,
@@ -220,14 +227,21 @@ def process_chromosome_mutations_for_mappable(chrom: str, mutations: pd.DataFram
     try:
         mappability_infos = mappabilityFeatures(mappability_path)
         chrom_data = mappability_infos._load_mappability_for_chrom(chrom)
-
+        pos_list = mutations["pos"].tolist()
         mappability_scores = mappability_infos._query_mappability(
             chrom_data,
-            mutations["pos"].tolist()
+            pos_list
         )
 
         result_df = mutations.copy()
         result_df["mappability"] = mappability_scores
+        
+        del pos_list
+        del mappability_scores
+        del chrom_data
+        del mappability_infos
+        gc.collect()
+
         return result_df
 
     except Exception as e:

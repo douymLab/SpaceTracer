@@ -38,6 +38,7 @@ def handel_bam_file_for_region(bam_file,region_dict,run_type,bins,cell_dict={},r
     return var_result_dict
 
 
+
 def process_reads_for_variant(sampled_reads,var,run_type,bins,cell_dict={},readLen=120):
     chrom,pos,ref,alt=var
 
@@ -300,6 +301,7 @@ def process_reads_for_variant(sampled_reads,var,run_type,bins,cell_dict={},readL
 
     result_dict['dp']=dp
     return result_dict
+
 
 
 

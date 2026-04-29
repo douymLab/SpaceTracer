@@ -248,7 +248,7 @@ def handle_reads_per_pos_read_count_and_strand(reads,pos,run_type):
 
 
 
-def scan_region_reads_once_for_targets(reads, sites, run_type):
+def scan_region_reads_once_for_targets(reads, sites, run_type,bin_size):
     """
     sites:
         [(pos, ref, alt, check_mosaic, check_error), ...]
@@ -270,7 +270,7 @@ def scan_region_reads_once_for_targets(reads, sites, run_type):
     }
 
     for item in reads:
-        barcode_name, UMI_name = handle_seq_type(item, run_type, 1)
+        barcode_name, UMI_name = handle_seq_type(item, run_type, bin_size)
         if barcode_name is None or UMI_name is None:
             continue
 
@@ -345,12 +345,12 @@ def scan_region_reads_once_for_targets(reads, sites, run_type):
     return result
 
 
-def process_single_region_for_umi_combine(bam_handle, region_info, seq_type):
+def process_single_region_for_umi_combine(bam_handle, region_info, seq_type,bin_size):
     chrom, start, end, sites = region_info
 
     try:
         reads = bam_handle.fetch(chrom, start, end)
-        pos_data_map = scan_region_reads_once_for_targets(reads, sites, seq_type)
+        pos_data_map = scan_region_reads_once_for_targets(reads, sites, seq_type,bin_size)
     except Exception as exc:
         logger.warning(f"[UmiCombine] region failed {chrom}:{start}-{end}: {exc}")
         return []
@@ -371,8 +371,6 @@ def process_single_region_for_umi_combine(bam_handle, region_info, seq_type):
 
         except Exception as exc:
             raise 
-            logger.warning(f"[UmiCombine] worker failed for {(chrom, pos, ref)}: {exc}")
-            results.append((None, None))
 
     return results
 

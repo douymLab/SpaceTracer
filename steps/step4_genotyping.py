@@ -206,10 +206,16 @@ class GenotypingStep(BaseStep):
 
         if not os.path.exists(spot_count_manifest):
             raise FileNotFoundError(f"spot_count manifest not found: {spot_count_manifest}")
-        if not os.path.exists(prior_file):
-            raise FileNotFoundError(f"prior_file not found: {prior_file}")
 
-        prior_df = _load_prior_file(prior_file)
+        if isinstance(prior_file,int) and prior_file==0:
+            prior_df=pd.DataFrame()
+        elif isinstance(prior_file,str) and not os.path.exists(prior_file):
+            raise FileNotFoundError(f"prior_file not found: {prior_file}")
+        elif isinstance(prior_file,str) and os.path.exists(prior_file):
+            prior_df = _load_prior_file(prior_file)
+        else:
+            raise RuntimeError(f"Wrong prior input: {prior_file}")
+
         rows = load_manifest_tsv(spot_count_manifest)
         if not rows:
             raise ValueError(f"No chunk records found in manifest: {spot_count_manifest}")
