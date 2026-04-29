@@ -518,7 +518,7 @@ def process_reads_for_variant(sampled_reads,var,run_type,bins,cell_dict={},readL
 
 def detect_read_length(bam_file: str, 
                        sample_size: int = 100,
-                       min_consensus: float = 0.9) -> Tuple[int, dict]:
+                       min_consensus: float = 0.9) -> int:
 
     read_lengths = []
     
@@ -546,7 +546,7 @@ def detect_read_length(bam_file: str,
     
     most_common_length, most_common_count = length_counter.most_common(1)[0]
     consensus_ratio = most_common_count / total_reads
-    
+
     if consensus_ratio < min_consensus:
         raise ValueError(f"The input bam file is under mixed library!")
         

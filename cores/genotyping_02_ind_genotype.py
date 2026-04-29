@@ -379,11 +379,15 @@ class IndGenoCalculator:
         if 'identifier' not in df.columns:
             df['identifier'] = df['chrom'] + "_" + df['pos'].astype(str)
 
-        merged = df.merge(
-            prior_df[['identifier', 'fA', 'fT', 'fC', 'fG']],
-            on='identifier',
-            how='left'
-        )
+        if prior_df.empty:
+            merged = df.copy()
+            merged[['fA', 'fT', 'fC', 'fG']]=[1,1,1,1]
+        else:
+            merged = df.merge(
+                prior_df[['identifier', 'fA', 'fT', 'fC', 'fG']],
+                on='identifier',
+                how='left'
+            )
         merged.fillna(0, inplace=True)
         return merged
 

@@ -72,7 +72,7 @@ class PipelineDAG:
             ),
             "genotyping": DAGStep(
                 name="genotyping",
-                dependencies=["cluster","prior", "cell_num"],
+                dependencies=["cluster","prior", "umi_combine","cell_num"],
                 produces=["genotype_results"],
                 run_level="chunk",
                 output_level="chunk"
@@ -105,6 +105,13 @@ class PipelineDAG:
                 run_level="sample",
                 output_level="sample"
             ),
+            "phasing":DAGStep(
+                name="phasing",
+                dependencies=["RNA_feature"],
+                produces=["phasing_results","cluster_events"],
+                run_level="sample",
+                output_level="sample"
+            ),
             "merge_feature": DAGStep(
                 name="merge_feature",
                 dependencies=[
@@ -112,16 +119,26 @@ class PipelineDAG:
                     "mappability_feature",
                     "read_feature",
                     "RNA_feature",
+                    "phasing"
                 ],
-                produces=["marged_features"],
+                produces=["merged_features"],
                 run_level="sample",
                 output_level="sample"
             ),
             # "mutation_prediction": DAGStep(
             #     name="mutation_predict",
             #     dependencies=["merge_feature"],
-            #     produces=["final_vcf"]
-            # )
+            #     produces=["final_vcf"],
+            #     run_level="sample",
+            #     output_level="sample"
+            # ),
+            # "phylogeny":DAGStep(
+            #     name="phylogeny",
+            #     dependencies=["mutation_prediction"],
+            #     produces=["phylogeny_results"],
+            #     run_level="sample",
+            #     output_level="sample"
+            # ),
         }
 
     # ─────────────────────────────────────────────────────────────

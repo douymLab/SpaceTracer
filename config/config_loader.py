@@ -8,9 +8,6 @@ from multiprocessing import cpu_count
 from SpaceTracer.utils.get_genome_info import GenomeDetails
 
 def check_file_exist(path):
-    # if path=="":
-    #     raise FileExistsError(f'You did not provide {path}, Please check your command or config file!')
-
     path=Path(path)
     if not path.exists():
         raise FileExistsError(f'Path {path} not exist! Please check your command or config file!')
@@ -20,7 +17,10 @@ def check_file_exist(path):
 class LoadConfig:
     def _replace_config(self, config_key, replace_dict):
         if config_key in replace_dict.keys():
-            self.config[config_key]=replace_dict[config_key]
+            if replace_dict[config_key]:
+                check_file_exist(replace_dict[config_key])
+                self.config[config_key]=replace_dict[config_key]
+
 
     def _check_input_details(self):
         """
@@ -54,35 +54,22 @@ class LoadConfig:
         """
         if "resource_dir" in self.config.keys():
             in_dir=Path(self.config["resource_dir"])
-            self.config["genome_fasta"]=in_dir/"genome.fa"
-            self.config["gnomad_path"]=in_dir/"gnomad"
-            self.config["mappability_path"]=in_dir/"mappability"
-            self.config["gene_bed"]=in_dir/"gene_region.bed"
-            self.config["dbsnp_vcf_file"]=in_dir/"dbSNP.vcf"
-            self.config["imprinted_bed"]=in_dir/"imprinted_gene_region.bed"
-            self.config["editing_bed"]=in_dir/"editing.bed"
-            self.config["PON_file"]=in_dir/"PON.txt"
-            self.config["reference_error_profile"]=in_dir/"reference_error_profile.txt"
+            self.config["genome_fasta"]=str(in_dir/"genome.fa")
+            self.config["gnomad_path"]=str(in_dir/"gnomad_af")
+            self.config["mappability_path"]=str(in_dir/"k24.umap.bedgraph")
+            self.config["gene_bed"]=str(in_dir/"gene_region.bed")
+            self.config["dbsnp_vcf_file"]=str(in_dir/"Homo_sapiens_assembly38.dbsnp138.vcf.gz")
+            self.config["imprinted_bed"]=str(in_dir/"imprinted_genes.region.bed")
+            self.config["editing_bed"]=str(in_dir/"known_editing.bed")
+            self.config["PON_file"]=str(in_dir/"PON.txt")
+            self.config["reference_error_profile"]=str(in_dir/"Artifacts.Sigprofile.txt")
 
         details=self.config["resource_details"]
-        # self._replace_config("genome_fasta",details)
-        # self._replace_config("gnomad_path",details)
-        # self._replace_config("mappability_path",details)
-        # self._replace_config("gene_bed",details)
-        # self._replace_config("dbsnp_vcf_file",details)
-        # self._replace_config("imprinted_bed",details)
-        # self._replace_config("editing_bed",details)
-        # self._replace_config("PON_file",details)
-        # self._replace_config("reference_error_profile",details)
-
-        # check_file_exist(self.config["genome_fasta"])    
-        # check_file_exist(self.config["gnomad_path"])
 
         resource_list=["genome_fasta","gnomad_path","mappability_path","gene_bed",
                         "dbsnp_vcf_file","imprinted_bed","editing_bed","PON_file","reference_error_profile"]
         for key in resource_list:
             self._replace_config(key, details)
-            check_file_exist(self.config[key])
 
         Genome=GenomeDetails(self.config.get('genome'),self.config.get('genome_fasta'))
         self.config['genome_details']=Genome._get_genome_details()
@@ -116,8 +103,6 @@ class LoadConfig:
             {
                 'threads': 4,
                 'memory': '32G',
-                'chunk_size': 1000000,
-                'keep_intermediates': False,
                 'skip_validation': False,
                 'sequence_type': 'visium' 
             }
@@ -147,6 +132,8 @@ class LoadConfig:
             config['bin_size']=None
 
         config['run']['threads']=min(config['run']['threads'],cpu_count())
+        config['run']['memory']=int(config['run']['memory'].split("G")[0])*(1024**3)
+        
         self.config=config
 
         self._check_input_details()
@@ -168,78 +155,4 @@ class LoadConfig:
             raise
             # return {}
         
-
-step_default_config={}
-
-
-# def load_config(genome: str, **kwargs) -> Dict[str, Any]:
-#     """
-#     Load configuration with parameter priority.
-    
-#     Priority order (from lowest to highest):
-#     1. Default parameters (built-in defaults)
-#     2. User custom parameters (from custom config file)
-#     3. Command-line parameters (highest priority, override all others)
-    
-#     Args:
-#         genome: Genome name (e.g., 'hg38', 'mm10')
-#         **kwargs: Command-line parameters that will have highest priority
-    
-#     Returns:
-#         Configuration dictionary with merged parameters
-#     """
-    
-#     # Reference genome settings
-#     genome: null  # 将从命令行指定
-
-#     # 1. Default parameters (built-in defaults)
-#     DEFAULT_CONFIG = {
-#         'threads': 4,
-#         'memory': '32G',
-#         'chunk_size': 1000000,
-#         'keep_intermediates': False,
-#         'skip_validation': False,
-#         'sequence_type': 'visium' 
-#     }
-
-#     # priority order
-#     config_sources = [
-#         DEFAULT_CONFIG, # 1. default
-#         load_custom_config(kwargs.get('custom_config')),  # 2 custom parameters fom config file
-#         {k: v for k, v in kwargs.items() if v is not None},  # 3. command-line parameters
-#     ]
-    
-#     # combine parameters
-#     config = {'genome': genome}
-#     for source in config_sources:
-#         for key, value in source.items():
-#             if value is not None:  # skip None value
-#                 config[key] = value
-
-
-#     if 'barcode_key' not in config.keys():
-#         if config['sequence_type']=='visium':
-#             config['barcode_key']="CB"
-
-#     if 'bin_size' in config.keys() and config['sequence_type']!='visium':
-#         config['bin_size']=config.get('bin_size',100)
-#     else:
-#         config['bin_size']=None
-        
-#     return config
-
-
-
-
-# def load_custom_config(custom_config_path: str = None) -> Dict[str, Any]:
-#     """load config file"""
-#     if not custom_config_path or not os.path.exists(custom_config_path):
-#         return {}
-    
-#     try:
-#         with open(custom_config_path) as f:
-#             config = yaml.safe_load(f)
-#             return config if isinstance(config, dict) else {}
-#     except Exception:
-#         return {}
 

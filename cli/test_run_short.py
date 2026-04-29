@@ -36,7 +36,7 @@ def test_two_steps():
         # 'prior': PriorCalculator
                 
     # results = pipeline.run()
-    results = pipeline.run(only_steps=["genotyping"])
+    results = pipeline.run(only_steps=["cluster"])
 
     # pipeline.run(start_from="genotyping", stop_at="merge_feature", enable_parallel=True)
 

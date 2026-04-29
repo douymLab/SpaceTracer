@@ -23,6 +23,9 @@ class readLevelFeatures:
     baseq_p: float = None
     baseq_p_adj: float = None
     baseq_rbc: float = None
+    ref_baseq_mean: float = None
+    alt_baseq_mean: float = None
+    baseq_mean: float = None
 
     alt_baseq1b_p: float = None
     alt_baseq1b_p_adj: float = None
@@ -56,9 +59,10 @@ class readLevelFeatures:
     mapq_p: float = None
     mapq_p_adj: float = None
     mapq_rbc: float = None
-    ref_mapq_mean: float = None
-    alt_mapq_mean: float = None
-    mapq_mean: float = None
+
+    ref_mapq255_prop: float = None
+    alt_mapq255_prop: float = None
+    mapq255_prop: float = None
 
     alt_UMI_avg_consistence: float = None
     alt_UMI_avg_consistence_remove_single_read: float = None
@@ -199,9 +203,26 @@ class readLevelFeatures:
         strand_bias_odds, self.strand_bias_p = scipy.stats.fisher_exact([[refine_alt_is_reverse, refine_alt_is_forward ],[refine_ref_is_reverse, refine_ref_is_forward]])
 
         ref_mapq,alt_mapq=get_list("map_q")
-        self.ref_mapq_mean=refine_mean(ref_mapq)
-        self.alt_mapq_mean=refine_mean(ref_mapq)
-        self.mapq_mean=refine_mean(ref_mapq+alt_mapq)
+
+        def calc_255_prop(seq):
+            if not seq:
+                return 0.0
+            try:
+                return sum(1 for i in seq if int(i) == 255) / len(seq)
+            except (ValueError, TypeError):
+                return 0.0
+
+        self.ref_mapq255_prop = calc_255_prop(ref_mapq)
+        self.alt_mapq255_prop = calc_255_prop(alt_mapq)
+
+        total_len = len(ref_mapq) + len(alt_mapq)
+        if total_len > 0:
+            count = sum(1 for i in ref_mapq if int(i) == 255) + \
+                    sum(1 for i in alt_mapq if int(i) == 255)
+            self.mapq255_prop = count / total_len
+        else:
+            self.mapq255_prop = 0.0
+
         mapq_s,self.mapq_p,self.mapq_rbc=wilcoxon_with_rbc(ref_mapq,alt_mapq,alternative="greater")
 
         ref_ind_num,alt_ind_num=get_list("ind_num")
@@ -216,6 +237,9 @@ class readLevelFeatures:
 
         ref_baseq, alt_baseq=get_list("baseq")
         baseq_s,self.baseq_p,self.baseq_rbc=wilcoxon_with_rbc(ref_baseq,alt_baseq,alternative="greater")
+        self.ref_baseq_mean=refine_mean(ref_baseq)
+        self.alt_baseq_mean=refine_mean(alt_baseq)
+        self.baseq_mean=refine_mean(ref_baseq+alt_baseq)
 
         ref_baseq1b,alt_baseq1b=get_list("baseq1b")
         # self.ref_baseq1b_s,self.ref_baseq1b_p,self.ref_baseq1b_rbc=wilcoxon_with_rbc(ref_baseq1b,ref_baseq,alternative="greater")

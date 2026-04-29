@@ -19,7 +19,6 @@ class ClusterStep(BaseStep):
     def get_outputs(self, context):
         cluster=self.config["cluster"] # not None value, this has been handled in ochestrator
         cell_num=self.config["cell_num"]
-
         # cell number
         if not isinstance(cell_num,int) and Path(cell_num).exists(): # provided a cell num list
             out_cell_num_file=cell_num

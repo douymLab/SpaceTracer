@@ -171,7 +171,7 @@ class ProgressLogger:
         """更新进度"""
         self.current += increment
         percentage = int((self.current / self.total) * 100)
-        
+
         # 每5%或完成时更新
         if percentage != self._last_percentage and (percentage % 5 == 0 or self.current == self.total):
             self._last_percentage = percentage
@@ -179,7 +179,7 @@ class ProgressLogger:
                 self.logger.info(f"{self.desc}: 100% ({self.current}/{self.total}) - Completed")
             else:
                 # 使用\r实现进度条效果
-                sys.stderr.write(f"\r{self.desc}: {percentage}% ({self.current}/{self.total})")
+                sys.stderr.write(f"{self.desc}: {percentage}% ({self.current}/{self.total})")
                 sys.stderr.flush()
     
     def finish(self):

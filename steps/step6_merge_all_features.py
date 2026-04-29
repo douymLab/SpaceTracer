@@ -3,6 +3,7 @@ import pandas as pd
 import subprocess
 import shlex
 
+from SpaceTracer.cores.phasing_summary import build_phase_summary_df
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.utils.read_files import load_parquet, load_text_file
 from SpaceTracer.utils.utils import list2min, load_manifest_tsv
@@ -20,25 +21,42 @@ def collect_files_from_manifest(manifest_file: str, column_name: str):
     return files
 
 
+# def _ensure_variant_multiindex(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     统一把 df 设置成 MultiIndex:
+#     (#chrom, pos, ref, alt)
+#     """
+#     if df is None or df.empty:
+#         return pd.DataFrame()
+
+#     required_cols = ["#chrom", "pos", "ref", "alt"]
+
+#     if not isinstance(df.index, pd.MultiIndex):
+#         if all(col in df.columns for col in required_cols):
+#             df = df.copy()
+#             df.index = pd.MultiIndex.from_arrays(
+#                 [df["#chrom"], df["pos"], df["ref"], df["alt"]],
+#                 names=["#chrom", "pos", "ref", "alt"]
+#             )
+#     return df
+
 def _ensure_variant_multiindex(df: pd.DataFrame) -> pd.DataFrame:
     """
-    统一把 df 设置成 MultiIndex:
-    (#chrom, pos, ref, alt)
+    set index and remove (#chrom, pos, ref, alt)
+    
     """
     if df is None or df.empty:
         return pd.DataFrame()
 
     required_cols = ["#chrom", "pos", "ref", "alt"]
 
+    df = df.copy()
+
     if not isinstance(df.index, pd.MultiIndex):
         if all(col in df.columns for col in required_cols):
-            df = df.copy()
-            df.index = pd.MultiIndex.from_arrays(
-                [df["#chrom"], df["pos"], df["ref"], df["alt"]],
-                names=["#chrom", "pos", "ref", "alt"]
-            )
-    return df
+            df = df.set_index(required_cols, drop=True)
 
+    return df
 
 def load_single_feature_file(path, sep="\t"):
     """
@@ -67,21 +85,21 @@ def load_single_feature_file(path, sep="\t"):
     return df
 
 
-def _is_nonempty_file(path: str) -> bool:
-    return bool(path) and os.path.exists(path) and os.path.getsize(path) > 0
+# def _is_nonempty_file(path: str) -> bool:
+#     return bool(path) and os.path.exists(path) and os.path.getsize(path) > 0
 
 
-def _newer_than_all(target_file: str, deps: list) -> bool:
-    """
-    target_file 是否新于所有依赖文件
-    """
-    if not os.path.exists(target_file):
-        return False
-    target_mtime = os.path.getmtime(target_file)
-    for dep in deps:
-        if dep and os.path.exists(dep) and os.path.getmtime(dep) > target_mtime:
-            return False
-    return True
+# def _newer_than_all(target_file: str, deps: list) -> bool:
+#     """
+#     target_file 是否新于所有依赖文件
+#     """
+#     if not os.path.exists(target_file):
+#         return False
+#     target_mtime = os.path.getmtime(target_file)
+#     for dep in deps:
+#         if dep and os.path.exists(dep) and os.path.getmtime(dep) > target_mtime:
+#             return False
+#     return True
 
 def _merge_files(valid_files, output_file):
     if not valid_files:
@@ -108,24 +126,24 @@ def _merge_files(valid_files, output_file):
 
                     out_f.write(line.rstrip("\n") + "\n")
 
-def _awk_merge_files(valid_files, output_file):
-    """
-    用 awk 合并多个带表头 txt：
-    - 保留第一个文件表头
-    - 跳过后续文件表头
-    - 去空行
-    """
-    if not valid_files:
-        with open(output_file, "w"):
-            pass
-        return
+# def _awk_merge_files(valid_files, output_file):
+#     """
+#     用 awk 合并多个带表头 txt：
+#     - 保留第一个文件表头
+#     - 跳过后续文件表头
+#     - 去空行
+#     """
+#     if not valid_files:
+#         with open(output_file, "w"):
+#             pass
+#         return
 
-    files_quoted = " ".join(shlex.quote(f) for f in valid_files)
-    out_quoted = shlex.quote(output_file)
+#     files_quoted = " ".join(shlex.quote(f) for f in valid_files)
+#     out_quoted = shlex.quote(output_file)
 
-    awk_script = r'NR==1{print;next} FNR==1{next} $0 !~ /^[[:space:]]*$/ {print}'
-    cmd = f"awk {shlex.quote(awk_script)} {files_quoted} > {out_quoted}"
-    subprocess.run(["bash", "-lc", cmd], check=True,shell=True)
+#     awk_script = r'NR==1{print;next} FNR==1{next} $0 !~ /^[[:space:]]*$/ {print}'
+#     cmd = f"awk {shlex.quote(awk_script)} {files_quoted} > {out_quoted}"
+#     subprocess.run(["bash", "-lc", cmd], check=True,shell=True)
 
 
 def merge_feature_files_from_manifest(
@@ -202,17 +220,17 @@ def merge_feature_files_from_manifest(
     return pd.DataFrame()
 
 
-def _log_df_index_info(name, df):
-    if df is None or df.empty:
-        print(f"[{name}] empty")
-        return
-    try:
-        n_rows = len(df)
-        n_unique = df.index.nunique()
-        n_dup = n_rows - n_unique
-        print(f"[{name}] rows={n_rows}, unique_index={n_unique}, duplicated_index={n_dup}")
-    except Exception as e:
-        print(f"[{name}] failed to inspect index: {e}")
+# def _log_df_index_info(name, df):
+#     if df is None or df.empty:
+#         # print(f"[{name}] empty")
+#         return
+#     try:
+#         n_rows = len(df)
+#         n_unique = df.index.nunique()
+#         n_dup = n_rows - n_unique
+#         # print(f"[{name}] rows={n_rows}, unique_index={n_unique}, duplicated_index={n_dup}")
+#     except Exception as e:
+#         print(f"[{name}] failed to inspect index: {e}")
 
 
 class MergeFeatureStep(BaseStep):
@@ -228,11 +246,14 @@ class MergeFeatureStep(BaseStep):
                 context.get("read_feature_results", "")
                 or context.get("read_feature", "")
             ),
+            "phasing_result": context.get("phasing_result"),
+            "cluster_event_result": context.get("cluster_event_result")
         }
 
     def get_outputs(self, context):
         return {
             "combine_feature": os.path.join(self.work_dir, "all_feature.txt"),
+            "combine_feature_parquet": os.path.join(self.work_dir, "all_feature.parquet"),
             "merged_spatial_feature": os.path.join(self.step_dir, "merged_spatial_feature.txt"),
             "merged_read_feature": os.path.join(self.step_dir, "merged_read_feature.txt"),
         }
@@ -289,17 +310,47 @@ class MergeFeatureStep(BaseStep):
             else:
                 read_feature_df = self._load_single_feature(read_input)
 
-        # 确保索引统一
+        # 5. phasing_results
+        phasing_result=inputs.get("phasing_result", "")
+        if phasing_result:
+            phase_df = pd.read_csv(phasing_result, sep="\t")
+            phase_summary_df=build_phase_summary_df(phase_df)
+        else:
+            phase_summary_df=build_phase_summary_df(pd.DataFrame())
+        
+        phase_summary_df=phase_summary_df.rename(columns={
+            "germline": "ref",
+            "mutant": "alt",
+        })
+
+        #  6. cluster event
+        cluster_event_result=inputs.get("cluster_event_result", "")
+        if cluster_event_result:
+            cluster_event_df = pd.read_csv(cluster_event_result, sep="\t")
+            cluster_event_df=cluster_event_df.rename(columns={
+                "#chr": "#chrom",
+                "germline": "ref",
+                "mutant": "alt",
+            })
+
+        else:
+            cluster_event_df=pd.DataFrame()
+
+        # reformat the index for each df
         RNA_feature_df = _ensure_variant_multiindex(RNA_feature_df)
         spatial_feature_df = _ensure_variant_multiindex(spatial_feature_df)
         read_feature_df = _ensure_variant_multiindex(read_feature_df)
         mappability_feature_df = _ensure_variant_multiindex(mappability_feature_df)
+        phase_summary_df = _ensure_variant_multiindex(phase_summary_df)
+        cluster_event_df = _ensure_variant_multiindex(cluster_event_df)
 
-        # 打印 index 唯一性，帮助排查 join 扩行
-        _log_df_index_info("RNA_feature", RNA_feature_df)
-        _log_df_index_info("spatial_feature", spatial_feature_df)
-        _log_df_index_info("read_feature", read_feature_df)
-        _log_df_index_info("mappability_feature", mappability_feature_df)
+        # chech df info 
+        # _log_df_index_info("RNA_feature", RNA_feature_df)
+        # _log_df_index_info("spatial_feature", spatial_feature_df)
+        # _log_df_index_info("read_feature", read_feature_df)
+        # _log_df_index_info("mappability_feature", mappability_feature_df)
+        # _log_df_index_info("phasing",phase_summary_df)
+        # _log_df_index_info("cluster_event",cluster_event_df)
 
         output_feature = outputs["combine_feature"]
 
@@ -312,30 +363,38 @@ class MergeFeatureStep(BaseStep):
             "mut_vs_nonmut_spots_KS_p", "mut_vs_nonmut_spots_KS_s",
             "mut_vs_nonmut_spots_MI_p", "mut_vs_nonmut_spots_MI_s"
         ]] if not spatial_feature_df.empty else pd.DataFrame()
-
         # 以 spatial 为主表
         if not short_spatial_feature_df.empty:
             merged_df = short_spatial_feature_df.copy()
         else:
             merged_df = pd.DataFrame()
 
-        # 按 spatial index 左连接
         for name, df in [
             ("RNA_feature", RNA_feature_df),
             ("read_feature", read_feature_df),
             ("mappability_feature", mappability_feature_df),
+            ("phasing", phase_summary_df)
         ]:
+            if df is None:
+                continue
+            
 
-            if df is not None and not df.empty:
-                # 去掉和主表重复的列，避免 join 冲突
-                duplicate_cols = [c for c in df.columns if c in merged_df.columns]
-                if duplicate_cols:
-                    print(f"[{name}] dropping duplicated columns before join: {duplicate_cols}")
-                    df = df.drop(columns=duplicate_cols)
-
+            if not df.empty:
                 merged_df = merged_df.join(df, how="left")
+            else:
+                # 空 df 但保留其列到 merged_df
+                for col in df.columns:
+                    if col not in merged_df.columns:
+                        merged_df[col] = pd.NA
 
-        print(f"[merged_df] rows={len(merged_df)}")
+
+        if not cluster_event_df.empty:
+            merged_df = merged_df.join(cluster_event_df, how="left")
+            merged_df["cluster_event"] = merged_df["cluster_event"].fillna(False).astype(bool)
+        else:
+            merged_df["cluster_event"]=False
+
+        # print(f"[merged_df] rows={len(merged_df)}")
 
         if "mappabilityScore" in merged_df.columns:
             merged_df["mappabilityScore"] = merged_df["mappabilityScore"].apply(list2min)
@@ -355,10 +414,13 @@ class MergeFeatureStep(BaseStep):
             "HIGH_MULTIPLE_MAPPING": ["HIGH_MULTIPLE_MAPPING"],
             "WIDE_DISTRIBUTION": ["HIGH_MUT_PROB"],
             "NEAR_READ_END": ["NEAR_READ_END1", "NEAR_READ_END2"],
+            "LOW_MAPQ": ["LOW_MAPQ"],
+            "LOW_BASEQ": ["LOW_BASEQ"],
             "MAPPABILITY": ["MAPPABILITY"],
             "INDEL_PROPORTION": ["INDEL_PROPORTION"],
             "ALT_ALLELE_COUNT": ["ALT_ALLELE_COUNT"],
             "POPULATION_AF": ["POPULATION_AF"],
+            "CLUSTER_EVENTS": ["CLUSTER_EVENTS"]
         }
 
         ALL_FILTER_CONDITIONS = {
@@ -384,6 +446,8 @@ class MergeFeatureStep(BaseStep):
             ) & (
                 pd.to_numeric(df["per_UMI_end_remove_clip_p"], errors="coerce") < 0.01
             ),
+            "LOW_MAPQ": lambda df: pd.to_numeric(df["mapq255_prop"], errors="coerce") < 0.8,
+            "LOW_BASEQ": lambda df: pd.to_numeric(df["alt_baseq_mean"], errors="coerce") < 20,
             "ASE": lambda df: df["ASE"] == True,
             "hFDR": lambda df: pd.to_numeric(df["hFDR"], errors="coerce") > 0.8,
             "imprinted": lambda df: df["imprinted"] == True,
@@ -395,6 +459,7 @@ class MergeFeatureStep(BaseStep):
             "INDEL_PROPORTION": lambda df: df["indel_proportion_for_site"] < 0.05,
             "ALT_ALLELE_COUNT": lambda df: df["consensus_alt_allele_count"] >= thr_altcount,
             "POPULATION_AF": lambda df: df["falt"] < thr_popAF,
+            "CLUSTER_EVENTS": lambda df: df["cluster_event"] == True
         }
 
         filtrations_dict = self.get_step_config()
@@ -415,13 +480,12 @@ class MergeFeatureStep(BaseStep):
             parquet_file = str(output_feature).replace(".txt", ".parquet")
             merged_df.to_parquet(parquet_file, index=True, engine="pyarrow", compression="snappy")
 
-        # 只处理 object/string 列，避免把数值列全转成 object
-        object_cols = merged_df.select_dtypes(include=["object"]).columns
-        for col in object_cols:
+        # object_cols = merged_df.select_dtypes(include=["object"]).columns
+        for col in merged_df.columns:
             merged_df[col] = merged_df[col].fillna("no")
             merged_df[col] = merged_df[col].replace("", "no")
 
-        # Filtration 单独补一下
+        # Filtration fill
         if "Filtration" in merged_df.columns:
             merged_df["Filtration"] = merged_df["Filtration"].fillna("PASS").replace("", "PASS")
 

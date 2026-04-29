@@ -149,8 +149,11 @@ class CheckpointManager:
     # ─────────────────────────────────────────────────────────────
 
     def _build_file_info(self, file_path: str) -> Dict[str, Any]:
-        path = Path(file_path).resolve()
-        info = {"path": str(path)}
+        path = Path(file_path)
+        info = {
+            "path": str(path),
+            "real_path": str(path.resolve()) if path.exists() else str(path),
+        }
 
         if path.exists():
             stat = path.stat()
@@ -158,6 +161,7 @@ class CheckpointManager:
             info["size"] = stat.st_size
 
         return info
+
 
     def verify_output_file(self, file_info: Dict[str, Any]) -> bool:
         try:
@@ -205,7 +209,7 @@ class CheckpointManager:
         if self.disabled:
             return
         logger.info(
-            f"Marking step '{step_name}' as complete, outputs={list(new_outputs.keys())}"
+            f"Marking step '{step_name}' as complete, outputs={list(new_outputs)}" #.keys()
         )
 
         outputs = {}

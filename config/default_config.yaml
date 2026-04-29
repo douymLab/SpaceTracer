@@ -1,40 +1,36 @@
-# SpaceTracer Default Configuration
-
-# input (for visium, not contain HD data)
-genome: hg38
-resource_dir: # if provided, all resource will be found in the directory
-sequence_type: visium # choice: visium, stereo-seq, ST, visium-HD
-bin_size: # only work for stereo-seq data. If use stereo-seq data, the cluster file must be provided!
+#### most important configure
+sample_name: 
+genome: hg38 # [choices: hg38, mm10]
+sequence_type: visium 
 spaceranger_dir: # Please provide the "{prefix}/outs" dir. If None or not provided, please give the bam file and tissue_position file 
-regions_file: /storage/douyanmeiLab/yangzhirui/01.Data_download/Callable_region_compare/all_callable_merge.bed
-output_dir: /storage/douyanmeiLab/yangzhirui/SpaceTracer_new/
-
-input_details: # if visium data and spaceranger dir have been provided, the following could be ignored
-  bam_file: 
-  tissue_position: 
-  barcode_key: # this may not work for stereo-seq
-
-resource_details: # if resource dir provided, the below config could be ignored, or each would be 
-  genome_fasta: /storage/douyanmeiLab/yangzhirui/Reference/Cellranger/refdata-gex-GRCh38-2020-A/fasta/genome.fa
-  gnomad_path: /storage/douyanmeiLab/yangzhirui/Reference/resource/only_af/ 
-  mappability_path: /storage/douyanmeiLab/yangzhirui/Reference/MapScore_umap_multiRead/k24.umap.bedgraph
-  gene_bed: /storage/douyanmeiLab/yangzhirui/Reference/gtexGene.txt
-  dbsnp_vcf_file: /storage/douyanmeiLab/yangzhirui/Reference/dbSNP/Homo_sapiens_assembly38.dbsnp138.vcf
-  imprinted_bed: /storage/douyanmeiLab/yangzhirui/Reference/Cellranger/refdata-gex-GRCh38-2020-A/imprinted_genes.region.bed
-  editing_bed: /storage/douyanmeiLab/yangzhirui/Reference/COMBINED_RADAR_REDIprotal_DARNED_hg38_all_sites.bed
-  PON_file: /storage/douyanmeiLab/yangzhirui/01.Data_download/PON/PON_new_model_250921_33samples_251224.only_sites.txt
-  reference_error_profile: /storage/douyanmeiLab/yangzhirui/01.Data_download/Mutation_signatures_new_creteria/use_not_validated_low_freq_001_251021/lysis_Signatures_split3.Sigprofile.txt
+resource_dir: SpaceTracer/resources/hg38 # if provided, all resource will be found in the directory
+model_dir: SpaceTracer/models/
+model_name: "spatial_free_model"  
+bin_size: # only work for stereo-seq data. If use stereo-seq data, the cluster file must be provided!
+regions_file: # optional, only analysis these region when provided
+output_dir: 
 
 run:
-  threads: 20 
-  memory: "200G"
-  max_parallel: 40
-  keep_intermediates: true # all intermediate files will be exported as files
+  threads: 16
+  memory: "96G"
   skip_validation: true
   
-logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  log_file: "pipeline.log"
+#### if not visium data, the input files could be assigned as following
+input_details: 
+  bam_file: 
+  tissue_position:
+  barcode_key: CB # this may not work for stereo-seq
+
+resource_details:  # if resource dir provided, the below config could be ignored, or each would be replaced 
+  genome_fasta: 
+  gnomad_path: 
+  mappability_path: 
+  gene_bed: 
+  dbsnp_vcf_file: 
+  imprinted_bed: 
+  editing_bed: 
+  PON_file:
+  reference_error_profile: 
 
 # Step-specific configurations (optional)
 steps:
@@ -43,23 +39,23 @@ steps:
     cluster_file:  # [if provided, the cluster function will be ignored]
     ncluster: 8
     plot: true
-    method: "SpaGCN"          # 原 --method
-    init_method: "louvain"    # 原 --init_method
+    method: "SpaGCN"      
+    init_method: "louvain"   
     data_type: "Visium" 
     h5_file_name: "filtered_feature_bc_matrix.h5"
     histology: true
-    spot_area: 49             # 原 --b，改成更清晰的名字
+    spot_area: 49     
     weight_histology: 1
     distance_threshold: 2
     min_samples: 1
     num_threshold: 30
-    percentage: 0.5           # 原 --pertentage（修正拼写）
+    percentage: 0.5           
     seed: 100
     tol: 5e-3
     lr: 0.05
-    max_epochs: 200           # 原 --max_epochs_run
+    max_epochs: 200       
     # GraphST 专用
-    graphst_tool: "louvain"   # 原 --tool
+    graphst_tool: "louvain"  
     radius: 6
     refinement: true
 
@@ -76,13 +72,13 @@ steps:
     min_baseq: 0
     exclude_flag:  0 # strongly recommended
     enable_split: True
-    split_threshold: 4000
-    chrom_chunk_size: 2000
-    chrM_chunk_size: 100
+    split_threshold: 10
+    chrom_chunk_size: 10
+    chrM_chunk_size: 10
 
   # Step 3 Calculate cell number (optional)
-  cell_number: 
-  
+  cell_number:   # [optional] fixed cell number per spot. Recommended if BAM > 30G
+
   # Step 3: UMI combine
   UMI_combine:
     filter_duplicates: true
@@ -90,13 +86,8 @@ steps:
     filter_qcfail: true
     filter_supplementary: true
     min_read_quality: 20
-    extract_features:
-      - "base_quality"
-      - "mapping_quality"
-      - "strand"
-      - "position_in_read"
   
-  # Step 5: Genotyping
+  # Step 4: genotyping
   genotyping:
     alpha: 0.05
     epsQ: 20
@@ -106,6 +97,7 @@ steps:
     pop_vaf: 1e-5
     filter_oneallele: True
 
+  # Step 5: spatial feature
   spatial_feature:
     alpha: 0.05
     thr_r2: 0.3
@@ -116,7 +108,8 @@ steps:
     fig_size: 5
     method: LDA
     num_directions: 8
-
+ 
+  # Step 5: read-level feature
   read_feature:
     cell_info: None 
     downsample: True
@@ -125,6 +118,7 @@ steps:
     max_variants_per_region: 100
     seed: 42
     
+  # Step 5: RNA-level feature
   RNA_feature:
     min_count_for_germline: 50
     min_prior_for_germline: 0.0001
@@ -132,15 +126,35 @@ steps:
     p_threshold: 0.05
     previous_base: 5
 
+  # Step 5: phasing
+  phasing:
+    minprior: 0.01
+    min_dp: 20
+    min_total_dp: 50
+    alpha: 0.05
+    phasing_pad: 1000
+    merge_gap: 200
+    max_target: 200000
+    seed: 42
+
+  # Step 6: feature merge and filtration
   feature_filtration:
-      ASE: True
-      hFDR: True
-      imprinted: True
-      homopolymer: True
-      PON: True
-      RNA_editing: True
-      ABNORMAL_MISMATCHES: True
-      LOW_READ_DIVERSITY: True
-      HIGH_MULTIPLE_MAPPIN: True
-      WIDE_DISTRIBUTION: True
-      NEAR_READ_END: True
+    ASE: True
+    hFDR: True
+    imprinted: True
+    homopolymer: True
+    PON: True
+    RNA_editing: True
+    ABNORMAL_MISMATCHES: True
+    LOW_READ_DIVERSITY: True
+    HIGH_MULTIPLE_MAPPIN: True
+    WIDE_DISTRIBUTION: True
+    NEAR_READ_END: True
+    CLUSTER_EVENTS: True
+    LOW_MAPQ: True
+    LOW_BASEQ: True
+
+  # Step 7: Prediction
+  mutation_prediction:
+    random_seed: 42
+    plot: True

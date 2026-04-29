@@ -103,16 +103,26 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # convert tuple-like '("no",)' forms into NaN
     df.replace(r"^\('no',\)$", np.nan, regex=True, inplace=True)
 
-    # modify the column name to new version
-    if transform_old_name:
-        print("Transform the column name to new version")
-        df = rename_columns(df, old2new_mapping)
+    # # modify the column name to new version
+    # if transform_old_name:
+    #     print("Transform the column name to new version")
+    #     df = rename_columns(df, old2new_mapping)
 
-    # add sample name to the index
+    # check index columns only appear once
+    idx_cols = ["#chrom", "pos", "ref", "alt"]
+    # drop duplicated genomic keys from regular columns if they are already index levels
+    dup_index_cols = [c for c in idx_cols if (c in df.index.names) and (c in df.columns)]
+    if dup_index_cols:
+        df = df.drop(columns=dup_index_cols)
+
+    # ensure sample is an index level
     if "sample" not in df.index.names:
-        df = df.reset_index()
-        df["sample"] = sample_name
-        df = df.set_index(["sample", "#chrom", "pos", "ref", "alt"])
+        if all(c in df.index.names for c in idx_cols):
+            df = (df.assign(sample=sample_name)
+                    .set_index("sample", append=True)
+                    .reorder_levels(["sample"] + [n for n in df.index.names if n != "sample"]))
+        else:
+            df = df.assign(sample=sample_name).set_index(["sample", *idx_cols])
 
     # keep the output features
     df_outputfeatures = df[['Filtration', 'consensus_UMI_count', 'consensus_alt_allele_count', 'AFind', 
@@ -165,7 +175,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                                'num_mut_spots', 'num_spots', 'hFDR', 'falt', 'fref', \
                                'consensus_ref_allele_count', 'consensus_alt2_allele_count', 'consensus_alt_allele_count', \
                                'Filtration', 'editing_AtoG', 'editing_database', 'RNA_editing', \
-                               'imprinted', 'ASE', 'hFDR', 'homopolymer', 'PON']
+                               'imprinted', 'ASE', 'hFDR', 'homopolymer', 'PON', \
+                               '#chrom', 'pos', 'ref', 'alt']
         for col in not_related_columns:
             if col in df.columns:
                 df = df.drop(col, axis=1)
@@ -403,17 +414,21 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     candidate_unphased_index = pd.MultiIndex.from_tuples(list(candidate_unphased_set), names=df.index.names).intersection(df.index)
 
     # print the number of each type site
-    print("=== Number of sites for each type ===")
-    print("validated phased mosaic:", len(phased_true_index))
-    print("validated mosaic:", len(true_sites))
-    print("validated het:", len(het_index))
-    print("validated artifact:", len(validated_artifact_set))
-    print("phasable artifact (used):", len(selected_phasable_artifact_set))
-    print("total artifact:", len(artifact_set))
-    print("haplotype=3:", len(haplo3_index))
-    print("candidate_phased:", len(candidate_phased_index))
-    print("candidate_unphased:", len(candidate_unphased_index))
-    print("=====================================")
+    if train:
+        print("=== Number of sites for each type ===")
+        print("validated phased mosaic:", len(phased_true_index))
+        print("validated mosaic:", len(true_sites))
+        print("validated het:", len(het_index))
+        print("validated artifact:", len(validated_artifact_set))
+        print("phasable artifact (used):", len(selected_phasable_artifact_set))
+        print("total artifact:", len(artifact_set))
+        print("haplotype=3:", len(haplo3_index))
+        print("candidate_phased:", len(candidate_phased_index))
+        print("candidate_unphased:", len(candidate_unphased_index))
+        print("=====================================")
+    else:
+        total_candidate_sites = len(candidate_phased_index) + len(candidate_unphased_index)
+        print(f"Total candidate sites: {total_candidate_sites}")
 
 
     # ====================================================================
@@ -643,7 +658,7 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
         X_nohet_df['evaluation'] = y_nohet          
 
     else:
-        print(f"Load the saved trained models for {model_name}")
+        # print(f"Load the saved trained models for {model_name}")
         if phase_refine:
             # get the model files
             rf_phased_file = os.path.join(model_dir, model_name+"_rf_phased_model.joblib")
@@ -704,8 +719,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
             candidate_phased_pred = rf_phased.predict(candidate_phased)
             # get the number of each values
             phsed_pred_counts = Counter(candidate_phased_pred)
-            print("Phase refinement prediction result:")
-            print(phsed_pred_counts)
+            # print("Phase refinement prediction result:")
+            # print(phsed_pred_counts)
         else:
             # using random forest model for non-phased sites
             candidate_phased_df = df_nophase.loc[candidate_phased_index]
@@ -716,8 +731,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                 candidate_phased_pred = rf.predict(candidate_phased)
             # get the number of each values
             phsed_pred_counts = Counter(candidate_phased_pred)
-            print("Phased set somatic mutation prediction result:")
-            print(phsed_pred_counts)
+            # print("Phased set somatic mutation prediction result:")
+            # print(phsed_pred_counts)
             # calculate and save the SHAP values
             if save_shap and not use_lr:
                 # calculate SHAP values
@@ -766,8 +781,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
         candidate_pred = lr_model.predict(candidate)
         # get the number of each values
         pred_counts = Counter(candidate_pred)
-        print("Heterozygous classification prediction result:")
-        print(pred_counts)
+        # print("Heterozygous classification prediction result:")
+        # print(pred_counts)
         # get predicted het and nohet sites
         candidate_df['pred'] = candidate_pred
         pred_het = candidate_df[candidate_df['pred']=="het"]
@@ -789,8 +804,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
 
     # get the number of each values
     nohet_pred_counts = Counter(candidate_nohet_pred)
-    print("Somatic mutation classification prediction result:")
-    print(nohet_pred_counts)
+    # print("Somatic mutation classification prediction result:")
+    # print(nohet_pred_counts)
     # calculate and save the SHAP values
     if save_shap and not use_lr:
         # calculate SHAP values
@@ -1740,3 +1755,16 @@ def write_simple_vcf(df, output_file, sample_name=None, reference_name=None):
             info = make_vcf_info(row, info_columns)
 
             f.write(f"{chrom}\t{pos}\t.\t{ref}\t{alt}\t.\t{filt}\t{info}\n")
+
+
+# # column names corresponding to the features in the model
+# old2new_mapping = {}
+
+# # function to rename columns based on the mapping
+# def rename_columns(df, name_mapping):
+#     for col in df.columns:
+#         if col in name_mapping:
+#             # check if the new name is different, and if so, rename the column
+#             if col != name_mapping[col]:
+#                 df = df.rename(columns={col: name_mapping[col]})
+#     return df
