@@ -56,35 +56,50 @@ docker run -it -v $(pwd):/mnt/workflow xiayh17/spacetracer bash
 
 ### 3) Run the pipeline (most efficient path)
 
-SpaceTracer is designed for one-command execution through Snakemake:
+Run with your config:
 
 ```bash
-# conda-based run
-snakemake --configfile config_example.txt -s run_snakemake_for_conda
-
-# docker-based run
-snakemake --configfile config_example.txt -s run_snakemake_for_docker
+SpaceTracer run --config config.yaml
 ```
 
-### 4) Configure inputs/resources
+Fallback command:
 
-Start from `config_example.txt` and update paths for your sample and resources.
+```bash
+python -m SpaceTracer.cli.run --config config.yaml
+```
+
+### 4) Configure inputs/resources/model
+
+Start from the docs template and update sample/resource paths.
+
+SpaceTracer provides two pretrained mutation-prediction models under `models/`:
+
+- `spatial_free_model`
+- `spatial_feature_preserved_model`
 
 For complete parameter descriptions and resource guidance, see:
 
 - Docs home: [SpaceTracer Docs](https://douymLab.github.io/SpaceTracer/)
 - Configuration: [Configuration Guide](https://douymLab.github.io/SpaceTracer/configuration/)
-- Resources: [Resource Guide](https://douymLab.github.io/SpaceTracer/resources/)
+- Config reference: [Config Reference](https://douymLab.github.io/SpaceTracer/config-reference/)
+- Resources: [Resources](https://douymLab.github.io/SpaceTracer/resources/)
+- Quick start: [Quick Start](https://douymLab.github.io/SpaceTracer/quickstart/)
 
-### 5) Final output
+### 5) Main outputs
 
-Final high-confidence somatic mutation list:
+Common downstream outputs:
 
-`$savePATH/$sample/$model/pred.FINAL.txt`
+- `output_dir/all_feature.txt`
+- `output_dir/all_feature.parquet`
+- `output_dir/mutation_prediction/Sample_total_pred_truesites.vcf`
+- `output_dir/mutation_prediction/Sample_total_pred_truesites_PASS.vcf`
 
 ### Optional: advanced step-by-step mode
 
-Advanced users can run all the steps manually for debugging/custom workflows; see **Step Reference** in the tutorial website.
+Advanced users can run/debug by step:
+
+- [Step-by-step guide](https://douymLab.github.io/SpaceTracer/steps/overview/)
+- [Single-Step Debug Cookbook](https://douymLab.github.io/SpaceTracer/steps/debug-cookbook/)
 
 ## Contact:
 

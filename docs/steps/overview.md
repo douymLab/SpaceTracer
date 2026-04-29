@@ -2,6 +2,8 @@
 
 This page combines the algorithm-level view and step-level execution map, so you can understand both **why** and **how** the full workflow runs.
 
+For exact input/parameter interpretation, open each step page under this section.
+
 ## Main algorithm logic
 
 1. **Candidate generation**  
@@ -24,8 +26,8 @@ This page combines the algorithm-level view and step-level execution map, so you
 | Step0 | `cluster`, `bam_processing`, `mpileup` | Data pre-processing: cluster metadata preparation, BAM filtering, and mpileup candidate generation. |
 | Step1 | `umi_combine`, `cell_num`, `prior` | Quality-control-oriented evidence aggregation and prior preparation for robust genotyping. |
 | Step2 | `genotyping` | Spot/cluster/individual-level genotype inference. |
-| Step3 | `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `merge_feature` | Multi-source feature extraction and integrated feature matrix generation. |
-| Step4 | `mutation_prediction` (optional) | Model-based mutation prediction and VCF export. |
+| Step3 | `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `phasing`, `merge_feature` | Multi-source feature extraction plus phasing refinement, followed by integrated feature matrix generation. |
+| Step4 | `mutation_prediction` | Model-based mutation prediction and VCF export. |
 | Step5 | external filtering stage | Remove recurrent artifacts using public/PoN-style resources. |
 | Step6 | external phylogeny tools | Optional lineage tree reconstruction from high-confidence mutation calls. |
 
@@ -53,7 +55,7 @@ Use the per-step pages directly:
 
 - Step1/2: genotype evidence files (for example `ind_geno_filter_file`, `spot_geno_file`, `cluster_vaf_file`)
 - Step3: merged feature table (`all_feature.txt` and parquet mirror)
-- Step4: predicted VCFs when mutation prediction is enabled
+- Step4: predicted VCF outputs from mutation prediction
 - Step5/6: curated high-confidence loci used for downstream lineage/phylogeny analyses
 
 For practical rerun recipes (for example, rerun only RNA or spatial branches), see [Single-Step Debug Cookbook](debug-cookbook.md).

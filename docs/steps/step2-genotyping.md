@@ -17,6 +17,15 @@ Script/module stage: `genotyping`
 - `prior_file`
 - `cell_num`
 
+### Input interpretation
+
+| Input | Interpretation |
+| --- | --- |
+| Step1 count outputs | UMI/spot evidence basis for genotype inference. |
+| `cluster` context | Provides grouping for cluster-level aggregation and downstream spot refinement. |
+| `prior_file` | Supplies prior frequency context for robust genotype calling. |
+| `cell_num` | Supports spot-level genotype normalization/refinement. |
+
 ## Outputs
 
 - `ind_geno_filter_file`

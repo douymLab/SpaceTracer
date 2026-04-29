@@ -31,3 +31,9 @@ This stage converts raw pileup evidence into quality-controlled counting and pri
 - `spot_count_file`, `error_count_file`
 - `cell_num`
 - `prior_file`
+
+## Input/parameter interpretation entry points
+
+- `umi_combine` inputs/parameters: [umi_combine](umi-combine.md)
+- `cell_num` inputs/parameters: [cell_num](cell-num.md)
+- `prior` inputs/parameters: [prior](prior.md)

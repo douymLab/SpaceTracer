@@ -12,15 +12,35 @@ nav:
   - Installation: installation.md
   - Resources: resources.md
   - Configuration: configuration.md
+  - Config Reference: config-reference.md
   - Quick Start: quickstart.md
   - Outputs: outputs.md
   - Step Reference:
     - Step-by-step guide: steps/overview.md
-    - Step 0 - Data pre-processing: steps/step0-preprocessing.md
-    - Step 1 - Quality control: steps/step1-quality-control.md
-    - Step 2 - Genotyping: steps/step2-genotyping.md
-    - Step 3 - Feature extraction: steps/step3-feature-extraction.md
-    - Step 4 - Mutation prediction: steps/step4-mutation-prediction.md
+    - Step 0 - Data pre-processing:
+      - Overview: steps/step0-preprocessing.md
+      - cluster: steps/cluster.md
+      - bam_processing: steps/bam-processing.md
+      - mpileup: steps/mpileup.md
+    - Step 1 - Quality control:
+      - Overview: steps/step1-quality-control.md
+      - umi_combine: steps/umi-combine.md
+      - cell_num: steps/cell-num.md
+      - prior: steps/prior.md
+    - Step 2 - Genotyping:
+      - Overview: steps/step2-genotyping.md
+      - genotyping: steps/genotyping.md
+    - Step 3 - Feature extraction:
+      - Overview: steps/step3-feature-extraction.md
+      - spatial_feature: steps/spatial-feature.md
+      - mappability_feature: steps/mappability-feature.md
+      - read_feature: steps/read-feature.md
+      - RNA_feature: steps/rna-feature.md
+      - phasing: steps/phasing.md
+      - merge_feature: steps/merge-feature.md
+    - Step 4 - Mutation prediction:
+      - Overview: steps/step4-mutation-prediction.md
+      - mutation_prediction: steps/mutation-prediction.md
     - Step 5 - Remove recurrent artifacts: steps/step5-remove-recurrent-artifacts.md
     - Step 6 - Phylogeny: steps/step6-phylogeny.md
     - Single-Step Debug Cookbook: steps/debug-cookbook.md

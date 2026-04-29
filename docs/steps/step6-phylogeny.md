@@ -6,6 +6,17 @@ This optional stage reconstructs lineage relationships from high-confidence muta
 
 Use curated loci after Step 5 filtering to reduce topology distortions from technical artifacts.
 
+### Input interpretation
+
+| Input | Interpretation |
+| --- | --- |
+| curated mutation loci (post-Step5) | Candidate mutation set used to build lineage relationships. |
+| cell/spot mutation matrix | Presence/absence or probabilistic mutation matrix required by external phylogeny tools. |
+
+## Parameter interpretation
+
+Phylogeny parameters are backend-specific (for example tree model, bootstrap count, distance metric, mutation filtering stringency). Document these in your project phylogeny script to keep lineage results reproducible.
+
 ## Tooling
 
 SpaceTracer does not enforce a single phylogeny backend. You can integrate external tools (for example project-standard SNV phylogeny packages) using SpaceTracer outputs as input.

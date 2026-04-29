@@ -8,7 +8,14 @@ This stage runs model-based classification on merged features and exports predic
 
 ## Inputs
 
-- `combine_feature` (for example `all_feature.txt`)
+- `combine_feature_parquet` (for example `all_feature.parquet` from `merge_feature`)
+
+### Input interpretation
+
+| Input | Interpretation |
+| --- | --- |
+| `combine_feature_parquet` | Integrated feature matrix used by mutation classifier inference. |
+| `model_dir` / `model_name` | Model artifacts selected for prediction. |
 
 ## Outputs
 

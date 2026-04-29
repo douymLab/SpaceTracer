@@ -15,8 +15,8 @@ SpaceTracer is a computational framework for detecting somatic single-nucleotide
 ## Get started
 
 1. [Installation](installation.md)
-2. Prepare required references in [Resources](resources.md)
-3. Configure your sample with [Configuration](configuration.md)
+2. [Resources](resources.md)
+3. [Configuration](configuration.md) and [Config Reference](config-reference.md)
 4. Run your first sample with [Quick Start](quickstart.md)
-5. Follow the [Step-by-step guide](steps/overview.md); advanced users can optionally run Step 0-6 pages directly under **Step Reference**.
-6. Check result files and validation plots in [Outputs](outputs.md)
+5. Use the [Step-by-step guide](steps/overview.md) (or Step Reference pages) for stage-level details
+6. Review outputs and validation plots in [Outputs](outputs.md)

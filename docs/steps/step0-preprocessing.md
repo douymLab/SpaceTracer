@@ -35,3 +35,9 @@ If your project already has prepared candidate-locus and metadata inputs, this s
 - `output_dir/mpileup/raw_mpileup.txt`
 - `output_dir/mpileup/filter_mpileup.txt`
 - `output_dir/split_chunk.db`
+
+## Input/parameter interpretation entry points
+
+- `cluster` inputs/parameters: [cluster](cluster.md)
+- `bam_processing` inputs/parameters: [bam_processing](bam-processing.md)
+- `mpileup` inputs/parameters: [mpileup](mpileup.md)

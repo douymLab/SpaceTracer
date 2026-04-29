@@ -8,6 +8,17 @@ This stage is a recommended post-processing layer to suppress recurrent technica
 - panel-of-normals (PoN) style exclusion lists
 - recurrent-position blacklists from internal cohorts
 
+## Input interpretation
+
+| Input | Interpretation |
+| --- | --- |
+| Step4 VCF outputs | Primary candidate loci table for recurrent-artifact suppression. |
+| external resources (`dbSNP`/editing/imprinted/PoN/blacklists) | Defines recurrent technical or biological artifact patterns to remove. |
+
+## Parameter interpretation
+
+This stage is usually project-specific. Typical tunable parameters are resource selection and threshold cutoffs in downstream filtering scripts (for example AF cutoffs, PoN recurrence thresholds, blacklist strictness).
+
 ## Notes
 
 - This step is often implemented as a project-specific filtering script after SpaceTracer core outputs are generated.

@@ -4,7 +4,7 @@
 
 Computes or forwards spot-level cell number information used in spot genotype inference.
 
-## Upstream dependencies
+## Upstream
 
 - `cluster`
 - `umi_combine`
@@ -15,7 +15,16 @@ Computes or forwards spot-level cell number information used in spot genotype in
 - `cluster` information from config/context
 - `sequence_type` and optional `bins`
 
-## Key parameters
+### Input interpretation
+
+| Input key | Source | Required | Interpretation |
+| --- | --- | --- | --- |
+| `in_filter_bam` | `bam_processing` output | Yes | Filtered BAM used to estimate or validate spot-level cell support. |
+| `cluster` | `cluster` step output/file | Yes | Spot grouping used for cell-number modeling context. |
+| `sequence_type` | top-level config | Yes | Controls mode-specific behavior (Visium vs non-Visium). |
+| `bins` (`bin_size`) | top-level config | Conditional | Used in non-Visium/binned workflows when applicable. |
+
+## Parameters
 
 This step is mostly controlled by:
 
@@ -24,12 +33,18 @@ This step is mostly controlled by:
   - positive integer: use constant
   - file path: use provided table
 
+### Parameter interpretation
+
+| Parameter | Type | Typical/default | Interpretation |
+| --- | --- | --- | --- |
+| `steps.cell_number` | int/path/null | unset or `0` | Main mode switch: compute, fixed value, or passthrough external table. |
+
 ## Outputs
 
 - `cell_num` key
   - generated file: `output_dir/refined_umi_read_cellNum.txt`, or
   - passthrough integer/path from config
 
-## Notes
+## Tuning notes
 
 - If cell number is already known, pass it directly to avoid recomputation.

@@ -142,16 +142,9 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # delete the rows if the likelihood columns and AF columns contain NA
     df = df.dropna(subset=['p_mosaic'])
     df = df.dropna(subset=['baseq_p_adj'])
-
-    # Temp: add phasing-related columns (NEED TO REMOVE AFTER ADDING PHASING COLUMNS!!!)
-    phase_rel_cols = ['combine_nearest_info_mutant_prop', 'combine_most_info_mutant_prop', 'combine_nearest_phase_distance', \
-                      'combine_most_phase_distance', 'combine_nearest_discordant_prop', 'combine_most_discordant_prop']
-    haplotype_columns = ['combine_nearest_phase_haplotype', 'combine_most_phase_haplotype']
-    df[phase_rel_cols] = np.nan
-    df[haplotype_columns] = 'unphased'
     
     # all haplotype-related columns (keeping these as they are not in the mapping)
-    haplotype_columns = ['combine_nearest_phase_haplotype', 'combine_most_phase_haplotype']
+    haplotype_columns = ['phasing_most_phase_haplotype', 'phasing_nearest_phase_haplotype']
     # find the most frequent haplotype
     df['haplotype'] = df.apply(lambda row: merge_haplotype_columns(row, haplotype_columns), axis=1)
     # drop the original haplotype columns
@@ -175,8 +168,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                                'num_mut_spots', 'num_spots', 'hFDR', 'falt', 'fref', \
                                'consensus_ref_allele_count', 'consensus_alt2_allele_count', 'consensus_alt_allele_count', \
                                'Filtration', 'editing_AtoG', 'editing_database', 'RNA_editing', \
-                               'imprinted', 'ASE', 'hFDR', 'homopolymer', 'PON', \
-                               '#chrom', 'pos', 'ref', 'alt']
+                               'imprinted', 'ASE', 'hFDR', 'homopolymer', 'PON', 'cluster_event', \
+                               '#chrom', 'pos', 'ref', 'alt', 'phasing_nearest_mut_origin', 'phasing_most_mut_origin']
         for col in not_related_columns:
             if col in df.columns:
                 df = df.drop(col, axis=1)
@@ -232,13 +225,14 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
         if col in df.columns:
             df[col] = df[col].fillna(0)
 
-    # interpolate the NAs in the phasing-related columns but not p-values as 0        
-    phase_rel_cols = ['combine_nearest_info_mutant_prop', 'combine_most_info_mutant_prop', 'combine_nearest_phase_distance', \
-                      'combine_most_phase_distance', 'combine_nearest_discordant_prop', 'combine_most_discordant_prop']
+    # interpolate the NAs in the phasing-related columns but not p-values as 0
+    phase_rel_cols = ['phasing_support_reads_prop_across_hSNPs', 'phasing_nearest_info_mutant_prop', \
+                      'phasing_nearest_discordant_prop', 'phasing_nearest_phase_distance', 'phasing_most_info_mutant_prop', \
+                      'phasing_most_discordant_prop', 'phasing_most_phase_distance']
     for col in phase_rel_cols:
         if col in df.columns:
             df[col] = df[col].fillna(0)
-    
+            
     # interpolate the other NAs with 0 (updated with new column names)
     other_num_cols = ['consensus_alt2_proportion', 'alt2_proportion_per_UMI', \
                       'alt_multi_map_prop', 'ref_multi_map_prop', 'multi_map_prop', \
@@ -247,13 +241,6 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     for col in other_num_cols:
         if col in df.columns:
             df[col] = df[col].fillna(0)
-
-    # checking mapping quality columns are numeric
-    mapq_columns = ["mapq_mean", "ref_mapq_mean", "alt_mapq_mean"]
-    for col in mapq_columns:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-    # drop rows where ANY numeric column failed conversion
-    df = df.dropna(subset=mapq_columns)
         
     # delete the columns with all missing values
     df = df.dropna(axis=1, how='all')
@@ -502,7 +489,7 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
         # ====================================================================
         # Logistic Regression Model For Het
         # ====================================================================
-        if len(het_index) > 0:
+        if (len(het_index) > 0) and (not not_pred_het):
             # pair each index with its label
             all_paired_indices = [(index, "nothet") for index in true_sites] + \
                                 [(index, "nothet") for index in artifact_index] + \
