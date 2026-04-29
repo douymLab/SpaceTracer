@@ -21,7 +21,6 @@ class PriorCalculator(BaseStep):
     def get_inputs(self, context: Dict) -> Dict[str, str]:
         """input"""
         inputs = {
-            'gnomad_path': self.config.get('gnomad_path'),
             'filter_mpileup_file': context.get('filter_mpileup_file')
         }
 

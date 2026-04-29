@@ -20,9 +20,8 @@ Backend = Literal["thread", "process"]
 
 def _safe_mem_info_mb(proc: psutil.Process) -> dict:
     """
-    返回进程内存信息（MB）:
-    - rss: 常驻内存
-    - uss: 独占内存（如果系统支持）
+    - rss: Resident Set Size
+    - uss: Unique Set Size
     """
     rss_mb = 0.0
     uss_mb = None
@@ -47,9 +46,6 @@ def _safe_mem_info_mb(proc: psutil.Process) -> dict:
 
 
 def _get_process_mem_summary(pid: Optional[int] = None) -> dict:
-    """
-    获取单个进程内存摘要
-    """
     pid = pid or os.getpid()
     proc = psutil.Process(pid)
     mem = _safe_mem_info_mb(proc)
@@ -61,9 +57,6 @@ def _get_process_mem_summary(pid: Optional[int] = None) -> dict:
 
 
 def _get_children_mem_summary(top_n: int = 5) -> dict:
-    """
-    获取当前主进程所有子进程的内存摘要
-    """
     parent = psutil.Process(os.getpid())
 
     total_rss_mb = 0.0
@@ -115,9 +108,6 @@ def _get_children_mem_summary(top_n: int = 5) -> dict:
 
 
 def _format_top_children(top_children: List[dict], use_uss: bool = False) -> str:
-    """
-    把 top children 格式化成一行短文本
-    """
     if not top_children:
         return "None"
 
@@ -130,9 +120,6 @@ def _format_top_children(top_children: List[dict], use_uss: bool = False) -> str
 
 
 def get_memory_snapshot(top_n: int = 5) -> dict:
-    """
-    获取当前主进程 + 子进程的完整内存快照
-    """
     main = _get_process_mem_summary()
     children = _get_children_mem_summary(top_n=top_n)
 
@@ -162,9 +149,7 @@ def memory_checkpoint(
     print_children: bool = True,
     do_gc: bool = False,
 ) -> None:
-    """
-    在任意 step 前后打一个内存检查点
-    """
+
     log = logger or get_logger("memory")
 
     if do_gc:
@@ -205,10 +190,6 @@ def _read_int_file(path: str) -> Optional[int]:
 
 
 def _get_memory_usage_bytes() -> Optional[int]:
-    """
-    获取当前总内存使用量（bytes）
-    优先 cgroup，其次 fallback 到 main + children RSS
-    """
     usage = _read_int_file("/sys/fs/cgroup/memory.current")
     if usage is not None:
         return usage
@@ -225,9 +206,6 @@ def _get_memory_usage_bytes() -> Optional[int]:
 
 
 def _get_memory_limit_bytes() -> Optional[int]:
-    """
-    获取 cgroup memory limit（bytes）
-    """
     limit = _read_int_file("/sys/fs/cgroup/memory.max")
     if limit is not None and limit > 0:
         return limit
@@ -240,12 +218,6 @@ def _get_memory_limit_bytes() -> Optional[int]:
 
 
 def _worker_wrapper(worker_fn, item, worker_takes_tuple: bool):
-    """
-    worker 包装器：
-    - 执行任务
-    - 返回任务结果
-    - 顺便记录 worker 进程内存信息
-    """
     pid = os.getpid()
 
     if worker_takes_tuple:
@@ -283,10 +255,7 @@ def _parallel_core(
     memory_check_interval=0.5,
     wait_on_memory_pressure=True,
 ) -> Generator[Tuple[int, Any], None, None]:
-    """
-    内部统一调度核心
-    流式 yield: (index, result)
-    """
+
     items = list(items)
     if not items:
         return
@@ -354,7 +323,6 @@ def _parallel_core(
             last_memory_usage_bytes is None
             or now - last_memory_check_time >= memory_check_interval
         ):
-            # 修正：这里必须是 bytes
             last_memory_usage_bytes = _get_memory_usage_bytes()
             last_memory_check_time = now
 
@@ -409,11 +377,7 @@ def _parallel_core(
         sys.stderr.write(
             f"[{label}] {bar} {current_pct}% ({completed}/{total}) | "
             f"task_id={task_idx} | status={task_status} | "
-            # f"workerRSS={worker_rss_text} workerUSS={worker_uss_text} | "
-            # f"MainRSS={snap['main_rss_mb']:.1f}MB MainUSS={main_uss_text} | "
-            # f"ChildrenRSS={snap['children_rss_mb']:.1f}MB ChildrenUSS={child_uss_text} | "
             f"TotalRSS={snap['total_rss_mb']:.1f}MB TotalUSS={total_uss_text} | "
-            # f"n_children={snap['n_children']} | "
             f"runing_tasks<={max_in_flight} | "
             f"Cost: {elapsed:.1f}s | ETA: {eta:.1f}s | {current_time}\n"
         )

@@ -1,8 +1,5 @@
 
 # SpaceTracer/utils/logger.py
-"""
-Logger setup for SpaceTracer
-"""
 
 import logging
 import sys
@@ -10,17 +7,6 @@ from typing import Optional
 from pathlib import Path
 from colorama import init, Fore, Style
 
-# 定义颜色（可选）
-# try:
-#     init(autoreset=True)
-#     COLORS = {
-#         'DEBUG': Fore.CYAN,
-#         'INFO': Fore.GREEN,
-#         'WARNING': Fore.YELLOW,
-#         'ERROR': Fore.RED,
-#         'CRITICAL': Fore.RED + Style.BRIGHT,
-#     }
-# except ImportError:
 COLORS = {}
 
 
@@ -70,7 +56,6 @@ def setup_logger(
     Returns:
         logger
     """
-    # 确定日志级别
     if debug:
         log_level = logging.DEBUG
     elif verbose:
@@ -78,19 +63,15 @@ def setup_logger(
     else:
         log_level = getattr(logging, level.upper(), logging.WARNING)
     
-    # 获取根logger
     logger = logging.getLogger('SpaceTracer')
     logger.setLevel(log_level)
     
-    # 避免重复添加handler
     if logger.handlers:
         return logger
     
-    # 控制台handler
     console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(log_level)
     
-    # 根据级别设置不同的控制台格式
     if log_level <= logging.DEBUG:
         # 调试模式：显示详细信息
         console_format = ColoredFormatter(
@@ -98,13 +79,11 @@ def setup_logger(
             datefmt='%H:%M:%S'
         )
     elif log_level <= logging.INFO:
-        # 信息模式：显示基本信息
         console_format = ColoredFormatter(
             '%(asctime)s - %(levelname)s - %(message)s',
             datefmt='%H:%M:%S'
         )
     else:
-        # 警告及以上：只显示消息
         console_format = ColoredFormatter(
             '%(levelname)s: %(message)s'
         )
@@ -112,28 +91,23 @@ def setup_logger(
     console_handler.setFormatter(console_format)
     logger.addHandler(console_handler)
     
-    # 文件handler（如果指定了日志文件）
     if log_file:
-        # 确保日志目录存在
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         
         file_handler = logging.FileHandler(log_file, encoding='utf-8')
-        file_handler.setLevel(logging.DEBUG)  # 文件记录所有级别的日志
+        file_handler.setLevel(logging.DEBUG) 
         
-        # 文件格式总是完整的
         file_format = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         file_handler.setFormatter(file_format)
-        file_handler.addFilter(ProgressFilter())  # 过滤进度条
+        file_handler.addFilter(ProgressFilter())  
         logger.addHandler(file_handler)
     
-    # 避免传播到根logger（防止重复输出）
     logger.propagate = False
     
-    # 记录初始化信息
     if debug:
         logger.debug(f"Logger initialized with level: {level}")
         logger.debug(f"Log file: {log_file if log_file else 'Not set'}")
@@ -142,23 +116,12 @@ def setup_logger(
 
 
 def get_logger(name: str = None) -> logging.Logger:
-    """
-    获取指定名称的logger
-    
-    Args:
-        name: logger名称，如果为None则返回根logger
-    
-    Returns:
-        logger实例
-    """
     if name:
         return logging.getLogger(f'SpaceTracer.{name}')
     return logging.getLogger('SpaceTracer')
 
 
-# 进度条相关的日志工具
 class ProgressLogger:
-    """进度条记录器"""
     
     def __init__(self, total: int, desc: str = "Processing", logger=None):
         self.total = total
@@ -168,7 +131,6 @@ class ProgressLogger:
         self._last_percentage = -1
     
     def update(self, increment: int = 1):
-        """更新进度"""
         self.current += increment
         percentage = int((self.current / self.total) * 100)
 
@@ -183,7 +145,6 @@ class ProgressLogger:
                 sys.stderr.flush()
     
     def finish(self):
-        """完成进度条"""
         if self.current < self.total:
             self.current = self.total
             self.logger.info(f"{self.desc}: 100% ({self.current}/{self.total}) - Completed")
@@ -191,16 +152,7 @@ class ProgressLogger:
         sys.stderr.flush()
 
 
-# 装饰器：记录函数执行时间
 def log_execution_time(logger=None):
-    """
-    记录函数执行时间的装饰器
-    
-    Example:
-        @log_execution_time()
-        def my_function():
-            pass
-    """
     def decorator(func):
         def wrapper(*args, **kwargs):
             import time

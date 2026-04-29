@@ -130,7 +130,7 @@ class MpileupStep(BaseStep):
         manifest_path = self.get_outputs(context)["manifest_path"]
         input_file = str(Path(input_file).resolve())
 
-        # 计算整个文件的数据范围
+        # the region defination
         start_offset = None
         end_offset = None
         start_pos = None
@@ -259,8 +259,8 @@ class MpileupStep(BaseStep):
             raise ValueError("region_file has no valid intervals")
 
         total = len(lines)
-        n_parts = min(n_parts, total)  # 防止 n_parts 比行数还多
-        chunk_size = (total + n_parts - 1) // n_parts  # 向上取整，保证覆盖所有行
+        n_parts = min(n_parts, total)  # to prevent a too large n_parts
+        chunk_size = (total + n_parts - 1) // n_parts  # make sure all lines are considered
 
         region_files = []
         for part_idx in range(n_parts):
@@ -301,7 +301,6 @@ class MpileupStep(BaseStep):
         os.makedirs(split_results_dir, exist_ok=True)
 
         chrom_length_dict=self.genome_details['chromosomes']['length']
-        # window_size = config.get("window_size", 100000000)
         region_files = self._make_bed_splits(chrom_length_dict,regions_file, window_size=100000000)
 
         out_files = []
@@ -350,16 +349,6 @@ class MpileupStep(BaseStep):
             worker_takes_tuple=True,
     )
 
-    # def _run_mpileup_parallel(self, bam, reference, region_files, min_depth, out_files, config):
-    #     with ProcessPoolExecutor(max_workers=self.threads) as exe:
-    #         futures = []
-    #         for reg, out in zip(region_files, out_files):
-    #             cmd = self._build_samtools_mpileup(bam, reference, reg, config)
-    #             futures.append(exe.submit(_run_mpileup_one, cmd, min_depth, out))
-
-    #         for f in as_completed(futures):
-    #             f.result()
-
     def _merge_mpileup_files(self, out_files, merged_file):
         os.makedirs(os.path.dirname(merged_file), exist_ok=True)
         with open(merged_file, "w") as w:
@@ -381,7 +370,6 @@ class MpileupStep(BaseStep):
 
         
     def _build_samtools_mpileup(self, bam_file, reference, regions_file, config):
-        # print("###############",config)
         max_depth = config.get('max_depth', 200000)
         min_mapq = config.get('min_mapq', 0)
         min_baseq = config.get('min_baseq', 0)
@@ -398,7 +386,6 @@ class MpileupStep(BaseStep):
         
         if regions_file:
             cmd_parts.append(f'-l {regions_file}')
-        # print(cmd_parts)
         
         cmd_parts.append(bam_file)
         cmd = ' '.join(str(p) for p in cmd_parts)
@@ -467,8 +454,6 @@ class MpileupStep(BaseStep):
         line_count = int(result.stdout.strip().split()[0])
         return line_count
 
-
-# refinement to avoid pickle in ProcessPool
 
 def _run_mpileup_one(cmd, min_depth, out_file):
     samtools_proc = subprocess.Popen(

@@ -93,11 +93,8 @@ def get_regions(identifiers: List[str],
     regions = []
     
     for chrom, variants in chrom_variants.items():
-        # 按位置排序
         variants.sort(key=lambda x: x[0])
         
-        # 初始化第一个区域
-        # current_region_variants 存储 (chrom, pos, ref, alt) 元组
         current_region_variants = [variants[0][1]]
         region_start = variants[0][0]
         
@@ -105,34 +102,30 @@ def get_regions(identifiers: List[str],
             region_span = pos - region_start
             variant_count = len(current_region_variants)
             
-            # 同时检查区域大小和变异数量
             if (region_span > max_region_size or 
                 variant_count >= max_variants_per_region):
                 
-                # 获取最后一个变异的位置（不需要 parse）
-                region_end = current_region_variants[-1][1]  # pos 是 tuple 的第二个元素
+                region_end = current_region_variants[-1][1]  
                 
                 regions.append({
                     'chrom': chrom,
                     'start': max(0, region_start - 1),
                     'end': region_end,
-                    'variants': current_region_variants  # 存储 tuple 列表
+                    'variants': current_region_variants 
                 })
                 
-                # 开始新区域
                 current_region_variants = [variant_tuple]
                 region_start = pos
             else:
                 current_region_variants.append(variant_tuple)
         
-        # 保存最后一个区域
         if current_region_variants:
-            region_end = current_region_variants[-1][1]  # pos 是 tuple 的第二个元素
+            region_end = current_region_variants[-1][1]  
             regions.append({
                 'chrom': chrom,
                 'start': max(0, region_start - 1),
                 'end': region_end,
-                'variants': current_region_variants  # 存储 tuple 列表
+                'variants': current_region_variants  
             })
     
     return regions
@@ -321,5 +314,3 @@ def save_manifest_tsv(rows: List[Dict[str, str]], output_file: str):
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(valid_rows)
-
-    # print(f"[manifest] wrote {len(valid_rows)} rows to {output_file}")

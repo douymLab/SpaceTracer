@@ -16,7 +16,6 @@ class PhasingCandidateStep(BaseStep):
             "in_filter_bam": context.get("in_filter_bam"),
             "merged_germline_file": context.get("merged_germline_file"),
             "merged_ind_geno_filter_file": context.get("merged_ind_geno_filter_file")
-
         }
 
         if context.get("gtexGene"):
@@ -46,8 +45,7 @@ class PhasingCandidateStep(BaseStep):
         genome_details=self.config['genome_details']
         species=genome_details['species']
         gene_bed=self.config['gene_bed']
-        bin_size=1 ## trust as bin1 level, if stereo-seq
-        # flanking=150
+        bin_size=1 ## treat as bin1 level, if stereo-seq
 
         step_config=self.get_step_config()
         minprior=float(step_config["minprior"])
@@ -58,12 +56,9 @@ class PhasingCandidateStep(BaseStep):
         merge_gap=int(step_config["merge_gap"])
         max_target=int(step_config["max_target"])
         seed=int(step_config["seed"])
-        max_dist=10
+        max_dist=10 # fixed
 
         autosomes=genome_details['chromosomes']['autosomes']
-        # sex_chromosomes= genome_details['chromosomes']
-        # mito_chromosomes=genome_details['mitochondrial']
-        # contigs=genome_details['contigs']
 
         outputs=self.get_outputs(context)
         out_phasing_file=outputs["phasing_result"]
@@ -79,7 +74,6 @@ class PhasingCandidateStep(BaseStep):
             indgeno=merged_ind_geno_filter_file,
             seq_type=seq_type,
             bin_size=bin_size,
-            # flanking=flanking,
             minprior=minprior,
             phasing_chromosomes=phasing_chromosomes,
             thread=thread,

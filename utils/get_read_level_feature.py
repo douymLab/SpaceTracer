@@ -3,7 +3,6 @@ from scipy import stats
 import numpy as np
 import pysam
 from collections import Counter, defaultdict
-from typing import Tuple
 
 from SpaceTracer.utils.handle_UMI_combine import calculate_UMI_combine_phred, get_most_candidate_allele, handle_quality_matrix, handle_seq, handle_pos, handle_seq_type
 
@@ -40,10 +39,7 @@ def get_indel_info(indel_info_list,pos_index_in_raw_matrix):
                 indel_distance.append(pos_index_in_raw_matrix-item[0])
             elif pos_index_in_raw_matrix=="in":
                 indel_distance.append(0)
-    # indel_length="/".join([str(i) for i in indel_length])
-    # indel_distance="/".join([str(i) for i in indel_distance])
-    # if indel_num!=0:
-    #     print(indel_info_list,pos_index_in_raw_matrix,indel_num,indel_length,indel_distance)
+    
     return indel_num,indel_length,indel_distance
 
 def judge_pos_in_indel(ins_info_list,del_info_list,get_reference_positions):
@@ -117,7 +113,6 @@ def combine_info_from_cigar(cigar_symbol):
     return seq_soft_cut, pos_cut, del_info, seq_hard_clip
 
 
-
 def barcode_cell_mapping(mapping_file):
     import pandas as pd
     if mapping_file == "":
@@ -128,7 +123,6 @@ def barcode_cell_mapping(mapping_file):
         return dict(zip(df['CB'], df['cell']))
     else:
         raise FileNotFoundError(f"Mapping file '{mapping_file}' does not exist")
-
 
 
 def wilcoxon_with_rbc(x, y, alternative='two-sided'):
@@ -226,7 +220,6 @@ def calculate_rbc_for_paired_wilcoxon(x, y):
         return 0
     
 
-
 def do_wilicox_sum_test(input_1,input_2,method="two-sided",type="dict"):
     from scipy import stats
     if type=="dict":
@@ -273,12 +266,6 @@ def process_reads_for_variant(sampled_reads,var,run_type,bins,cell_dict={},readL
     barcode_name=[]
     site_barcode_UMI_dict={}
     
-    # if downsample:
-    #     reads, original_depth = fetch_and_downsample_optimized(bam_file, chrom, pos, target_depth, seed)
-    #     # print(f"Original depth: {original_depth}, Sampled reads: {len(sampled_reads)}")
-    # else:
-    #     reads=in_bam_read.fetch(chrom, pos-1, pos)
-
     for read in sampled_reads:
         barcode_name,UMI_name=handle_seq_type(read,run_type,bins,cell_dict)
 
@@ -506,7 +493,6 @@ def process_reads_for_variant(sampled_reads,var,run_type,bins,cell_dict={},readL
             result_dict[one_ref]["UMI_end_value"].append(end_value)
             result_dict[one_ref]["UMI_end_remove_clip_value"].append(end_remove_clip_value)
         
-
         # print(end_value,end_remove_clip_value)
         for geno,count in zip("ATCG",UMI_count_by_allele):
             result_dict[geno]["UMI_number_per_spot"].append(count)

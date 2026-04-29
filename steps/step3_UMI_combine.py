@@ -42,12 +42,10 @@ COLUMNS_MAIN = [
 # error_allele file: one row per allele observation at each position
 COLUMNS_ERROR_ALLELE = ["#chrom", "pos", "ref", "alt", "strand"]
 
-# 单层进程池版：
-# 外层 chunk 级 process 并行
-# 内层 region 串行处理 + 边处理边 flush
+# the configuration for per chunck
 normal_cfg = {
     "task_type": "normal",
-    "thread_per_chunk": 1,   # 保留字段，当前版本不再用于 chunk 内并行
+    "thread_per_chunk": 1,   # 1 means no parallel among chunk
     "main_flush_rows": 20000,
     "err_flush_rows": 1000,
     "max_region_size": 20000,
@@ -56,7 +54,7 @@ normal_cfg = {
 
 mito_cfg = {
     "task_type": "mito",
-    "thread_per_chunk": 1,   # 保留字段，当前版本不再用于 chunk 内并行
+    "thread_per_chunk": 1,   # 1 means no parallel among chunk
     "main_flush_rows": 5000,
     "err_flush_rows": 1000,
     "max_region_size": 150,
@@ -86,7 +84,7 @@ class UMICombineStep(BaseStep):
     def _run(self, context: Dict):
         inputs = self.get_inputs(context)
         bam_file = inputs["in_filter_bam"]
-        mpileup_file = inputs["filter_mpileup_file"]
+        # mpileup_file = inputs["filter_mpileup_file"]
         manifest_path = inputs["manifest_path"]
 
         seq_type = self.config.get("sequence_type")
@@ -178,7 +176,6 @@ def _build_region_tasks_from_one_chunk_file_for_UMI_combine(
         max_variants_per_region,
     )
 
-    # 尽早释放 df
     del df
     return region_tasks
 
@@ -200,7 +197,6 @@ def _flush_rows_to_parquet(rows, columns, writer, out_file, compression="snappy"
 
     writer.write_table(table)
 
-    # 尽量缩短中间对象生命周期
     del df
     del table
     return writer
@@ -217,12 +213,6 @@ def _umi_combine_to_parquet_buffered(
     err_flush_rows,
     compression,
 ):
-    """
-    单层进程池版：
-    - 不再在 chunk 内开 multiprocessing.Pool
-    - 当前进程直接串行处理 region_tasks
-    - 边处理边 flush parquet
-    """
     main_writer = None
     err_writer = None
     main_buffer = []
@@ -247,8 +237,7 @@ def _umi_combine_to_parquet_buffered(
                     main_buffer.extend(spot_count_list)
 
                 if error_list:
-                    # 你已确认 error_list 是单行
-                    err_buffer.append(error_list)
+                    err_buffer.append(error_list) 
 
             if len(main_buffer) >= main_flush_rows:
                 main_writer = _flush_rows_to_parquet(
@@ -509,15 +498,6 @@ def _run_umi_combine_parallel(
 
 # ── Output helpers ────────────────────────────────────────────────────────────
 def save_parquet_file_list(chunk_files: List[Union[str, Tuple[str, str]]], output_file: str):
-    """
-    Args:
-        chunk_files:
-            支持两种格式：
-            1. ["/path/chr10_chunk0000.spot.parquet", ...]
-            2. [("chr10_chunk0000", "/path/chr10_chunk0000.spot.parquet"), ...]
-        output_file:
-            输出 manifest tsv 文件
-    """
     valid_rows = []
 
     for item in chunk_files:

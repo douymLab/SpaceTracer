@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import pyranges as pr
     
@@ -78,7 +79,7 @@ def add_col_from_bed(df: pd.DataFrame, file: str) -> pd.Series:
 
 
 def add_col_from_mutant(df: pd.DataFrame, file:str) -> pd.Series:
-    if file:
+    if file and os.path.exists(file):
         filter_df = pd.read_csv(file, sep="\t", header=None, 
                             names=['chrom', 'pos', 'ref', 'alt'])
         

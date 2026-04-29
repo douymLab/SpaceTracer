@@ -1,5 +1,5 @@
 """
-SpaceTracer - A tool for calling mutations from spatial transcriptome data
+SpaceTracer - A tool for calling mutations from spatial transcriptome data, directly
 
 Main components:
 - CLI: Command-line interface
@@ -17,6 +17,6 @@ from SpaceTracer.pipeline.orchestrator import PipelineOrchestrator
 from SpaceTracer.config.config_loader import LoadConfig
 
 __all__ = [
-    'PipelineOrchestrator',
-    'LoadConfig',
+    "PipelineOrchestrator",
+    "LoadConfig",
 ]

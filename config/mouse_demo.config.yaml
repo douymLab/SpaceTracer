@@ -1,0 +1,159 @@
+sample_name: demo_mouse
+genome: mm10
+sequence_type: visium # choice: visium, stereo-seq, ST, visium-HD
+spaceranger_dir: #/storage/douyanmeiLab/yangzhirui/01.Data_download/42.benchmark_skin/04.Analysis/01.spaceranger/BCC-1/outs/ # Please provide the "{prefix}/outs" dir. If None or not provided, please give the bam file and tissue_position file 
+resource_dir: resources/mm10 # if provided, all resource will be found in the directory
+bin_size: # only work for stereo-seq data. If use stereo-seq data, the cluster file must be provided!
+regions_file: 
+output_dir: demo_mouse
+
+input_details: # if visium data and spaceranger dir have been provided, the following could be ignored
+  bam_file: demo_input/mouse_demo.bam
+  tissue_position: demo_input/mouse_demo.tissue_positions_list.csv
+  barcode_key: # this may not work for stereo-seq
+
+resource_details:  # if resource dir provided, the below config could be ignored, or each would be 
+  genome_fasta: 
+  gnomad_path: 
+  mappability_path: 
+  gene_bed: 
+  dbsnp_vcf_file: 
+  imprinted_bed: 
+  editing_bed: 
+  PON_file:
+  reference_error_profile: 
+
+run:
+  threads: 16
+  memory: "96G"
+  skip_validation: true
+  
+
+# Step-specific configurations (optional)
+steps:
+  cell_number: "demo_input/mouse_demo.cell_number.txt" # [optional] fixed cell number per spot. Recommended if BAM > 30G
+
+  # Step 0: Cluster [if not provided, the cluster function will run]
+  cluster:
+    cluster_file: "demo_input/mouse_demo.cluster.txt" # [if provided, the cluster function will be ignored]
+    ncluster: 8
+    plot: true
+    method: "SpaGCN"          
+    init_method: "louvain"    
+    data_type: "Visium" 
+    h5_file_name: "filtered_feature_bc_matrix.h5"
+    histology: true
+    spot_area: 49             
+    weight_histology: 1
+    distance_threshold: 2
+    min_samples: 1
+    num_threshold: 30
+    percentage: 0.5          
+    seed: 100
+    tol: 5e-3
+    lr: 0.05
+    max_epochs: 200           
+    graphst_tool: "louvain"   
+    radius: 6
+    refinement: true
+
+  # Step 1: BAM Processing
+  bam_processing:
+    nm_threshold: 5
+    mapq_threshold: 255
+  
+  # Step 2: Mpileup
+  mpileup:
+    min_depth: 30 # strongly recommended
+    max_depth: 200000 # strongly recommended
+    min_mapq: 0
+    min_baseq: 0
+    exclude_flag:  0 # strongly recommended
+    enable_split: True
+    split_threshold: 10
+    chrom_chunk_size: 10
+    chrM_chunk_size: 10
+
+  # Step 3: UMI combine
+  UMI_combine:
+    filter_duplicates: true
+    filter_secondary: true
+    filter_qcfail: true
+    filter_supplementary: true
+    min_read_quality: 20
+  
+  # Step 4: genotyping
+  genotyping:
+    alpha: 0.05
+    epsQ: 20
+    epsAF: 0.003
+    mu: 1e-5
+    thr_dp: 1000
+    pop_vaf: 1e-5
+    filter_oneallele: True
+
+  # Step 5: spatial feature
+  spatial_feature:
+    alpha: 0.05
+    thr_r2: 0.3
+    thr_prob: 0.9
+    thr_likelihood: 0.9
+    thr_vaf: 0
+    plot_supp: False
+    fig_size: 5
+    method: LDA
+    num_directions: 8
+ 
+  # Step 5: read-level feature
+  read_feature:
+    cell_info: None 
+    downsample: True
+    downsample_target_depth: 2000
+    max_region_size: 20000
+    max_variants_per_region: 100
+    seed: 42
+    
+  # Step 5: RNA-level feature
+  RNA_feature:
+    min_count_for_germline: 50
+    min_prior_for_germline: 0.0001
+    default_range_of_gene: 150
+    p_threshold: 0.05
+    previous_base: 5
+
+  # Step 5: phasing
+  phasing:
+    minprior: 0.01
+    min_dp: 20
+    min_total_dp: 50
+    alpha: 0.05
+    phasing_pad: 1000
+    merge_gap: 200
+    max_target: 200000
+    seed: 42
+
+  # Step 6: feature merge and filtration
+  feature_filtration:
+    ASE: True
+    hFDR: True
+    imprinted: True
+    homopolymer: True
+    PON: True
+    RNA_editing: True
+    ABNORMAL_MISMATCHES: True
+    LOW_READ_DIVERSITY: True
+    HIGH_MULTIPLE_MAPPIN: True
+    WIDE_DISTRIBUTION: True
+    NEAR_READ_END: True
+    CLUSTER_EVENTS: True
+    LOW_MAPQ: True
+    LOW_BASEQ: True
+
+
+  # Step 7: Prediction
+  mutation_prediction:
+    model_dir: "/storage/douyanmeiLab/yangzhirui/SpaceTracer_new/SpaceTracer/models/spatial_free_model"  
+    model_name: "spatial_free_model" 
+    random_seed: 42
+    plot: True
+  

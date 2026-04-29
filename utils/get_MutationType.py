@@ -1,7 +1,5 @@
 import itertools
 import os
-from sre_compile import isstring
-# from Bio import SeqIO
 import pandas as pd
 from pyfaidx import Fasta
 
@@ -51,14 +49,6 @@ def get_default_labels(choice: str) -> str:
         for f in range(0, value)
     ]
     return result
-
-
-# def fasta_to_dict(fasta_file):
-#     chromosome_dict = {}
-#     with open(fasta_file, "r") as handle:
-#         for record in SeqIO.parse(handle, "fasta"):
-#             chromosome_dict[record.id] = record.seq
-#     return chromosome_dict
 
 
 def get_mutation_type(df, fasta_file, mode):
@@ -113,9 +103,6 @@ def get_mutation_type(df, fasta_file, mode):
         df["RNAMutationType"]=df.apply(_make_RNAMutationType, axis=1)
 
     return df
-
-
-
 
 
 def make_mutation_order():

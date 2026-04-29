@@ -23,7 +23,6 @@ class CellNumStep(BaseStep):
 
     
     def get_outputs(self, context):
-        # print(self.config)
         cell_num=context.get('cell_num',0)
         if isinstance(cell_num,int):
             if cell_num==0: # 0 means we'll run cell number function.

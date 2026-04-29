@@ -82,7 +82,7 @@ class ReadFeatureStep(BaseStep):
         output_file = self._get_chunk_output_path(context, chunk)
         parquet_file = str(output_file).replace('.txt', '.parquet')
 
-        # 安全读取 mutation id
+        # load mutation id
         identifiers = []
         with open(mutation_list_file, "r", encoding="utf-8", errors="ignore") as f:
             for line in f:
@@ -90,7 +90,6 @@ class ReadFeatureStep(BaseStep):
                 if line:
                     identifiers.append(line)
 
-        # 空 chunk：直接写空输出
         if len(identifiers) == 0:
             self._write_empty_chunk_output(output_file)
             return {
@@ -102,7 +101,6 @@ class ReadFeatureStep(BaseStep):
 
         region_dict_list = get_regions(identifiers, max_region_size, max_variants_per_region)
 
-        # 如果分区后为空，也写空输出
         if not region_dict_list:
             self._write_empty_chunk_output(output_file)
             return {
@@ -122,11 +120,10 @@ class ReadFeatureStep(BaseStep):
             downsample=downsample,
             target_depth=target_depth,
             seed=seed,
-            n_processes=1,  # 外层已并行
+            n_processes=1,  
             output_file=output_file,
         )
 
-        # 防御：如果内部没产出文件，也补空文件
         if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
             self._write_empty_chunk_output(output_file)
 
@@ -302,10 +299,6 @@ class ReadFeatureStep(BaseStep):
 
                 total_features += len(region_features)
 
-                # if total_features % 10000 == 0:
-                #     logger.info(f"Processed {total_features} features so far...")
-
-        # 没有任何结果，写空表头文件
         if total_features == 0:
             self._write_empty_chunk_output(output_file)
             return total_features
