@@ -64,7 +64,7 @@ Notes:
 Use these pages for interpretation and debugging:
 
 - [Outputs](outputs.md)
-- [Step-by-step guide](steps/overview.md)
+- [Step-by-step guide](steps/overview.md) (code-aligned with `SpaceTracer/steps`)
 - [Single-Step Debug Cookbook](steps/debug-cookbook.md)
 
 Common output files from downstream feature and prediction stages include:

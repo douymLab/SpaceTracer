@@ -6,22 +6,13 @@ SpaceTracer is an open-source algorithm capable of accurately detecting mosaic S
 
 ## Release Notes
 
-- 2025/03/31: Version 1.0.0  
-This is the initial version of SpaceTracer.
+- 2026/04/30: Version 2.0.0 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.0.0))  
+This release introduces one-command workflow execution, integrates lysis error calculation into the main pipeline, and significantly improves running speed.
+
 - 2026/02/25: Version 1.1.0  
 This release focuses on updating the genotype calculation and enhancing the features used in the random forest model. Additionally, we've added more filter steps to improve the accuracy of the results.
-
-We expect to release the **next version** of SpaceTracer soon. This release will 
-feature substantial performance improvements, the **most important update** in this release is significantly improved running speed.
-
-**Key Improvements for Upcoming Release**
-
-- Integrated Lysis Error Calculation  
-Lysis error calculation for single samples will be incorporated directly into the full algorithm pipeline, providing more comprehensive and streamlined analysis.
-- One-Command Execution Mode  
-A simplified execution option will allow users to run SpaceTracer with a single command, removing the Snakemake dependency and making the workflow more accessible.
-- Improved Running Speed  
-Major performance optimizations will significantly accelerate processing compared with the previous version.
+- 2025/03/31: Version 1.0.0  
+This is the initial version of SpaceTracer.
 
 ## Documentation
 
@@ -96,7 +87,7 @@ Common downstream outputs:
 
 Advanced users can run/debug by step:
 
-- [Step-by-step guide](https://douymLab.github.io/SpaceTracer/steps/overview/)
+- [Step-by-step guide](https://douymLab.github.io/SpaceTracer/steps/overview/) (code-aligned with `SpaceTracer/steps`)
 - [Single-Step Debug Cookbook](https://douymLab.github.io/SpaceTracer/steps/debug-cookbook/)
 
 ## Contact:

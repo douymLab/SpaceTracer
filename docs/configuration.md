@@ -61,11 +61,6 @@ All resource paths are validated at startup. Missing files will stop the run imm
 
 ### `runtime`
 
-```yaml
-runtime:
-  max_parallel: 4
-```
-
 - `max_parallel`: controls parallel execution width for independent DAG layers.
 
 ### `steps`
@@ -85,10 +80,19 @@ For full step-level parameter details, see:
 - [Step Reference Overview](steps/overview.md)
 - [Single-Step Debug Cookbook](steps/debug-cookbook.md)
 - [cluster](steps/cluster.md)
+- [bam_processing](steps/bam-processing.md)
+- [mpileup](steps/mpileup.md)
+- [umi_combine](steps/umi-combine.md)
+- [cell_num](steps/cell-num.md)
+- [prior](steps/prior.md)
 - [genotyping](steps/genotyping.md)
+- [spatial_feature](steps/spatial-feature.md)
+- [mappability_feature](steps/mappability-feature.md)
+- [read_feature](steps/read-feature.md)
 - [RNA_feature](steps/rna-feature.md)
-- [merge_feature](steps/merge-feature.md)
+- [feature_filtration / merge_feature](steps/merge-feature.md)
 - [phasing](steps/phasing.md)
+- [mutation_prediction](steps/mutation-prediction.md)
 
 ## Override behavior and path shortcuts
 
@@ -103,4 +107,4 @@ You can still override any specific file in `input_details` or `resource_details
 
 Use these names with `--start-from`, `--stop-at`, and `--only-steps`:
 
-`cluster`, `bam_processing`, `mpileup`, `umi_combine`, `cell_num`, `prior`, `genotyping`, `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `phasing`, `merge_feature`
+`cluster`, `bam_processing`, `mpileup`, `umi_combine`, `cell_num`, `prior`, `genotyping`, `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `phasing`, `merge_feature`, `mutation_prediction`

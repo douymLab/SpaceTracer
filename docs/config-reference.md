@@ -299,35 +299,19 @@ See [mutation_prediction step](steps/mutation-prediction.md).
 
 `cluster`, `bam_processing`, `mpileup`, `umi_combine`, `cell_num`, `prior`, `genotyping`, `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `phasing`, `merge_feature`, `mutation_prediction`
 
-## Important parameter quick guide
+## Important quick guide
 
-Use this section as a fast tuning checklist. Full details are documented in each step page.
+Use this as a fast checklist for both parameter tuning and step-input handoff. For full field lists, see [Configuration](configuration.md) and the `steps.*` sections above.
 
-| Area | Parameter(s) | Why it matters | See details |
-| --- | --- | --- | --- |
-| Runtime | `run.threads`, `run.memory` | Controls throughput and resource stability. | [Configuration](configuration.md) |
-| Input mode | `sequence_type`, `spaceranger_dir`, `input_details.*` | Determines how BAM/barcode/tissue-position inputs are resolved. | [Configuration](configuration.md) |
-| Candidate strictness | `steps.mpileup.min_depth`, `max_depth`, `min_mapq`, `min_baseq` | Main early-stage sensitivity/specificity controls. | [mpileup](steps/mpileup.md) |
-| Chunking | `steps.mpileup.enable_split`, `split_threshold`, `chrom_chunk_size`, `chrM_chunk_size` | Affects scalability and downstream parallel execution behavior. | [mpileup](steps/mpileup.md) |
-| Genotype strictness | `steps.genotyping.alpha`, `epsAF`, `mu`, `thr_dp`, `pop_vaf` | Core thresholds for genotype confidence and candidate retention. | [genotyping](steps/genotyping.md) |
-| Phasing refinement | `steps.phasing.min_dp`, `min_total_dp`, `phasing_pad`, `merge_gap` | Controls how aggressively phasing evidence is accepted/merged. | [phasing](steps/phasing.md) |
-| Feature filtration | `steps.feature_filtration.*` group switches | Determines which artifact filters are applied before prediction. | [merge_feature](steps/merge-feature.md) |
-| Prediction model | `model_dir`, `model_name` (or step-specific mapping in your version) | Selects trained classifier artifacts used for final mutation prediction. | [mutation_prediction](steps/mutation-prediction.md) |
+- Runtime and input wiring: `run.*`, `sequence_type`, `spaceranger_dir`, `input_details.*`, `resource_details.*`
+- Candidate detection and chunking: [`steps.mpileup`](#stepsmpileup) -> [mpileup step](steps/mpileup.md)
+- Genotype confidence and inputs: [`steps.genotyping`](#stepsgenotyping) -> [genotyping step](steps/genotyping.md)
+- Phasing behavior and inputs: [`steps.phasing`](#stepsphasing) -> [phasing step](steps/phasing.md)
+- Filtration and feature merge handoff: [`steps.feature_filtration`](#stepsfeature_filtration), [`steps.merge_feature`](#stepsmerge_feature) -> [merge_feature step](steps/merge-feature.md)
+- Final prediction and model artifacts: [`steps.mutation_prediction`](#stepsmutation_prediction), `model_dir`, `model_name` -> [mutation_prediction step](steps/mutation-prediction.md)
 
 !!! note
     Keep one baseline config per dataset and change only a few important parameters per experiment to preserve comparability.
-
-## Important input quick guide
-
-Input wiring is as important as parameter tuning. Use step pages for exact input semantics and expected formats.
-
-| Step | Critical input(s) to verify | See details |
-| --- | --- | --- |
-| `mpileup` | `in_filter_bam`, `genome_fasta`, optional `regions_file` | [mpileup](steps/mpileup.md) |
-| `genotyping` | `spot_count_file`, `prior_file`, `cluster`, `cell_num` | [genotyping](steps/genotyping.md) |
-| `phasing` | `in_filter_bam`, `merged_germline_file`, `merged_ind_geno_filter_file` | [phasing](steps/phasing.md) |
-| `merge_feature` | RNA/spatial/read/mappability feature tables + phasing outputs | [merge_feature](steps/merge-feature.md) |
-| `mutation_prediction` | `combine_feature_parquet` + model artifacts (`model_dir`/`model_name`) | [mutation_prediction](steps/mutation-prediction.md) |
 
 ## Recommended usage pattern
 

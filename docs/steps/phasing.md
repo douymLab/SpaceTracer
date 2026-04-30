@@ -54,6 +54,6 @@ This step refines genotype-supported candidate loci using RNA-informed phasing s
 
 ## Related pages
 
-- [Step 3: Feature extraction](step3-feature-extraction.md)
+- [Step 5: feature extraction](step5-feature-extraction.md)
 - [Algorithm Walkthrough](../algorithm.md)
 - [Step-by-step guide](overview.md)

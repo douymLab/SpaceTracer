@@ -2,9 +2,29 @@
 
 This page lists reference resources commonly used with SpaceTracer.
 
-To help users get started quickly, we provide two prebuilt reference packages for **mm10** and **hg38**, which can be downloaded from [Zenodo](https://zenodo.org/records/19896967).
+## Start here: prebuilt reference packages (recommended)
 
-If you would like to build your own reference, please refer to the resources below.
+**Recommended for first-time users** to avoid manual reference setup.
+
+- Source: [Zenodo resource package (SpaceTracer v2.0.0)](https://zenodo.org/records/19896967)
+- Main archive: `resources.tar` (~7.0 GB)
+- Includes:
+  - `mm10_resources.tar.zst` (mouse, mm10 / GRCm38)
+  - `hg38_resources.tar.zst` (human, hg38 / GRCh38)
+
+Extract references:
+
+```bash
+tar -xf resources.tar
+
+# mm10
+mkdir -p mm10 && zstd -d mm10_resources.tar.zst | tar -xf - -C mm10
+
+# hg38
+mkdir -p hg38 && zstd -d hg38_resources.tar.zst | tar -xf - -C hg38
+```
+
+If you need custom references, use the resource links below to build your own.
 
 ## Human reference genome example
 

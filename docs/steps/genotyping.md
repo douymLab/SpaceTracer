@@ -59,5 +59,5 @@ When `run.keep_intermediates` is true, extra intermediate count/genotype files a
 
 ## Tuning notes
 
-- This step is the key bridge from evidence aggregation to multi-feature extraction.
+- This step is the key bridge from Step 3 count/prior construction to Step 5 multi-feature extraction.
 - Downstream feature steps all depend directly on these genotype outputs.

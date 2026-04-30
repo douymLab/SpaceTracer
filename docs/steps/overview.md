@@ -1,35 +1,25 @@
 # Step-by-step guide
 
-This page combines the algorithm-level view and step-level execution map, so you can understand both **why** and **how** the full workflow runs.
+This page is aligned to the code layout in `SpaceTracer/steps` so users can map tutorials directly to implementation files.
 
 For exact input/parameter interpretation, open each step page under this section.
 
-## Main algorithm logic
+## Code-aligned execution map
 
-1. **Candidate generation**  
-   Generate candidate variant sites from mpileup and basic depth/VAF filters.
-2. **Allele counting and quality control**  
-   Build spot, cluster, and individual-level count tables after quality checks.
-3. **Bayesian/statistical genotyping**  
-   Infer genotypes using allele counts, prior frequencies, and confidence thresholds.
-4. **Feature extraction**  
-   Extract spatial, read-level, mappability, and transcriptomic features.
-5. **Mutation prediction**  
-   Use random-forest models to classify true somatic mutations.
-6. **Artifact removal**  
-   Remove recurrent artifacts using dbSNP, editing databases, imprinted regions, and PON resources.
+| Step tutorial | Runtime step name | Purpose | Code step file |
+| --- | --- | --- | --- |
+| [Step 0: Cluster Preparation](step0-cluster.md) | `cluster` | Load or compute spot/domain clusters. | `step0_cluster.py` |
+| [Step 1: BAM Processing](step1-bam-processing.md) | `bam_processing` | Build in-tissue filtered BAM for downstream analysis. | `step1_bam_processing.py` |
+| [Step 2: Pileup Candidate Sites](step2-mpileup.md) | `mpileup` | Generate candidate loci and chunk metadata. | `step2_mpileup.py` |
+| [Step 3: Count and Prior Construction](step3-count-and-prior-construction.md) | `umi_combine`<br>`cell_num`<br>`prior` | Aggregate UMI-level count evidence, build cell-number support values, and construct prior information for candidate-site genotyping. | `step3_UMI_combine.py`<br>`step3_cell_number.py`<br>`step3_get_prior.py` |
+| [Step 4: Genotyping](step4-genotyping.md) | `genotyping` | Infer genotype evidence at multiple levels. | `step4_genotyping.py` |
+| [Step 5: Feature Extraction and Phasing](step5-feature-extraction.md) | `spatial_feature`<br>`mappability_feature`<br>`read_feature`<br>`RNA_feature`<br>`phasing` | Extract spatial, mappability, read-level, and RNA-level features, then refine candidate sites with phasing evidence. | `step5_spatial_feature.py`<br>`step5_mappability_feature.py`<br>`step5_read_feature.py`<br>`step5_RNA_level_feature.py`<br>`step5_phasing.py` |
+| [Step 6: Feature Merge and Filtration](step6-merge-filtration.md) | `merge_feature` | Merge features and apply filtration tags/switches. | `step6_merge_all_features.py` |
+| [Step 7: Mutation Prediction](step7-mutation-prediction.md) | `mutation_prediction` | Run model inference and export VCF results. | `step7_mutation_prediction.py` |
 
-## Full workflow steps
+Post-processing outside `SpaceTracer/steps`:
 
-| Step | Main SpaceTracer modules | Purpose |
-| --- | --- | --- |
-| Step0 | `cluster`, `bam_processing`, `mpileup` | Data pre-processing: cluster metadata preparation, BAM filtering, and mpileup candidate generation. |
-| Step1 | `umi_combine`, `cell_num`, `prior` | Quality-control-oriented evidence aggregation and prior preparation for robust genotyping. |
-| Step2 | `genotyping` | Spot/cluster/individual-level genotype inference. |
-| Step3 | `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature`, `phasing`, `merge_feature` | Multi-source feature extraction plus phasing refinement, followed by integrated feature matrix generation. |
-| Step4 | `mutation_prediction` | Model-based mutation prediction and VCF export. |
-| Step5 | external filtering stage | Remove recurrent artifacts using public/PoN-style resources. |
-| Step6 | external phylogeny tools | Optional lineage tree reconstruction from high-confidence mutation calls. |
+- [Post-step: Phylogeny (optional)](post-phylogeny.md)
 
 ## How to run
 
@@ -39,23 +29,25 @@ For exact input/parameter interpretation, open each step page under this section
 SpaceTracer run --config config.yaml
 ```
 
-### Advanced: script-by-script workflow
+### Advanced: inspect by code step order
 
-Use the per-step pages directly:
+Use these pages in code order:
 
-- [Step 0: Data pre-processing](step0-preprocessing.md)
-- [Step 1: Quality control](step1-quality-control.md)
-- [Step 2: Genotyping](step2-genotyping.md)
-- [Step 3: Feature extraction](step3-feature-extraction.md)
-- [Step 4: Mutation prediction](step4-mutation-prediction.md)
-- [Step 5: Remove recurrent artifacts](step5-remove-recurrent-artifacts.md)
-- [Step 6: Phylogeny (optional)](step6-phylogeny.md)
+- [Step 0: Cluster Preparation](step0-cluster.md)
+- [Step 1: BAM Processing](step1-bam-processing.md)
+- [Step 2: Pileup Candidate Sites](step2-mpileup.md)
+- [Step 3: Count and Prior Construction](step3-count-and-prior-construction.md)
+- [Step 4: Genotyping](step4-genotyping.md)
+- [Step 5: Feature Extraction and Phasing](step5-feature-extraction.md)
+- [Step 6: Feature Merge and Filtration](step6-merge-filtration.md)
+- [Step 7: Mutation Prediction](step7-mutation-prediction.md)
+- [Post-step: Phylogeny (optional)](post-phylogeny.md)
 
 ## Important outputs by stage
 
-- Step1/2: genotype evidence files (for example `ind_geno_filter_file`, `spot_geno_file`, `cluster_vaf_file`)
-- Step3: merged feature table (`all_feature.txt` and parquet mirror)
-- Step4: predicted VCF outputs from mutation prediction
-- Step5/6: curated high-confidence loci used for downstream lineage/phylogeny analyses
+- Code step 4: genotype evidence files (for example `ind_geno_filter_file`, `spot_geno_file`, `cluster_vaf_file`)
+- Code step 6: merged/filtered feature tables (`all_feature.txt` and parquet mirror)
+- Code step 7: predicted VCF outputs from mutation prediction
+- Optional post-step phylogeny: lineage analysis from high-confidence loci
 
 For practical rerun recipes (for example, rerun only RNA or spatial branches), see [Single-Step Debug Cookbook](debug-cookbook.md).
