@@ -6,6 +6,9 @@ SpaceTracer is a computational framework for detecting somatic single-nucleotide
 
 ## Release notes
 
+* **2026-04-30 · Version 2.0.0** ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.0.0))
+  Added one-command workflow execution, integrated lysis error calculation into the main pipeline, and delivered major runtime performance improvements.
+
 * **2026-02-25 · Version 1.1.0**
   Updated genotype calculation, improved random forest features, and added additional filtering steps to improve accuracy.
 
@@ -18,5 +21,5 @@ SpaceTracer is a computational framework for detecting somatic single-nucleotide
 2. [Resources](resources.md)
 3. [Configuration](configuration.md) and [Config Reference](config-reference.md)
 4. Run your first sample with [Quick Start](quickstart.md)
-5. Use the [Step-by-step guide](steps/overview.md) (or Step Reference pages) for stage-level details
+5. Use the [Step-by-step guide](steps/overview.md) (code-aligned with `SpaceTracer/steps`) for stage-level details
 6. Review outputs and validation plots in [Outputs](outputs.md)

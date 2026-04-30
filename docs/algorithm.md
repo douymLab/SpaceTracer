@@ -6,19 +6,19 @@ This page explains how SpaceTracer converts spatial transcriptomics alignments i
 
 SpaceTracer is organized as a directed acyclic graph (DAG) of processing steps. Each step produces context outputs consumed by downstream steps.
 
-The current core execution flow is:
+The current core execution flow (aligned to `SpaceTracer/steps`) is:
 
-1. `cluster`
-2. `bam_processing`
-3. `mpileup`
-4. `umi_combine`
-5. `cell_num`
-6. `prior`
-7. `genotyping`
-8. `spatial_feature`, `mappability_feature`, `read_feature`, `RNA_feature` (parallel branch)
-9. `phasing`
-10. `merge_feature`
-11. `mutation_prediction`
+1. `step0_cluster.py` -> `cluster`
+2. `step1_bam_processing.py` -> `bam_processing`
+3. `step2_mpileup.py` -> `mpileup`
+4. `step3_UMI_combine.py` -> `umi_combine`
+5. `step3_cell_number.py` -> `cell_num`
+6. `step3_get_prior.py` -> `prior`
+7. `step4_genotyping.py` -> `genotyping`
+8. `step5_spatial_feature.py`, `step5_mappability_feature.py`, `step5_read_feature.py`, `step5_RNA_level_feature.py` -> feature branches
+9. `step5_phasing.py` -> `phasing`
+10. `step6_merge_all_features.py` -> `merge_feature`
+11. `step7_mutation_prediction.py` -> `mutation_prediction`
 
 For a detailed per-step reference (inputs, parameters, and outputs), see [Step Reference Overview](steps/overview.md). For practical rerun/debug patterns, see [Single-Step Debug Cookbook](steps/debug-cookbook.md).
 

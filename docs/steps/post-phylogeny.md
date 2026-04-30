@@ -1,16 +1,16 @@
-# Step 6: Phylogeny
+# Post-step: Phylogeny
 
 This optional stage reconstructs lineage relationships from high-confidence mutation calls.
 
 ## Input recommendation
 
-Use curated loci after Step 5 filtering to reduce topology distortions from technical artifacts.
+Use curated loci after post-step recurrent-artifact filtering to reduce topology distortions from technical artifacts.
 
 ### Input interpretation
 
 | Input | Interpretation |
 | --- | --- |
-| curated mutation loci (post-Step5) | Candidate mutation set used to build lineage relationships. |
+| curated mutation loci (post-filtering) | Candidate mutation set used to build lineage relationships. |
 | cell/spot mutation matrix | Presence/absence or probabilistic mutation matrix required by external phylogeny tools. |
 
 ## Parameter interpretation

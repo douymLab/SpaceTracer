@@ -15,24 +15,8 @@ cd SpaceTracer
 
 Before running SpaceTracer, make sure all required dependencies are available in your environment. We provide two recommended ways to prepare the environment.
 
-#### Option 1: Docker image
 
-We provide a Docker image, `spacetracer`, with all required dependencies preinstalled. The image is available on [Docker Hub](https://hub.docker.com/r/xiayh17/spacetracer):
-
-```bash
-docker pull xiayh17/spacetracer
-docker run -it -v $(pwd):/mnt/workflow xiayh17/spacetracer bash
-```
-
-You can also download the container image file `spacetracer_latest.sif` from [Figshare](https://figshare.com/s/c7836f53c4eafb556ee1).
-
-This command runs the Docker container in interactive mode (`-it`), mounts the current working directory (`$(pwd)`) to `/mnt/workflow` inside the container, and starts a Bash shell.
-
-!!! note
-    Docker must be installed on your machine before using this option.
-    If Docker is not installed, please follow the [official Docker installation guide](https://docs.docker.com/get-started/get-docker/).
-
-#### Option 2: Conda environment
+#### Option 1: Conda environment
 
 Alternatively, you can create your own Conda environment using the provided `environment.yaml` file:
 
@@ -54,6 +38,24 @@ This step may take some time with Conda on Linux, while mamba is usually much fa
     Conda must be installed before running these commands.
     Please refer to the [official Conda documentation](https://docs.conda.io/en/latest/).
     If you plan to use mamba, please install it first from the [mamba documentation](https://mamba.readthedocs.io/en/latest/).
+
+
+#### Option 2: Docker image
+
+We provide a Docker image, `spacetracer`, with all required dependencies preinstalled. The image is available on [Docker Hub](https://hub.docker.com/r/xiayh17/spacetracer):
+
+```bash
+docker pull xiayh17/spacetracer
+docker run -it -v $(pwd):/mnt/workflow xiayh17/spacetracer bash
+```
+
+You can also download the container image file `spacetracer_latest.sif` from [Figshare](https://figshare.com/s/c7836f53c4eafb556ee1).
+
+This command runs the Docker container in interactive mode (`-it`), mounts the current working directory (`$(pwd)`) to `/mnt/workflow` inside the container, and starts a Bash shell.
+
+!!! note
+    Docker must be installed on your machine before using this option.
+    If Docker is not installed, please follow the [official Docker installation guide](https://docs.docker.com/get-started/get-docker/).
 
 
 #### Additional Python packages
