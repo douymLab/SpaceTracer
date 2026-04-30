@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/steps/genotyping/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>genotyping - SpaceTracer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "genotyping";
+        var mkdocs_page_input_path = "steps/genotyping.md";
+        var mkdocs_page_url = "/SpaceTracer/steps/genotyping/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../config-reference/">Config Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Code-aligned step map</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 0 - Cluster Preparation</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step0-cluster/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../cluster/">cluster</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 1 - BAM Processing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step1-bam-processing/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../bam-processing/">bam_processing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 2 - Pileup Candidate Sites</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step2-mpileup/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../mpileup/">mpileup</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 3 - Count and Prior Construction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step3-count-and-prior-construction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../umi-combine/">umi_combine</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../cell-num/">cell_num</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../prior/">prior</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" >Step 4 - Genotyping</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../step4-genotyping/">Overview</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">genotyping</a>
+    <ul class="current">
+    <li class="toctree-l3"><a class="reference internal" href="#purpose">Purpose</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#upstream">Upstream</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#required-inputs">Required inputs</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#input-interpretation">Input interpretation</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#parameters-stepsgenotyping">Parameters (steps.genotyping)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tuning-notes">Tuning notes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#outputs">Outputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tuning-notes_1">Tuning notes</a>
+    </li>
+    </ul>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 5 - Feature Extraction and Phasing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step5-feature-extraction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../spatial-feature/">spatial_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../mappability-feature/">mappability_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../read-feature/">read_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../rna-feature/">RNA_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../phasing/">phasing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 6 - Feature Merge and Filtration</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step6-merge-filtration/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../merge-feature/">merge_feature</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 7 - Mutation Prediction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step7-mutation-prediction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../mutation-prediction/">mutation_prediction</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../post-phylogeny/">Post-step - Phylogeny</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../debug-cookbook/">Single-Step Debug Cookbook</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Step Reference</li>
+          <li class="breadcrumb-item">Step 4 - Genotyping</li>
+      <li class="breadcrumb-item active">genotyping</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/main/docs/steps/genotyping.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="genotyping"><code>genotyping</code><a class="headerlink" href="#genotyping" title="Permanent link">&para;</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h2>
+<p>Performs cluster-level and spot-level genotype inference from UMI counts and priors.</p>
+<h2 id="upstream">Upstream<a class="headerlink" href="#upstream" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>cluster</code></li>
+<li><code>prior</code></li>
+<li><code>cell_num</code></li>
+</ul>
+<h2 id="required-inputs">Required inputs<a class="headerlink" href="#required-inputs" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>spot_count_file</code></li>
+<li><code>prior_file</code></li>
+<li><code>cluster</code> information</li>
+<li><code>cell_num</code></li>
+</ul>
+<h3 id="input-interpretation">Input interpretation<a class="headerlink" href="#input-interpretation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Input key</th>
+<th>Source step/config</th>
+<th>Required</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spot_count_file</code></td>
+<td><code>umi_combine</code> manifest output</td>
+<td>Yes</td>
+<td>Chunk manifest pointing to spot-level count parquet files used for genotype inference.</td>
+</tr>
+<tr>
+<td><code>prior_file</code></td>
+<td><code>prior</code> output (or fixed/empty mode)</td>
+<td>Yes</td>
+<td>Prior-frequency table for genotype calculations; behavior differs if fixed/empty prior is used.</td>
+</tr>
+<tr>
+<td><code>cluster</code></td>
+<td><code>cluster</code> output (<code>cluster_file</code>)</td>
+<td>Yes</td>
+<td>Spot-to-cluster mapping used for cluster-level aggregation before individual calls.</td>
+</tr>
+<tr>
+<td><code>cell_num</code></td>
+<td><code>steps.cell_number</code> / context</td>
+<td>Yes</td>
+<td>Cell-number support used in spot-level genotype refinement logic.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters-stepsgenotyping">Parameters (<code>steps.genotyping</code>)<a class="headerlink" href="#parameters-stepsgenotyping" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Typical/default</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>alpha</code></td>
+<td>float</td>
+<td><code>0.05</code></td>
+<td>Statistical significance threshold used in allele-level filtering logic.</td>
+</tr>
+<tr>
+<td><code>epsQ</code></td>
+<td>int</td>
+<td><code>20</code></td>
+<td>Quality-to-error conversion scale for UMI/read evidence aggregation.</td>
+</tr>
+<tr>
+<td><code>epsAF</code></td>
+<td>float</td>
+<td><code>0.003</code></td>
+<td>Allele-frequency error floor used during cluster allele filtering.</td>
+</tr>
+<tr>
+<td><code>mu</code></td>
+<td>float</td>
+<td><code>1e-5</code></td>
+<td>Prior mutation-rate term used in individual genotype inference.</td>
+</tr>
+<tr>
+<td><code>thr_dp</code></td>
+<td>int</td>
+<td><code>1000</code></td>
+<td>Depth threshold for robust genotype calling/retention.</td>
+</tr>
+<tr>
+<td><code>pop_vaf</code></td>
+<td>float</td>
+<td><code>1e-5</code></td>
+<td>Population-AF threshold used in genotype filtering logic.</td>
+</tr>
+<tr>
+<td><code>filter_oneallele</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>If true, applies one-allele style filtering for stricter genotype selection.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tuning-notes">Tuning notes<a class="headerlink" href="#tuning-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>alpha</code>, <code>epsAF</code>, and <code>mu</code> jointly control strictness of candidate retention.</li>
+<li>Raise <code>thr_dp</code> for more conservative calls on noisy/high-depth data.</li>
+<li>Lower <code>pop_vaf</code> for stricter rare-variant emphasis.</li>
+<li>Keep <code>filter_oneallele=true</code> unless you explicitly want a more permissive candidate set.</li>
+</ul>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<p>Main outputs:</p>
+<ul>
+<li><code>ind_geno_filter_file</code></li>
+<li><code>ind_geno_filter_mutation_list</code></li>
+<li><code>germline_file</code></li>
+<li><code>cluster_vaf_file</code></li>
+<li><code>spot_geno_file</code></li>
+</ul>
+<p>When <code>run.keep_intermediates</code> is true, extra intermediate count/genotype files are also emitted.</p>
+<h2 id="tuning-notes_1">Tuning notes<a class="headerlink" href="#tuning-notes_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>This step is the key bridge from Step 3 count/prior construction to Step 5 multi-feature extraction.</li>
+<li>Downstream feature steps all depend directly on these genotype outputs.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../step4-genotyping/" class="btn btn-neutral float-left" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../step5-feature-extraction/" class="btn btn-neutral float-right" title="Overview">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../step4-genotyping/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../step5-feature-extraction/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../javascripts/copy-code.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

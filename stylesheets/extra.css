@@ -1,0 +1,76 @@
+body {
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.rst-content {
+  line-height: 1.55;
+}
+
+.rst-content h1 {
+  border-bottom: 1px solid #d9d9d9;
+  padding-bottom: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+/* Only small typography tweaks */
+.rst-content p,
+.rst-content ul,
+.rst-content ol {
+  margin-bottom: 0.75rem;
+}
+
+/* Copy button */
+.copy-btn-container {
+  position: relative;
+}
+
+.copy-code-button {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #57606a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.copy-btn-container:hover .copy-code-button {
+  opacity: 1;
+}
+
+.copy-code-button:hover {
+  background: #f6f8fa;
+}
+
+.copy-code-button svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.copy-code-button.copied {
+  color: #1a7f37;
+  border-color: #1a7f37;
+}
+
+
+/* Show checkmark when copied */
+.copy-code-button.copied::after {
+content: "✓";
+font-size: 16px;
+}
+
+/* Hide original icon when copied */
+.copy-code-button.copied svg {
+display: none;
+}

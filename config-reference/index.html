@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/config-reference/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Config Reference - SpaceTracer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Config Reference";
+        var mkdocs_page_input_path = "config-reference.md";
+        var mkdocs_page_url = "/SpaceTracer/config-reference/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Config Reference</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#complete-template-verbatim-from-configdefault_configyaml">Complete template (verbatim from config/default_config.yaml)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#top-level-fields">Top-level fields</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#sample_name">sample_name</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#genome">genome</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sequence_type">sequence_type</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#spaceranger_dir">spaceranger_dir</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#resource_dir">resource_dir</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#model_dir-model_name">model_dir, model_name</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#bin_size">bin_size</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#regions_file">regions_file</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#output_dir">output_dir</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#input_details">input_details</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#resource_details">resource_details</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#run">run</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#steps">steps</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#stepscluster">steps.cluster</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsbam_processing">steps.bam_processing</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepscell_number-top-level-stepscell_number">steps.cell_number / top-level steps.cell_number</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsumi_combine">steps.UMI_combine</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsgenotyping">steps.genotyping</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsmpileup">steps.mpileup</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsspatial_feature">steps.spatial_feature</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsread_feature">steps.read_feature</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsrna_feature">steps.RNA_feature</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsphasing">steps.phasing</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsfeature_filtration">steps.feature_filtration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsmerge_feature">steps.merge_feature</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#stepsmutation_prediction">steps.mutation_prediction</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cli-step-names-for-start-from-stop-at-only-steps">CLI step names (for --start-from / --stop-at / --only-steps)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#important-quick-guide">Important quick guide</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#recommended-usage-pattern">Recommended usage pattern</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/overview/">Code-aligned step map</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 0 - Cluster Preparation</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step0-cluster/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cluster/">cluster</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 1 - BAM Processing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step1-bam-processing/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/bam-processing/">bam_processing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 2 - Pileup Candidate Sites</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step2-mpileup/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mpileup/">mpileup</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 3 - Count and Prior Construction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step3-count-and-prior-construction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/umi-combine/">umi_combine</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cell-num/">cell_num</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/prior/">prior</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 4 - Genotyping</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step4-genotyping/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/genotyping/">genotyping</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 5 - Feature Extraction and Phasing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step5-feature-extraction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/spatial-feature/">spatial_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mappability-feature/">mappability_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/read-feature/">read_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/rna-feature/">RNA_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/phasing/">phasing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 6 - Feature Merge and Filtration</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step6-merge-filtration/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/merge-feature/">merge_feature</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 7 - Mutation Prediction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step7-mutation-prediction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mutation-prediction/">mutation_prediction</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/post-phylogeny/">Post-step - Phylogeny</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Config Reference</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/main/docs/config-reference.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="config-reference">Config Reference<a class="headerlink" href="#config-reference" title="Permanent link">&para;</a></h1>
+<p>This page is the full reference companion to <a href="../configuration/">Configuration</a>.
+Use <code>configuration.md</code> for a minimal runnable template, and use this page for complete parameter interpretation.</p>
+<h2 id="complete-template-verbatim-from-configdefault_configyaml">Complete template (verbatim from <code>config/default_config.yaml</code>)<a class="headerlink" href="#complete-template-verbatim-from-configdefault_configyaml" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nt">sample_name</span><span class="p">:</span>
+<span class="nt">genome</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hg38</span>
+<span class="nt">sequence_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">visium</span>
+<span class="nt">spaceranger_dir</span><span class="p">:</span>
+<span class="nt">resource_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SpaceTracer/resources/hg38</span>
+<span class="nt">model_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SpaceTracer/models/</span>
+<span class="nt">model_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;spatial_free_model&quot;</span>
+<span class="nt">bin_size</span><span class="p">:</span>
+<span class="nt">regions_file</span><span class="p">:</span>
+<span class="nt">output_dir</span><span class="p">:</span>
+
+<span class="nt">run</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">threads</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16</span>
+<span class="w">  </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;96G&quot;</span>
+<span class="w">  </span><span class="nt">skip_validation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="nt">input_details</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bam_file</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">tissue_position</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">barcode_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CB</span>
+
+<span class="nt">resource_details</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">genome_fasta</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">gnomad_path</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">mappability_path</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">gene_bed</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">dbsnp_vcf_file</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">imprinted_bed</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">editing_bed</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">PON_file</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">reference_error_profile</span><span class="p">:</span>
+
+<span class="nt">steps</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">cluster</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">cluster_file</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">ncluster</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">    </span><span class="nt">plot</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;SpaGCN&quot;</span>
+<span class="w">    </span><span class="nt">init_method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;louvain&quot;</span>
+<span class="w">    </span><span class="nt">data_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Visium&quot;</span>
+<span class="w">    </span><span class="nt">h5_file_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filtered_feature_bc_matrix.h5&quot;</span>
+<span class="w">    </span><span class="nt">histology</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">spot_area</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">49</span>
+<span class="w">    </span><span class="nt">weight_histology</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">    </span><span class="nt">distance_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">min_samples</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">    </span><span class="nt">num_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<span class="w">    </span><span class="nt">percentage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
+<span class="w">    </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+<span class="w">    </span><span class="nt">tol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5e-3</span>
+<span class="w">    </span><span class="nt">lr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">max_epochs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
+<span class="w">    </span><span class="nt">graphst_tool</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;louvain&quot;</span>
+<span class="w">    </span><span class="nt">radius</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<span class="w">    </span><span class="nt">refinement</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="w">  </span><span class="nt">bam_processing</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">nm_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<span class="w">    </span><span class="nt">mapq_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">255</span>
+
+<span class="w">  </span><span class="nt">mpileup</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">min_depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<span class="w">    </span><span class="nt">max_depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200000</span>
+<span class="w">    </span><span class="nt">min_mapq</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">    </span><span class="nt">min_baseq</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">    </span><span class="nt">exclude_flag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">    </span><span class="nt">enable_split</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">split_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+<span class="w">    </span><span class="nt">chrom_chunk_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+<span class="w">    </span><span class="nt">chrM_chunk_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+
+<span class="w">  </span><span class="nt">cell_number</span><span class="p">:</span>
+
+<span class="w">  </span><span class="nt">UMI_combine</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">filter_duplicates</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">filter_secondary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">filter_qcfail</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">filter_supplementary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">min_read_quality</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+
+<span class="w">  </span><span class="nt">genotyping</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">alpha</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">epsQ</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<span class="w">    </span><span class="nt">epsAF</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.003</span>
+<span class="w">    </span><span class="nt">mu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-5</span>
+<span class="w">    </span><span class="nt">thr_dp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+<span class="w">    </span><span class="nt">pop_vaf</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-5</span>
+<span class="w">    </span><span class="nt">filter_oneallele</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="w">  </span><span class="nt">spatial_feature</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">alpha</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">thr_r2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+<span class="w">    </span><span class="nt">thr_prob</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.9</span>
+<span class="w">    </span><span class="nt">thr_likelihood</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.9</span>
+<span class="w">    </span><span class="nt">thr_vaf</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">    </span><span class="nt">plot_supp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">    </span><span class="nt">fig_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LDA</span>
+<span class="w">    </span><span class="nt">num_directions</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+
+<span class="w">  </span><span class="nt">read_feature</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">cell_info</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">None</span>
+<span class="w">    </span><span class="nt">downsample</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">downsample_target_depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2000</span>
+<span class="w">    </span><span class="nt">max_region_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20000</span>
+<span class="w">    </span><span class="nt">max_variants_per_region</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+<span class="w">    </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+
+<span class="w">  </span><span class="nt">RNA_feature</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">min_count_for_germline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span>
+<span class="w">    </span><span class="nt">min_prior_for_germline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0001</span>
+<span class="w">    </span><span class="nt">default_range_of_gene</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">150</span>
+<span class="w">    </span><span class="nt">p_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">previous_base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+
+<span class="w">  </span><span class="nt">phasing</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">minprior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">    </span><span class="nt">min_dp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<span class="w">    </span><span class="nt">min_total_dp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span>
+<span class="w">    </span><span class="nt">alpha</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
+<span class="w">    </span><span class="nt">phasing_pad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+<span class="w">    </span><span class="nt">merge_gap</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
+<span class="w">    </span><span class="nt">max_target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200000</span>
+<span class="w">    </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+
+<span class="w">  </span><span class="nt">feature_filtration</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">ASE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">hFDR</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">imprinted</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">homopolymer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">PON</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">RNA_editing</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">ABNORMAL_MISMATCHES</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">LOW_READ_DIVERSITY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">HIGH_MULTIPLE_MAPPIN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">WIDE_DISTRIBUTION</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">NEAR_READ_END</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">CLUSTER_EVENTS</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">LOW_MAPQ</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">LOW_BASEQ</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="w">  </span><span class="nt">mutation_prediction</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">random_seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+<span class="w">    </span><span class="nt">plot</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+<h2 id="top-level-fields">Top-level fields<a class="headerlink" href="#top-level-fields" title="Permanent link">&para;</a></h2>
+<h3 id="sample_name"><code>sample_name</code><a class="headerlink" href="#sample_name" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: string</li>
+<li><strong>Purpose</strong>: Sample label used in downstream naming and outputs.</li>
+</ul>
+<h3 id="genome"><code>genome</code><a class="headerlink" href="#genome" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: string</li>
+<li><strong>Purpose</strong>: Genome build label used across steps and resources.</li>
+<li><strong>Example</strong>: <code>"hg38"</code></li>
+</ul>
+<h3 id="sequence_type"><code>sequence_type</code><a class="headerlink" href="#sequence_type" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: string</li>
+<li><strong>Purpose</strong>: Selects input mode behavior (for example Visium-specific handling).</li>
+<li><strong>Example</strong>: <code>"visium"</code></li>
+</ul>
+<h3 id="spaceranger_dir"><code>spaceranger_dir</code><a class="headerlink" href="#spaceranger_dir" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: path string</li>
+<li><strong>Purpose</strong>: Shortcut input root (<code>&lt;prefix&gt;/outs</code>) for auto-resolving BAM and Visium tissue-position files.</li>
+</ul>
+<h3 id="resource_dir"><code>resource_dir</code><a class="headerlink" href="#resource_dir" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: path string</li>
+<li><strong>Purpose</strong>: Shortcut directory for auto-resolving common resource files.</li>
+</ul>
+<h3 id="model_dir-model_name"><code>model_dir</code>, <code>model_name</code><a class="headerlink" href="#model_dir-model_name" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: string/path</li>
+<li><strong>Purpose</strong>: Model location and model identifier used by mutation prediction.</li>
+</ul>
+<h3 id="bin_size"><code>bin_size</code><a class="headerlink" href="#bin_size" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: integer or null</li>
+<li><strong>Purpose</strong>: Bin-size setting used for non-Visium workflows (for example stereo-seq).</li>
+</ul>
+<h3 id="regions_file"><code>regions_file</code><a class="headerlink" href="#regions_file" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: path string or null</li>
+<li><strong>Purpose</strong>: Restrict analysis to a target-region file when provided.</li>
+</ul>
+<h3 id="output_dir"><code>output_dir</code><a class="headerlink" href="#output_dir" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Type</strong>: path string</li>
+<li><strong>Purpose</strong>: Root output directory for all step outputs and checkpoints.</li>
+</ul>
+<h2 id="input_details"><code>input_details</code><a class="headerlink" href="#input_details" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>bam_file</code>: aligned BAM input path.</li>
+<li><code>tissue_position</code>: Visium tissue-position table path.</li>
+<li><code>barcode_key</code>: BAM tag used as barcode key (commonly <code>CB</code>).</li>
+</ul>
+<h2 id="resource_details"><code>resource_details</code><a class="headerlink" href="#resource_details" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>genome_fasta</code>: reference FASTA.</li>
+<li><code>gnomad_path</code>: population-frequency resource path.</li>
+<li><code>mappability_path</code>: mappability resource path.</li>
+<li><code>gene_bed</code>: gene annotation BED.</li>
+<li><code>dbsnp_vcf_file</code>: dbSNP VCF.</li>
+<li><code>imprinted_bed</code>: imprinted-region BED.</li>
+<li><code>editing_bed</code>: RNA-editing BED/resource.</li>
+<li><code>PON_file</code>: panel-of-normals file.</li>
+<li><code>reference_error_profile</code>: reference error profile file.</li>
+</ul>
+<h2 id="run"><code>run</code><a class="headerlink" href="#run" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>threads</code>: total CPU threads for execution.</li>
+<li><code>memory</code>: memory limit string (<code>&lt;integer&gt;G</code> format).</li>
+<li><code>skip_validation</code>: disables output validation checks when <code>true</code>.</li>
+</ul>
+<h2 id="steps"><code>steps</code><a class="headerlink" href="#steps" title="Permanent link">&para;</a></h2>
+<p>This namespace contains step-specific parameters.</p>
+<h3 id="stepscluster"><code>steps.cluster</code><a class="headerlink" href="#stepscluster" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>cluster_file</code>, <code>ncluster</code>, <code>plot</code>, <code>method</code>, <code>init_method</code>, <code>data_type</code>, <code>h5_file_name</code>, <code>histology</code>, <code>spot_area</code>, <code>weight_histology</code>, <code>distance_threshold</code>, <code>min_samples</code>, <code>num_threshold</code>, <code>percentage</code>, <code>seed</code>, <code>tol</code>, <code>lr</code>, <code>max_epochs</code>, <code>graphst_tool</code>, <code>radius</code>, <code>refinement</code>.</li>
+</ul>
+<h3 id="stepsbam_processing"><code>steps.bam_processing</code><a class="headerlink" href="#stepsbam_processing" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>nm_threshold</code>, <code>mapq_threshold</code>.</li>
+</ul>
+<h3 id="stepscell_number-top-level-stepscell_number"><code>steps.cell_number</code> / top-level <code>steps.cell_number</code><a class="headerlink" href="#stepscell_number-top-level-stepscell_number" title="Permanent link">&para;</a></h3>
+<ul>
+<li>fixed integer or file-backed setting depending on workflow mode.</li>
+</ul>
+<h3 id="stepsumi_combine"><code>steps.UMI_combine</code><a class="headerlink" href="#stepsumi_combine" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>filter_duplicates</code>, <code>filter_secondary</code>, <code>filter_qcfail</code>, <code>filter_supplementary</code>, <code>min_read_quality</code>.</li>
+</ul>
+<h3 id="stepsgenotyping"><code>steps.genotyping</code><a class="headerlink" href="#stepsgenotyping" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>alpha</code>, <code>epsQ</code>, <code>epsAF</code>, <code>mu</code>, <code>thr_dp</code>, <code>pop_vaf</code>, <code>filter_oneallele</code>.</li>
+</ul>
+<h3 id="stepsmpileup"><code>steps.mpileup</code><a class="headerlink" href="#stepsmpileup" title="Permanent link">&para;</a></h3>
+<p>Common keys:</p>
+<ul>
+<li><code>min_depth</code></li>
+<li><code>max_depth</code></li>
+<li><code>min_mapq</code></li>
+<li><code>min_baseq</code></li>
+<li><code>exclude_flag</code></li>
+<li><code>enable_split</code></li>
+<li><code>split_threshold</code></li>
+<li><code>chrom_chunk_size</code></li>
+<li><code>chrM_chunk_size</code></li>
+</ul>
+<p>See <a href="../steps/mpileup/">mpileup step</a> for details.</p>
+<h3 id="stepsspatial_feature"><code>steps.spatial_feature</code><a class="headerlink" href="#stepsspatial_feature" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>alpha</code>, <code>thr_r2</code>, <code>thr_prob</code>, <code>thr_likelihood</code>, <code>thr_vaf</code>, <code>plot_supp</code>, <code>fig_size</code>, <code>method</code>, <code>num_directions</code>.</li>
+</ul>
+<h3 id="stepsread_feature"><code>steps.read_feature</code><a class="headerlink" href="#stepsread_feature" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>cell_info</code>, <code>downsample</code>, <code>downsample_target_depth</code>, <code>max_region_size</code>, <code>max_variants_per_region</code>, <code>seed</code>.</li>
+</ul>
+<h3 id="stepsrna_feature"><code>steps.RNA_feature</code><a class="headerlink" href="#stepsrna_feature" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>min_count_for_germline</code>, <code>min_prior_for_germline</code>, <code>default_range_of_gene</code>, <code>p_threshold</code>, <code>previous_base</code>.</li>
+</ul>
+<h3 id="stepsphasing"><code>steps.phasing</code><a class="headerlink" href="#stepsphasing" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>minprior</code>, <code>min_dp</code>, <code>min_total_dp</code>, <code>alpha</code>, <code>phasing_pad</code>, <code>merge_gap</code>, <code>max_target</code>, <code>seed</code>.</li>
+</ul>
+<h3 id="stepsfeature_filtration"><code>steps.feature_filtration</code><a class="headerlink" href="#stepsfeature_filtration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>ASE</code>, <code>hFDR</code>, <code>imprinted</code>, <code>homopolymer</code>, <code>PON</code>, <code>RNA_editing</code>, <code>ABNORMAL_MISMATCHES</code>, <code>LOW_READ_DIVERSITY</code>, <code>HIGH_MULTIPLE_MAPPIN</code>, <code>WIDE_DISTRIBUTION</code>, <code>NEAR_READ_END</code>, <code>CLUSTER_EVENTS</code>, <code>LOW_MAPQ</code>, <code>LOW_BASEQ</code>.</li>
+</ul>
+<h3 id="stepsmerge_feature"><code>steps.merge_feature</code><a class="headerlink" href="#stepsmerge_feature" title="Permanent link">&para;</a></h3>
+<ul>
+<li>behavior is tied to merged feature generation and filtration tags; see <a href="../steps/merge-feature/">merge_feature step</a>.</li>
+</ul>
+<h3 id="stepsmutation_prediction"><code>steps.mutation_prediction</code><a class="headerlink" href="#stepsmutation_prediction" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>random_seed</code>, <code>plot</code> (plus model settings from top-level <code>model_dir</code>/<code>model_name</code>).</li>
+</ul>
+<p>See <a href="../steps/mutation-prediction/">mutation_prediction step</a>.</p>
+<h2 id="cli-step-names-for-start-from-stop-at-only-steps">CLI step names (for <code>--start-from</code> / <code>--stop-at</code> / <code>--only-steps</code>)<a class="headerlink" href="#cli-step-names-for-start-from-stop-at-only-steps" title="Permanent link">&para;</a></h2>
+<p><code>cluster</code>, <code>bam_processing</code>, <code>mpileup</code>, <code>umi_combine</code>, <code>cell_num</code>, <code>prior</code>, <code>genotyping</code>, <code>spatial_feature</code>, <code>mappability_feature</code>, <code>read_feature</code>, <code>RNA_feature</code>, <code>phasing</code>, <code>merge_feature</code>, <code>mutation_prediction</code></p>
+<h2 id="important-quick-guide">Important quick guide<a class="headerlink" href="#important-quick-guide" title="Permanent link">&para;</a></h2>
+<p>Use this as a fast checklist for both parameter tuning and step-input handoff. For full field lists, see <a href="../configuration/">Configuration</a> and the <code>steps.*</code> sections above.</p>
+<ul>
+<li>Runtime and input wiring: <code>run.*</code>, <code>sequence_type</code>, <code>spaceranger_dir</code>, <code>input_details.*</code>, <code>resource_details.*</code></li>
+<li>Candidate detection and chunking: <a href="#stepsmpileup"><code>steps.mpileup</code></a> -&gt; <a href="../steps/mpileup/">mpileup step</a></li>
+<li>Genotype confidence and inputs: <a href="#stepsgenotyping"><code>steps.genotyping</code></a> -&gt; <a href="../steps/genotyping/">genotyping step</a></li>
+<li>Phasing behavior and inputs: <a href="#stepsphasing"><code>steps.phasing</code></a> -&gt; <a href="../steps/phasing/">phasing step</a></li>
+<li>Filtration and feature merge handoff: <a href="#stepsfeature_filtration"><code>steps.feature_filtration</code></a>, <a href="#stepsmerge_feature"><code>steps.merge_feature</code></a> -&gt; <a href="../steps/merge-feature/">merge_feature step</a></li>
+<li>Final prediction and model artifacts: <a href="#stepsmutation_prediction"><code>steps.mutation_prediction</code></a>, <code>model_dir</code>, <code>model_name</code> -&gt; <a href="../steps/mutation-prediction/">mutation_prediction step</a></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Keep one baseline config per dataset and change only a few important parameters per experiment to preserve comparability.</p>
+</div>
+<h2 id="recommended-usage-pattern">Recommended usage pattern<a class="headerlink" href="#recommended-usage-pattern" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Start with the minimal template in <a href="../configuration/">Configuration</a>.</li>
+<li>Add only the step parameters you need to override.</li>
+<li>Keep one validated baseline config per dataset.</li>
+<li>Track parameter changes per run for reproducibility.</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../configuration/" class="btn btn-neutral float-left" title="Configuration"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../quickstart/" class="btn btn-neutral float-right" title="Quick Start">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../configuration/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../quickstart/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/copy-code.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

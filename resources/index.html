@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/resources/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Resources - SpaceTracer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Resources";
+        var mkdocs_page_input_path = "resources.md";
+        var mkdocs_page_url = "/SpaceTracer/resources/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Resources</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#start-here-prebuilt-reference-packages-recommended">Start here: prebuilt reference packages (recommended)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#human-reference-genome-example">Human reference genome example</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#grch37-hg19">GRCh37 / hg19</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#grch38-hg38">GRCh38 / hg38</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#annotation-and-supporting-resources">Annotation and supporting resources</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../config-reference/">Config Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/overview/">Code-aligned step map</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 0 - Cluster Preparation</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step0-cluster/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cluster/">cluster</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 1 - BAM Processing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step1-bam-processing/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/bam-processing/">bam_processing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 2 - Pileup Candidate Sites</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step2-mpileup/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mpileup/">mpileup</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 3 - Count and Prior Construction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step3-count-and-prior-construction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/umi-combine/">umi_combine</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cell-num/">cell_num</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/prior/">prior</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 4 - Genotyping</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step4-genotyping/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/genotyping/">genotyping</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 5 - Feature Extraction and Phasing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step5-feature-extraction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/spatial-feature/">spatial_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mappability-feature/">mappability_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/read-feature/">read_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/rna-feature/">RNA_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/phasing/">phasing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 6 - Feature Merge and Filtration</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step6-merge-filtration/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/merge-feature/">merge_feature</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 7 - Mutation Prediction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step7-mutation-prediction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mutation-prediction/">mutation_prediction</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/post-phylogeny/">Post-step - Phylogeny</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Resources</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/main/docs/resources.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="public-resources">Public Resources<a class="headerlink" href="#public-resources" title="Permanent link">&para;</a></h1>
+<p>This page lists reference resources commonly used with SpaceTracer.</p>
+<h2 id="start-here-prebuilt-reference-packages-recommended">Start here: prebuilt reference packages (recommended)<a class="headerlink" href="#start-here-prebuilt-reference-packages-recommended" title="Permanent link">&para;</a></h2>
+<p><strong>Recommended for first-time users</strong> to avoid manual reference setup.</p>
+<ul>
+<li>Source: <a href="https://zenodo.org/records/19896967">Zenodo resource package (SpaceTracer v2.0.0)</a></li>
+<li>Main archive: <code>resources.tar</code> (~7.0 GB)</li>
+<li>Includes:</li>
+<li><code>mm10_resources.tar.zst</code> (mouse, mm10 / GRCm38)</li>
+<li><code>hg38_resources.tar.zst</code> (human, hg38 / GRCh38)</li>
+</ul>
+<p>Extract references:</p>
+<div class="highlight"><pre><span></span><code>tar<span class="w"> </span>-xf<span class="w"> </span>resources.tar
+
+<span class="c1"># mm10</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>mm10<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>zstd<span class="w"> </span>-d<span class="w"> </span>mm10_resources.tar.zst<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>-xf<span class="w"> </span>-<span class="w"> </span>-C<span class="w"> </span>mm10
+
+<span class="c1"># hg38</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>hg38<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>zstd<span class="w"> </span>-d<span class="w"> </span>hg38_resources.tar.zst<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>-xf<span class="w"> </span>-<span class="w"> </span>-C<span class="w"> </span>hg38
+</code></pre></div>
+<p>If you need custom references, use the resource links below to build your own.</p>
+<h2 id="human-reference-genome-example">Human reference genome example<a class="headerlink" href="#human-reference-genome-example" title="Permanent link">&para;</a></h2>
+<h3 id="grch37-hg19">GRCh37 / hg19<a class="headerlink" href="#grch37-hg19" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz
+wget<span class="w"> </span>ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz.fai
+</code></pre></div>
+<h3 id="grch38-hg38">GRCh38 / hg38<a class="headerlink" href="#grch38-hg38" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa
+wget<span class="w"> </span>ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa.fai
+</code></pre></div>
+<p>NCBI reference page: <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9606/">NCBI human datasets</a>.</p>
+<h2 id="annotation-and-supporting-resources">Annotation and supporting resources<a class="headerlink" href="#annotation-and-supporting-resources" title="Permanent link">&para;</a></h2>
+<ul>
+<li>gene annotation (Gencode): <a href="https://www.gencodegenes.org/human/#">GENCODE human</a></li>
+<li>mappability resources: <a href="https://genome.ucsc.edu/">UCSC Genome Browser</a></li>
+<li>GTEx expression: <a href="https://gtexportal.org/home/">GTEx Portal</a> or <a href="https://www.ncbi.nlm.nih.gov/gap/">dbGaP website</a></li>
+<li>dbSNP bundle: <a href="https://gatk.broadinstitute.org/">GATK resources</a></li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../installation/" class="btn btn-neutral float-left" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../configuration/" class="btn btn-neutral float-right" title="Configuration">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../installation/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../configuration/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/copy-code.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

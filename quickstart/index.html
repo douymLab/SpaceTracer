@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/quickstart/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Quick Start - SpaceTracer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Quick Start";
+        var mkdocs_page_input_path = "quickstart.md";
+        var mkdocs_page_url = "/SpaceTracer/quickstart/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../config-reference/">Config Reference</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Quick Start</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#1-prepare-environment">1) Prepare environment</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-prepare-inputs-and-references">2) Prepare inputs and references</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-edit-config-file">3) Edit config file</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-run-full-workflow">4) Run full workflow</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#5-resume-or-rerun-when-needed">5) Resume or rerun when needed</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#6-check-outputs-and-step-details">6) Check outputs and step details</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/overview/">Code-aligned step map</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 0 - Cluster Preparation</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step0-cluster/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cluster/">cluster</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 1 - BAM Processing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step1-bam-processing/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/bam-processing/">bam_processing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 2 - Pileup Candidate Sites</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step2-mpileup/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mpileup/">mpileup</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 3 - Count and Prior Construction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step3-count-and-prior-construction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/umi-combine/">umi_combine</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cell-num/">cell_num</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/prior/">prior</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 4 - Genotyping</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step4-genotyping/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/genotyping/">genotyping</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 5 - Feature Extraction and Phasing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step5-feature-extraction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/spatial-feature/">spatial_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mappability-feature/">mappability_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/read-feature/">read_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/rna-feature/">RNA_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/phasing/">phasing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 6 - Feature Merge and Filtration</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step6-merge-filtration/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/merge-feature/">merge_feature</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 7 - Mutation Prediction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step7-mutation-prediction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mutation-prediction/">mutation_prediction</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/post-phylogeny/">Post-step - Phylogeny</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Quick Start</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/main/docs/quickstart.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
+<p>This page gives the fastest path to run SpaceTracer on your data.</p>
+<h2 id="1-prepare-environment">1) Prepare environment<a class="headerlink" href="#1-prepare-environment" title="Permanent link">&para;</a></h2>
+<p>Complete <a href="../installation/">Installation</a> first.</p>
+<h2 id="2-prepare-inputs-and-references">2) Prepare inputs and references<a class="headerlink" href="#2-prepare-inputs-and-references" title="Permanent link">&para;</a></h2>
+<p>At minimum you need:</p>
+<ul>
+<li>aligned BAM file from spatial transcriptomics</li>
+<li>tissue position file (for Visium)</li>
+<li>reference genome FASTA and required resources from <a href="../resources/">Resources</a></li>
+<li>writable output directory</li>
+</ul>
+<h2 id="3-edit-config-file">3) Edit config file<a class="headerlink" href="#3-edit-config-file" title="Permanent link">&para;</a></h2>
+<p>Create <code>config.yaml</code> from the template in <a href="../configuration/">Configuration</a>, then update all sample-specific paths and run parameters.</p>
+<p>Pretrained mutation-prediction models are already provided under <code>SpaceTracer_new_github/models</code>:</p>
+<ul>
+<li><code>spatial_free_model</code></li>
+<li><code>spatial_feature_preserved_model</code></li>
+</ul>
+<p>Set these via <code>model_dir</code> and <code>model_name</code> in your config.
+For full parameter/input meaning, use <a href="../config-reference/">Config Reference</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>SpaceTracer validates input/resource paths on startup. Every configured file path must exist before running.</p>
+</div>
+<h2 id="4-run-full-workflow">4) Run full workflow<a class="headerlink" href="#4-run-full-workflow" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>SpaceTracer<span class="w"> </span>run<span class="w"> </span>--config<span class="w"> </span>config.yaml
+</code></pre></div>
+<p>Fallback command:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>SpaceTracer.cli.run<span class="w"> </span>--config<span class="w"> </span>config.yaml
+</code></pre></div>
+<h2 id="5-resume-or-rerun-when-needed">5) Resume or rerun when needed<a class="headerlink" href="#5-resume-or-rerun-when-needed" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>SpaceTracer<span class="w"> </span>run<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--start-from<span class="w"> </span>genotyping
+SpaceTracer<span class="w"> </span>run<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--stop-at<span class="w"> </span>merge_feature
+SpaceTracer<span class="w"> </span>run<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--only-steps<span class="w"> </span><span class="s2">&quot;RNA_feature,phasing,merge_feature&quot;</span><span class="w"> </span>--force
+SpaceTracer<span class="w"> </span>run<span class="w"> </span>--config<span class="w"> </span>config.yaml<span class="w"> </span>--force
+</code></pre></div>
+<p>Notes:</p>
+<ul>
+<li><code>--start-from &lt;step&gt;</code> skips earlier completed steps and resumes from the specified step.</li>
+<li><code>--stop-at &lt;step&gt;</code> runs up to that step and then exits.</li>
+<li><code>--force</code> reruns requested steps even if checkpoint metadata says they are complete.</li>
+<li><code>--only-steps</code> runs exactly the listed steps (topologically ordered within that subset) and does <strong>not</strong> auto-include external dependencies.</li>
+<li>If required upstream outputs are missing, <code>--only-steps</code> will fail with missing-key or missing-file errors.</li>
+</ul>
+<h2 id="6-check-outputs-and-step-details">6) Check outputs and step details<a class="headerlink" href="#6-check-outputs-and-step-details" title="Permanent link">&para;</a></h2>
+<p>Use these pages for interpretation and debugging:</p>
+<ul>
+<li><a href="../outputs/">Outputs</a></li>
+<li><a href="../steps/overview/">Step-by-step guide</a> (code-aligned with <code>SpaceTracer/steps</code>)</li>
+<li><a href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a></li>
+</ul>
+<p>Common output files from downstream feature and prediction stages include:</p>
+<ul>
+<li><code>output_dir/all_feature.txt</code></li>
+<li><code>output_dir/all_feature.parquet</code></li>
+<li><code>output_dir/mutation_prediction/Sample_total_pred_truesites.vcf</code></li>
+<li><code>output_dir/mutation_prediction/Sample_total_pred_truesites_PASS.vcf</code></li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../config-reference/" class="btn btn-neutral float-left" title="Config Reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../outputs/" class="btn btn-neutral float-right" title="Outputs">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../config-reference/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../outputs/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/copy-code.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

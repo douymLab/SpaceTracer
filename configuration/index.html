@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/configuration/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Configuration - SpaceTracer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Configuration";
+        var mkdocs_page_input_path = "configuration.md";
+        var mkdocs_page_url = "/SpaceTracer/configuration/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Configuration</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#minimal-runnable-template">Minimal runnable template</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#key-sections">Key sections</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#input_details">input_details</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#resource_details">resource_details</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#run">run</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#runtime">runtime</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#steps">steps</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#override-behavior-and-path-shortcuts">Override behavior and path shortcuts</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#active-step-names-for-cli-control">Active step names for CLI control</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../config-reference/">Config Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/overview/">Code-aligned step map</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 0 - Cluster Preparation</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step0-cluster/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cluster/">cluster</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 1 - BAM Processing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step1-bam-processing/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/bam-processing/">bam_processing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 2 - Pileup Candidate Sites</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step2-mpileup/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mpileup/">mpileup</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 3 - Count and Prior Construction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step3-count-and-prior-construction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/umi-combine/">umi_combine</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cell-num/">cell_num</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/prior/">prior</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 4 - Genotyping</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step4-genotyping/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/genotyping/">genotyping</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 5 - Feature Extraction and Phasing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step5-feature-extraction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/spatial-feature/">spatial_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mappability-feature/">mappability_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/read-feature/">read_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/rna-feature/">RNA_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/phasing/">phasing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 6 - Feature Merge and Filtration</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step6-merge-filtration/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/merge-feature/">merge_feature</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 7 - Mutation Prediction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step7-mutation-prediction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mutation-prediction/">mutation_prediction</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/post-phylogeny/">Post-step - Phylogeny</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Configuration</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/main/docs/configuration.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="configuration-guide">Configuration Guide<a class="headerlink" href="#configuration-guide" title="Permanent link">&para;</a></h1>
+<p>This page explains the main fields in the SpaceTracer config YAML and provides a minimal template you can copy.</p>
+<p>For full parameter-by-parameter interpretation, see <a href="../config-reference/">Config Reference</a>.</p>
+<h2 id="minimal-runnable-template">Minimal runnable template<a class="headerlink" href="#minimal-runnable-template" title="Permanent link">&para;</a></h2>
+<p>Save as <code>config.yaml</code> and replace all placeholder paths.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">genome</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;hg38&quot;</span>
+<span class="nt">sequence_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;visium&quot;</span>
+
+<span class="nt">input_details</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bam_file</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/possorted_genome_bam.bam&quot;</span>
+<span class="w">  </span><span class="nt">tissue_position</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/tissue_positions_list.csv&quot;</span>
+<span class="w">  </span><span class="nt">barcode_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CB&quot;</span>
+
+<span class="nt">resource_details</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">genome_fasta</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/genome.fa&quot;</span>
+<span class="w">  </span><span class="nt">gnomad_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/gnomad&quot;</span>
+<span class="w">  </span><span class="nt">mappability_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/mappability&quot;</span>
+<span class="w">  </span><span class="nt">gene_bed</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/gene_region.bed&quot;</span>
+<span class="w">  </span><span class="nt">dbsnp_vcf_file</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/dbSNP.vcf&quot;</span>
+<span class="w">  </span><span class="nt">imprinted_bed</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/imprinted_gene_region.bed&quot;</span>
+<span class="w">  </span><span class="nt">editing_bed</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/editing.bed&quot;</span>
+<span class="w">  </span><span class="nt">PON_file</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/PON.txt&quot;</span>
+<span class="w">  </span><span class="nt">reference_error_profile</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/reference_error_profile.txt&quot;</span>
+
+<span class="nt">run</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">threads</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">  </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;32G&quot;</span>
+<span class="w">  </span><span class="nt">skip_validation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+
+<span class="nt">output_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/absolute/path/to/output&quot;</span>
+
+<span class="nt">steps</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">cluster</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">cluster_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">  </span><span class="nt">cell_number</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</code></pre></div>
+<h2 id="key-sections">Key sections<a class="headerlink" href="#key-sections" title="Permanent link">&para;</a></h2>
+<h3 id="input_details"><code>input_details</code><a class="headerlink" href="#input_details" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>bam_file</code>: aligned BAM file</li>
+<li><code>tissue_position</code>: required for Visium mode</li>
+<li><code>barcode_key</code>: BAM tag used as barcode key (usually <code>CB</code> for Visium)</li>
+</ul>
+<h3 id="resource_details"><code>resource_details</code><a class="headerlink" href="#resource_details" title="Permanent link">&para;</a></h3>
+<p>All resource paths are validated at startup. Missing files will stop the run immediately.</p>
+<h3 id="run"><code>run</code><a class="headerlink" href="#run" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>threads</code>: CPU threads used by the pipeline</li>
+<li><code>memory</code>: memory limit string parsed as <code>&lt;integer&gt;G</code> (for example <code>32G</code>)</li>
+<li><code>skip_validation</code>: disable output validation checks (use carefully)</li>
+</ul>
+<h3 id="runtime"><code>runtime</code><a class="headerlink" href="#runtime" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>max_parallel</code>: controls parallel execution width for independent DAG layers.</li>
+</ul>
+<h3 id="steps"><code>steps</code><a class="headerlink" href="#steps" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>cluster.cluster_file</code>: if provided and exists, SpaceTracer uses this cluster file directly</li>
+<li><code>cell_number</code>: can be a fixed integer or a file path</li>
+</ul>
+<p>If <code>cluster_file</code> is not provided and <code>sequence_type</code> is <code>visium</code>, SpaceTracer can compute clusters internally.</p>
+<p>Model settings for mutation prediction:</p>
+<ul>
+<li><code>model_dir</code>: directory containing trained models (for example <code>SpaceTracer_new_github/models</code>)</li>
+<li><code>model_name</code>: model identifier (for example <code>spatial_free_model</code> or <code>spatial_feature_preserved_model</code>)</li>
+</ul>
+<p>For full step-level parameter details, see:</p>
+<ul>
+<li><a href="../steps/overview/">Step Reference Overview</a></li>
+<li><a href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a></li>
+<li><a href="../steps/cluster/">cluster</a></li>
+<li><a href="../steps/bam-processing/">bam_processing</a></li>
+<li><a href="../steps/mpileup/">mpileup</a></li>
+<li><a href="../steps/umi-combine/">umi_combine</a></li>
+<li><a href="../steps/cell-num/">cell_num</a></li>
+<li><a href="../steps/prior/">prior</a></li>
+<li><a href="../steps/genotyping/">genotyping</a></li>
+<li><a href="../steps/spatial-feature/">spatial_feature</a></li>
+<li><a href="../steps/mappability-feature/">mappability_feature</a></li>
+<li><a href="../steps/read-feature/">read_feature</a></li>
+<li><a href="../steps/rna-feature/">RNA_feature</a></li>
+<li><a href="../steps/merge-feature/">feature_filtration / merge_feature</a></li>
+<li><a href="../steps/phasing/">phasing</a></li>
+<li><a href="../steps/mutation-prediction/">mutation_prediction</a></li>
+</ul>
+<h2 id="override-behavior-and-path-shortcuts">Override behavior and path shortcuts<a class="headerlink" href="#override-behavior-and-path-shortcuts" title="Permanent link">&para;</a></h2>
+<p>SpaceTracer supports directory-level shortcuts:</p>
+<ul>
+<li><code>spaceranger_dir</code>: auto-resolves BAM and Visium tissue positions</li>
+<li><code>resource_dir</code>: auto-resolves expected resource file names in one directory</li>
+</ul>
+<p>You can still override any specific file in <code>input_details</code> or <code>resource_details</code>.</p>
+<h2 id="active-step-names-for-cli-control">Active step names for CLI control<a class="headerlink" href="#active-step-names-for-cli-control" title="Permanent link">&para;</a></h2>
+<p>Use these names with <code>--start-from</code>, <code>--stop-at</code>, and <code>--only-steps</code>:</p>
+<p><code>cluster</code>, <code>bam_processing</code>, <code>mpileup</code>, <code>umi_combine</code>, <code>cell_num</code>, <code>prior</code>, <code>genotyping</code>, <code>spatial_feature</code>, <code>mappability_feature</code>, <code>read_feature</code>, <code>RNA_feature</code>, <code>phasing</code>, <code>merge_feature</code>, <code>mutation_prediction</code></p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../resources/" class="btn btn-neutral float-left" title="Resources"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../config-reference/" class="btn btn-neutral float-right" title="Config Reference">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../resources/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../config-reference/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/copy-code.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

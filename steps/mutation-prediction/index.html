@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/steps/mutation-prediction/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>mutation_prediction - SpaceTracer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "mutation_prediction";
+        var mkdocs_page_input_path = "steps/mutation-prediction.md";
+        var mkdocs_page_url = "/SpaceTracer/steps/mutation-prediction/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../config-reference/">Config Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Code-aligned step map</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 0 - Cluster Preparation</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step0-cluster/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../cluster/">cluster</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 1 - BAM Processing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step1-bam-processing/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../bam-processing/">bam_processing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 2 - Pileup Candidate Sites</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step2-mpileup/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../mpileup/">mpileup</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 3 - Count and Prior Construction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step3-count-and-prior-construction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../umi-combine/">umi_combine</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../cell-num/">cell_num</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../prior/">prior</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 4 - Genotyping</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step4-genotyping/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../genotyping/">genotyping</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 5 - Feature Extraction and Phasing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step5-feature-extraction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../spatial-feature/">spatial_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../mappability-feature/">mappability_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../read-feature/">read_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../rna-feature/">RNA_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../phasing/">phasing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 6 - Feature Merge and Filtration</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../step6-merge-filtration/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../merge-feature/">merge_feature</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" >Step 7 - Mutation Prediction</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../step7-mutation-prediction/">Overview</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">mutation_prediction</a>
+    <ul class="current">
+    <li class="toctree-l3"><a class="reference internal" href="#purpose">Purpose</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#upstream">Upstream</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#required-inputs">Required inputs</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#input-interpretation">Input interpretation</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#parameters">Parameters</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#effective-runtime-keys-current-implementation">Effective runtime keys (current implementation)</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#present-in-template-but-not-fully-wired-in-current-step-runner">Present in template but not fully wired in current step runner</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tuning-notes">Tuning notes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#outputs">Outputs</a>
+    </li>
+    </ul>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../post-phylogeny/">Post-step - Phylogeny</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../debug-cookbook/">Single-Step Debug Cookbook</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Step Reference</li>
+          <li class="breadcrumb-item">Step 7 - Mutation Prediction</li>
+      <li class="breadcrumb-item active">mutation_prediction</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/main/docs/steps/mutation-prediction.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="mutation_prediction"><code>mutation_prediction</code><a class="headerlink" href="#mutation_prediction" title="Permanent link">&para;</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h2>
+<p>Runs model-based mutation classification from merged features and produces VCF outputs.</p>
+<h2 id="upstream">Upstream<a class="headerlink" href="#upstream" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>merge_feature</code></li>
+</ul>
+<h2 id="required-inputs">Required inputs<a class="headerlink" href="#required-inputs" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>combine_feature_parquet</code> (<code>all_feature.parquet</code> from <code>merge_feature</code>)</li>
+</ul>
+<h3 id="input-interpretation">Input interpretation<a class="headerlink" href="#input-interpretation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Input key</th>
+<th>Source step</th>
+<th>Required</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>combine_feature_parquet</code></td>
+<td><code>merge_feature</code> output</td>
+<td>Yes</td>
+<td>Integrated feature matrix used for model inference; schema must match model expectations.</td>
+</tr>
+<tr>
+<td><code>model_dir</code></td>
+<td>config (<code>steps.mutation_prediction</code>)</td>
+<td>Yes</td>
+<td>Directory containing trained model artifacts for prediction.</td>
+</tr>
+<tr>
+<td><code>model_name</code></td>
+<td>config (<code>steps.mutation_prediction</code>)</td>
+<td>Yes</td>
+<td>Selected model artifact name/version under <code>model_dir</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
+<h3 id="effective-runtime-keys-current-implementation">Effective runtime keys (current implementation)<a class="headerlink" href="#effective-runtime-keys-current-implementation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Location</th>
+<th>Type</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model_dir</code></td>
+<td><code>steps.mutation_prediction</code></td>
+<td>path string</td>
+<td>Directory containing trained model artifacts used for inference.</td>
+</tr>
+<tr>
+<td><code>model_name</code></td>
+<td><code>steps.mutation_prediction</code></td>
+<td>string</td>
+<td>Model identifier/name loaded from <code>model_dir</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Common pretrained model names shipped in <code>SpaceTracer_new_github/models</code>:</p>
+<ul>
+<li><code>spatial_free_model</code></li>
+<li><code>spatial_feature_preserved_model</code></li>
+</ul>
+<h3 id="present-in-template-but-not-fully-wired-in-current-step-runner">Present in template but not fully wired in current step runner<a class="headerlink" href="#present-in-template-but-not-fully-wired-in-current-step-runner" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Location</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>random_seed</code></td>
+<td><code>steps.mutation_prediction</code></td>
+<td>Template key exists; current step uses internal constant seed.</td>
+</tr>
+<tr>
+<td><code>plot</code></td>
+<td><code>steps.mutation_prediction</code></td>
+<td>Template key exists; current step uses internal plotting setting.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tuning-notes">Tuning notes<a class="headerlink" href="#tuning-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Ensure model artifacts match the feature schema in <code>combine_feature</code>.</li>
+<li>Keep model versioning explicit (<code>model_dir</code> + <code>model_name</code>) for reproducibility.</li>
+<li>If extending this step, expose internal hardcoded options as config keys progressively.</li>
+</ul>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>raw_pred_vcf</code>: <code>&lt;step_dir&gt;/Sample_total_pred_truesites.vcf</code></li>
+<li><code>final_vcf</code>: <code>&lt;step_dir&gt;/Sample_total_pred_truesites_PASS.vcf</code></li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../step7-mutation-prediction/" class="btn btn-neutral float-left" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../post-phylogeny/" class="btn btn-neutral float-right" title="Post-step - Phylogeny">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+      <span><a href="../step7-mutation-prediction/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../post-phylogeny/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../javascripts/copy-code.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

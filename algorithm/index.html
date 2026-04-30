@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://douymLab.github.io/SpaceTracer/algorithm/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Algorithm Walkthrough - SpaceTracer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Algorithm Walkthrough";
+        var mkdocs_page_input_path = "algorithm.md";
+        var mkdocs_page_url = "/SpaceTracer/algorithm/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SpaceTracer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../resources/">Resources</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../configuration/">Configuration</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../config-reference/">Config Reference</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quickstart/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../outputs/">Outputs</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Step Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/overview/">Code-aligned step map</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 0 - Cluster Preparation</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step0-cluster/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cluster/">cluster</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 1 - BAM Processing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step1-bam-processing/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/bam-processing/">bam_processing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 2 - Pileup Candidate Sites</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step2-mpileup/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mpileup/">mpileup</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 3 - Count and Prior Construction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step3-count-and-prior-construction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/umi-combine/">umi_combine</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/cell-num/">cell_num</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/prior/">prior</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 4 - Genotyping</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step4-genotyping/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/genotyping/">genotyping</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 5 - Feature Extraction and Phasing</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step5-feature-extraction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/spatial-feature/">spatial_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mappability-feature/">mappability_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/read-feature/">read_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/rna-feature/">RNA_feature</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/phasing/">phasing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 6 - Feature Merge and Filtration</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step6-merge-filtration/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/merge-feature/">merge_feature</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >Step 7 - Mutation Prediction</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/step7-mutation-prediction/">Overview</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../steps/mutation-prediction/">mutation_prediction</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/post-phylogeny/">Post-step - Phylogeny</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SpaceTracer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Algorithm Walkthrough</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/douymLab/SpaceTracer/edit/main/docs/algorithm.md">Edit on SpaceTracer</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="algorithm-walkthrough">Algorithm Walkthrough<a class="headerlink" href="#algorithm-walkthrough" title="Permanent link">&para;</a></h1>
+<p>This page explains how SpaceTracer converts spatial transcriptomics alignments into lineage-informative somatic SNV evidence.</p>
+<h2 id="pipeline-design">Pipeline design<a class="headerlink" href="#pipeline-design" title="Permanent link">&para;</a></h2>
+<p>SpaceTracer is organized as a directed acyclic graph (DAG) of processing steps. Each step produces context outputs consumed by downstream steps.</p>
+<p>The current core execution flow (aligned to <code>SpaceTracer/steps</code>) is:</p>
+<ol>
+<li><code>step0_cluster.py</code> -&gt; <code>cluster</code></li>
+<li><code>step1_bam_processing.py</code> -&gt; <code>bam_processing</code></li>
+<li><code>step2_mpileup.py</code> -&gt; <code>mpileup</code></li>
+<li><code>step3_UMI_combine.py</code> -&gt; <code>umi_combine</code></li>
+<li><code>step3_cell_number.py</code> -&gt; <code>cell_num</code></li>
+<li><code>step3_get_prior.py</code> -&gt; <code>prior</code></li>
+<li><code>step4_genotyping.py</code> -&gt; <code>genotyping</code></li>
+<li><code>step5_spatial_feature.py</code>, <code>step5_mappability_feature.py</code>, <code>step5_read_feature.py</code>, <code>step5_RNA_level_feature.py</code> -&gt; feature branches</li>
+<li><code>step5_phasing.py</code> -&gt; <code>phasing</code></li>
+<li><code>step6_merge_all_features.py</code> -&gt; <code>merge_feature</code></li>
+<li><code>step7_mutation_prediction.py</code> -&gt; <code>mutation_prediction</code></li>
+</ol>
+<p>For a detailed per-step reference (inputs, parameters, and outputs), see <a href="../steps/overview/">Step Reference Overview</a>. For practical rerun/debug patterns, see <a href="../steps/debug-cookbook/">Single-Step Debug Cookbook</a>.</p>
+<h2 id="step-by-step-meaning">Step-by-step meaning<a class="headerlink" href="#step-by-step-meaning" title="Permanent link">&para;</a></h2>
+<h3 id="1-cluster">1) <code>cluster</code><a class="headerlink" href="#1-cluster" title="Permanent link">&para;</a></h3>
+<p>Builds or loads spot/domain grouping information used in downstream genotype and spatial inference.</p>
+<h3 id="2-bam_processing">2) <code>bam_processing</code><a class="headerlink" href="#2-bam_processing" title="Permanent link">&para;</a></h3>
+<p>Prepares BAM-level data for robust pileup and candidate detection (sorting/filtering/index-friendly preprocessing).</p>
+<h3 id="3-mpileup">3) <code>mpileup</code><a class="headerlink" href="#3-mpileup" title="Permanent link">&para;</a></h3>
+<p>Generates base-level evidence from aligned reads across the genome/chunks.</p>
+<h3 id="4-umi_combine">4) <code>umi_combine</code><a class="headerlink" href="#4-umi_combine" title="Permanent link">&para;</a></h3>
+<p>Aggregates read evidence at UMI level to reduce read-level technical noise and improve confidence.</p>
+<h3 id="5-cell_num">5) <code>cell_num</code><a class="headerlink" href="#5-cell_num" title="Permanent link">&para;</a></h3>
+<p>Estimates spot/cell-level support statistics needed for later probabilistic genotyping.</p>
+<h3 id="6-prior">6) <code>prior</code><a class="headerlink" href="#6-prior" title="Permanent link">&para;</a></h3>
+<p>Builds prior information for mutation likelihood estimation.</p>
+<h3 id="7-genotyping">7) <code>genotyping</code><a class="headerlink" href="#7-genotyping" title="Permanent link">&para;</a></h3>
+<p>Combines evidence and priors to infer genotype-level mutation signals.</p>
+<h3 id="8-feature-branches">8) Feature branches<a class="headerlink" href="#8-feature-branches" title="Permanent link">&para;</a></h3>
+<p>From genotyping outputs, SpaceTracer computes multiple complementary feature families:</p>
+<ul>
+<li><code>spatial_feature</code>: neighborhood/tissue-structure signal</li>
+<li><code>mappability_feature</code>: regional mappability/confounder signal</li>
+<li><code>read_feature</code>: read-level quality/bias signal</li>
+<li><code>RNA_feature</code>: RNA-level context (including expression-related cues)</li>
+</ul>
+<h3 id="9-phasing">9) <code>phasing</code><a class="headerlink" href="#9-phasing" title="Permanent link">&para;</a></h3>
+<p>Refines candidate evidence with RNA-informed phasing information and cluster-level event summaries.</p>
+<h3 id="10-merge_feature">10) <code>merge_feature</code><a class="headerlink" href="#10-merge_feature" title="Permanent link">&para;</a></h3>
+<p>Merges all feature families (plus phasing outputs) into an integrated feature representation for downstream prioritization.</p>
+<h2 id="step-detail-index">Step detail index<a class="headerlink" href="#step-detail-index" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../steps/cluster/">cluster</a></li>
+<li><a href="../steps/bam-processing/">bam_processing</a></li>
+<li><a href="../steps/mpileup/">mpileup</a></li>
+<li><a href="../steps/umi-combine/">umi_combine</a></li>
+<li><a href="../steps/cell-num/">cell_num</a></li>
+<li><a href="../steps/prior/">prior</a></li>
+<li><a href="../steps/genotyping/">genotyping</a></li>
+<li><a href="../steps/spatial-feature/">spatial_feature</a></li>
+<li><a href="../steps/mappability-feature/">mappability_feature</a></li>
+<li><a href="../steps/read-feature/">read_feature</a></li>
+<li><a href="../steps/rna-feature/">RNA_feature</a></li>
+<li><a href="../steps/phasing/">phasing</a></li>
+<li><a href="../steps/merge-feature/">merge_feature</a></li>
+<li><a href="../steps/mutation-prediction/">mutation_prediction</a></li>
+</ul>
+<h2 id="why-this-structure-works">Why this structure works<a class="headerlink" href="#why-this-structure-works" title="Permanent link">&para;</a></h2>
+<p>SpaceTracer combines orthogonal information to suppress false positives:</p>
+<ul>
+<li>read/UMI evidence reduces sequencing artifacts</li>
+<li>prior modeling stabilizes genotype inference</li>
+<li>mappability and RNA-level features handle context-specific noise</li>
+<li>spatial features preserve in situ biological structure</li>
+</ul>
+<p>This combination improves confidence in mosaic SNV discovery for lineage analysis.</p>
+<h2 id="parallel-execution-and-checkpoints">Parallel execution and checkpoints<a class="headerlink" href="#parallel-execution-and-checkpoints" title="Permanent link">&para;</a></h2>
+<p>SpaceTracer supports:</p>
+<ul>
+<li>parallel execution for independent feature steps</li>
+<li>checkpoint-aware resume (skip completed steps)</li>
+<li>partial execution with <code>--start-from</code> and <code>--stop-at</code></li>
+<li>explicit subset execution with <code>--only-steps</code> (no automatic dependency completion outside the listed subset)</li>
+</ul>
+<p>These capabilities make iterative analysis and parameter tuning practical on real datasets.</p>
+<h2 id="practical-interpretation">Practical interpretation<a class="headerlink" href="#practical-interpretation" title="Permanent link">&para;</a></h2>
+<p>When reading results, think in three layers:</p>
+<ol>
+<li><strong>Evidence layer</strong>: pileup + UMI + genotype calls</li>
+<li><strong>Feature layer</strong>: spatial/read/mappability/RNA features</li>
+<li><strong>Integration layer</strong>: merged features for final candidate prioritization</li>
+</ol>
+<p>This helps diagnose whether a candidate variant is supported by strong multi-modal evidence or likely a technical artifact.</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/douymLab/SpaceTracer" class="fa fa-code-fork" style="color: #fcfcfc"> SpaceTracer</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascripts/copy-code.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
