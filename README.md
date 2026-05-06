@@ -21,7 +21,7 @@ Includes installation, resources, configuration, quick start, outputs, and step-
 
 ## Quick Start
 
-SpaceTracer requires Python `3.9`, `samtools`, `bedtools`, and `vcftools`.
+SpaceTracer requires Python `3.9`, `samtools`, `bedtools`, and `bcftools`.
 
 ### 1) Install SpaceTracer
 
@@ -72,7 +72,12 @@ For complete parameter descriptions and resource guidance, see:
 - Resources: [Resources](https://douymLab.github.io/SpaceTracer/resources/)
 - Quick start: [Quick Start](https://douymLab.github.io/SpaceTracer/quickstart/)
 
-You can also download the packaged resource files (for mm10 and hg38) and the `demo_input` archive to quickly get started with SpaceTracer from [zendo].
+You can also download packaged resources (mm10/hg38) and `demo_input` from Zenodo:
+
+```bash
+wget -O resources.tar "https://zenodo.org/records/19896967/files/resources.tar?download=1"
+wget -O demo_input.tar "https://zenodo.org/records/19896967/files/demo_input.tar?download=1"
+```
 
 ### 5) Main outputs
 
@@ -80,8 +85,8 @@ Common downstream outputs:
 
 - `output_dir/all_feature.txt`
 - `output_dir/all_feature.parquet`
-- `output_dir/mutation_prediction/Sample_total_pred_truesites.vcf`
-- `output_dir/mutation_prediction/Sample_total_pred_truesites_PASS.vcf`
+- `output_dir/mutation_prediction/results/Sample_total_pred_truesites.vcf`
+- `output_dir/mutation_prediction/results/Sample_total_pred_truesites_PASS.vcf`
 
 ### Optional: advanced step-by-step mode
 

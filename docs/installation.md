@@ -1,6 +1,6 @@
 ## Installation
 
-SpaceTracer requires **Python 3.9.0**, `samtools`, `bedtools`, and `vcftools`.
+SpaceTracer requires **Python 3.9**, `samtools`, `bedtools` and `bcftools`.
 
 ### Clone the repository
 
@@ -33,6 +33,13 @@ conda activate SpaceTracer
 ```
 
 This step may take some time with Conda on Linux, while mamba is usually much faster.
+
+Install SpaceTracer into the activated environment (this provides the `spacetracer` command):
+
+```bash
+pip install .
+spacetracer --help
+```
 
 !!! note
     Conda must be installed before running these commands.
