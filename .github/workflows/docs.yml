@@ -27,26 +27,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.11"
 
-      - name: Cache MkDocs dependencies
-        run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mkdocs pymdown-extensions
 
-      - name: Configure cache
-        uses: actions/cache@v4
-        with:
-          key: mkdocs-${{ env.cache_id }}
-          path: ~/.cache
-          restore-keys: |
-            mkdocs-
-
-      - name: Install docs dependencies
-        run: pip install mkdocs-material
-
-      - name: Build docs site
+      - name: Build site
         run: mkdocs build --strict
 
-      - name: Upload pages artifact
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
