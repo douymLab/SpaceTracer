@@ -49,5 +49,5 @@ Common pretrained model names shipped in `SpaceTracer_new_github/models`:
 
 ## Outputs
 
-- `raw_pred_vcf`: `<step_dir>/Sample_total_pred_truesites.vcf`
-- `final_vcf`: `<step_dir>/Sample_total_pred_truesites_PASS.vcf`
+- `raw_pred_vcf`: `<step_dir>/results/Sample_total_pred_truesites.vcf`
+- `final_vcf`: `<step_dir>/results/Sample_total_pred_truesites_PASS.vcf`

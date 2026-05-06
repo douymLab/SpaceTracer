@@ -6,6 +6,13 @@ This page gives the fastest path to run SpaceTracer on your data.
 
 Complete [Installation](installation.md) first.
 
+Make sure you have installed the package into your environment (for CLI usage):
+
+```bash
+pip install .
+spacetracer --help
+```
+
 ## 2) Prepare inputs and references
 
 At minimum you need:
@@ -71,5 +78,5 @@ Common output files from downstream feature and prediction stages include:
 
 - `output_dir/all_feature.txt`
 - `output_dir/all_feature.parquet`
-- `output_dir/mutation_prediction/Sample_total_pred_truesites.vcf`
-- `output_dir/mutation_prediction/Sample_total_pred_truesites_PASS.vcf`
+- `output_dir/mutation_prediction/results/Sample_total_pred_truesites.vcf`
+- `output_dir/mutation_prediction/results/Sample_total_pred_truesites_PASS.vcf`

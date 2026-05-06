@@ -12,6 +12,18 @@ This page lists reference resources commonly used with SpaceTracer.
   - `mm10_resources.tar.zst` (mouse, mm10 / GRCm38)
   - `hg38_resources.tar.zst` (human, hg38 / GRCh38)
 
+Download from Zenodo with `wget` (append `?download=1` so the server serves the file directly):
+
+```bash
+# Full reference package (~7 GB) — pick a working directory first
+wget -O resources.tar "https://zenodo.org/records/19896967/files/resources.tar?download=1"
+
+# Optional: small demo inputs from the same record
+wget -O demo_input.tar "https://zenodo.org/records/19896967/files/demo_input.tar?download=1"
+```
+
+`curl -L -o resources.tar "https://zenodo.org/records/19896967/files/resources.tar?download=1"` works the same way if you prefer `curl`.
+
 Extract references:
 
 ```bash
