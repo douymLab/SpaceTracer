@@ -2,9 +2,13 @@
 
 SpaceTracer is an open-source algorithm capable of accurately detecting mosaic SNVs, including both nuclear SNVs and mitochondria SNVs, directly from spatial transcriptomics data. 
 
+> **Active development:** We are actively maintaining and extending SpaceTracer. New releases and documentation updates are posted in [Release Notes](#release-notes) and on [GitHub Releases](https://github.com/douymLab/SpaceTracer/releases).
+
 ![flowchart](./figures/flowchart.png)
 
 ## Release Notes
+
+*SpaceTracer is actively maintained. Check the Release Notes below and GitHub Releases for the latest updates.*
 
 - 2026/04/30: Version 2.0.0 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.0.0))  
 This release introduces one-command workflow execution, integrates lysis error calculation into the main pipeline, and significantly improves running speed.
