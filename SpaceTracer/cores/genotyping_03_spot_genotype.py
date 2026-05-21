@@ -1,6 +1,8 @@
 import math
 from functools import lru_cache
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -15,12 +17,13 @@ def rename_df(df):
     return df
 
 class SpotGenoCalculator:
-    def __init__(self, bins, epsQ, thr_dp, pop_vaf, cell_num):
+    def __init__(self, bins, epsQ, thr_dp, pop_vaf, cell_num, max_workers=1):
         self.bins = bins
         self.epsQ = epsQ
         self.thr_dp = thr_dp
         self.pop_vaf = pop_vaf
         self.cell_num = cell_num
+        self.max_workers = max_workers
 
     def run_from_df(self, spot_count_df, ind_geno_df, cluster_df, cluster_vaf_df, output_file):
         raw_spot_count_df = spot_count_df.copy()
@@ -75,21 +78,27 @@ class SpotGenoCalculator:
 
         tuple_cols = list(mosaic_df_no_cell.columns)
         col_idx = {c: i for i, c in enumerate(tuple_cols)}
-        out_rows = []
+        row_records = list(mosaic_df_no_cell.itertuples(index=False, name=None))
+        payloads = list(zip(row_records, cell_nums))
+
+        worker_fn = partial(
+            _spot_genotype_from_payload,
+            col_idx=col_idx,
+            epsQ=self.epsQ,
+            thr_dp=self.thr_dp,
+            pop_vaf=self.pop_vaf
+        )
+        if self.max_workers > 1 and len(payloads) > 1:
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                all_rows = list(executor.map(worker_fn, payloads))
+        else:
+            all_rows = [worker_fn(payload) for payload in payloads]
+
+        out_rows = [spot_geno_info for spot_geno_info in all_rows if spot_geno_info[10] != "NA"]
         with open(output_file, 'w') as f:
             f.write(out_colname + "\n")
-            for i, row in enumerate(mosaic_df_no_cell.itertuples(index=False, name=None)):
-                spot_geno_info = spot_genotype_fast(
-                    row=row,
-                    col_idx=col_idx,
-                    cell_num=cell_nums[i],
-                    epsQ=self.epsQ,
-                    thr_dp=self.thr_dp,
-                    pop_vaf=self.pop_vaf
-                )
-                if spot_geno_info[10] != "NA":
-                    f.write("\t".join(spot_geno_info) + "\n")
-                    out_rows.append(spot_geno_info)
+            for spot_geno_info in out_rows:
+                f.write("\t".join(spot_geno_info) + "\n")
 
         # Build parquet directly to avoid re-reading large TSV.
         out_cols = [
@@ -118,15 +127,14 @@ class SpotGenoCalculator:
 
 
 def bin_df(df, bins):
-    def round_to_nearest_bin(x):
-        return int(np.ceil(x / bins) * bins)
-
     df = df.copy()
     df[['x', 'y']] = df['spot_barcode'].str.split('_', expand=True)
-    df['x'] = df['x'].astype(int)
-    df['y'] = df['y'].astype(int)
-    df['new_x'] = df['x'].apply(round_to_nearest_bin).astype(str)
-    df['new_y'] = df['y'].apply(round_to_nearest_bin).astype(str)
+    df['x'] = df['x'].astype(np.int64)
+    df['y'] = df['y'].astype(np.int64)
+    df['new_x'] = ((df['x'] + bins - 1) // bins) * bins
+    df['new_y'] = ((df['y'] + bins - 1) // bins) * bins
+    df['new_x'] = df['new_x'].astype(str)
+    df['new_y'] = df['new_y'].astype(str)
     df['spot_barcode'] = df['new_x'] + "_" + df['new_y']
     df = df.drop(columns=['x', 'y', 'new_x', 'new_y'])
     return df
@@ -457,3 +465,15 @@ def spot_genotype_fast(row, col_idx, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=
         str(l_norm[0]),
         str(l_norm[1]),
     ] + [str(i) for i in spot_geno]
+
+
+def _spot_genotype_from_payload(payload, col_idx, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
+    row, cell_num = payload
+    return spot_genotype_fast(
+        row=row,
+        col_idx=col_idx,
+        cell_num=cell_num,
+        epsQ=epsQ,
+        thr_dp=thr_dp,
+        pop_vaf=pop_vaf
+    )

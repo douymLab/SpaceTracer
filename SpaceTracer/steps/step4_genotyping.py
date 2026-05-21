@@ -104,6 +104,8 @@ class GenotypingStep(BaseStep):
         filter_oneallele: bool,
         cell_num,
         bins,
+        ind_geno_workers: int,
+        spot_geno_workers: int,
         context: Dict,
     ) -> Dict[str, str]:
         chunk = row["chunk"]
@@ -153,7 +155,8 @@ class GenotypingStep(BaseStep):
             mu=mu,
             thr_dp=thr_dp,
             pop_vaf=pop_vaf,
-            filter_oneallele=filter_oneallele
+            filter_oneallele=filter_oneallele,
+            max_workers=ind_geno_workers
         )
 
         has_data = not geno_filter_df.empty
@@ -171,7 +174,8 @@ class GenotypingStep(BaseStep):
                 epsQ,
                 thr_dp,
                 pop_vaf,
-                cell_num
+                cell_num,
+                max_workers=spot_geno_workers
             ).run_from_df(
                 spot_count_df=spot_df,
                 ind_geno_df=geno_filter_df,
@@ -225,8 +229,22 @@ class GenotypingStep(BaseStep):
 
         cell_num = self.config.get("cell_num")
         bins = self.config.get("bin_size")
-        max_workers = self.config.get("runtime", {}).get("max_parallel", self.threads)
-        parallel_backend = self.config.get("runtime", {}).get("parallel_backend", "thread")
+        runtime_cfg = self.config.get("runtime", {})
+        max_workers = runtime_cfg.get("max_parallel", self.threads)
+        parallel_backend = runtime_cfg.get("parallel_backend", "thread")
+
+        # Unified worker control for genotyping internals.
+        # Backward-compatible behavior:
+        # 1) explicit per-stage workers override
+        # 2) shared geno_workers applies to both stages
+        # 3) fallback to 1
+        shared_geno_workers = int(runtime_cfg.get("geno_workers", 1))
+        ind_geno_workers = int(runtime_cfg.get("ind_geno_workers", shared_geno_workers))
+        if ind_geno_workers < 1:
+            ind_geno_workers = 1
+        spot_geno_workers = int(runtime_cfg.get("spot_geno_workers", shared_geno_workers))
+        if spot_geno_workers < 1:
+            spot_geno_workers = 1
 
         worker = partial(
             self._run_one_chunk,
@@ -241,6 +259,8 @@ class GenotypingStep(BaseStep):
             filter_oneallele=filter_oneallele,
             cell_num=cell_num,
             bins=bins,
+            ind_geno_workers=ind_geno_workers,
+            spot_geno_workers=spot_geno_workers,
             context=context,
         )
 
