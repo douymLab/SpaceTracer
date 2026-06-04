@@ -5,7 +5,7 @@ import logging
 import sys
 from typing import Optional
 from pathlib import Path
-from colorama import init, Fore, Style
+from colorama import Style
 
 COLORS = {}
 

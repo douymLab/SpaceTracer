@@ -19,6 +19,7 @@ STEP_CLASS_PATHS: Dict[str, str] = {
     "phasing": "SpaceTracer.steps.step5_phasing:PhasingCandidateStep",
     "merge_feature": "SpaceTracer.steps.step6_merge_all_features:MergeFeatureStep",
     "mutation_prediction": "SpaceTracer.steps.step7_mutation_prediction:MutationPredictionStep",
+    "phylogeny": "SpaceTracer.steps.step8_phylosolid:PhylogenyBuildStep"
 }
 
 def _load_symbol(path: str):

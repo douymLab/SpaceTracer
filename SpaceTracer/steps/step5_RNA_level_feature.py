@@ -1,5 +1,6 @@
 from collections import Counter
 import os
+import shutil
 import pandas as pd
 import pyarrow.parquet as pq
 import gc
@@ -8,7 +9,7 @@ from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.cores.RNA_features_00_from_fasta import add_features_from_fasta
 from SpaceTracer.cores.RNA_features_01_ASE import get_ase_germline_sites, intersect_somatic_with_ase
 from SpaceTracer.cores.RNA_features_02_hFDR import add_hFDR
-from SpaceTracer.cores.RNA_features_03_imprinted_editing_PON import add_col_from_bed, add_col_from_mutant
+from SpaceTracer.cores.RNA_features_03_imprinted_editing_PON import add_col_from_bed, add_col_from_mutant, add_col_from_mutant_from_df
 from SpaceTracer.utils.get_MutationType import get_mutation_type, reorder_mutation_df
 from SpaceTracer.utils.logger import get_logger
 from SpaceTracer.utils.utils import load_manifest_tsv
@@ -61,8 +62,46 @@ def merge_parquet_files_from_list(parquet_files, output_file, compression="snapp
     return output_file
 
 
+# def merge_table_files_from_list(file_list, output_file, sep="\t"):
+#     file_list = [f for f in file_list if f and os.path.exists(f) and os.path.getsize(f) > 0]
+
+#     out_dir = os.path.dirname(output_file)
+#     if out_dir:
+#         os.makedirs(out_dir, exist_ok=True)
+
+#     if not file_list:
+#         raise ValueError(f"No valid table files to merge for {output_file}")
+
+#     wrote_any = False
+#     header_written = False
+
+#     for f in file_list:
+#         df = pd.read_csv(f, sep=sep)
+#         if df is None or df.empty:
+#             del df
+#             continue
+
+#         mode = "w" if not wrote_any else "a"
+#         df.to_csv(output_file, sep=sep, index=False, mode=mode, header=not header_written)
+
+#         wrote_any = True
+#         header_written = True
+
+#         del df
+#         gc.collect()
+
+#     if not wrote_any:
+#         pd.DataFrame().to_csv(output_file, sep=sep, index=False)
+
+#     return output_file
+
+
+
 def merge_table_files_from_list(file_list, output_file, sep="\t"):
-    file_list = [f for f in file_list if f and os.path.exists(f) and os.path.getsize(f) > 0]
+    file_list = [
+        f for f in file_list
+        if f and os.path.exists(f) and os.path.getsize(f) > 0
+    ]
 
     out_dir = os.path.dirname(output_file)
     if out_dir:
@@ -71,26 +110,29 @@ def merge_table_files_from_list(file_list, output_file, sep="\t"):
     if not file_list:
         raise ValueError(f"No valid table files to merge for {output_file}")
 
+    expected_header = None
     wrote_any = False
-    header_written = False
 
-    for f in file_list:
-        df = pd.read_csv(f, sep=sep)
-        if df is None or df.empty:
-            del df
-            continue
+    with open(output_file, "w") as fout:
+        for f in file_list:
+            with open(f, "r") as fin:
+                header = fin.readline()
+                if not header:
+                    continue
 
-        mode = "w" if not wrote_any else "a"
-        df.to_csv(output_file, sep=sep, index=False, mode=mode, header=not header_written)
+                if expected_header is None:
+                    expected_header = header
+                    fout.write(header)
+                    wrote_any = True
+                else:
+                    if header != expected_header:
+                        raise ValueError(f"Header mismatch in file: {f}")
 
-        wrote_any = True
-        header_written = True
-
-        del df
-        gc.collect()
+                shutil.copyfileobj(fin, fout, length=1024 * 1024)
 
     if not wrote_any:
-        pd.DataFrame().to_csv(output_file, sep=sep, index=False)
+        with open(output_file, "w") as fout:
+            fout.write("")
 
     return output_file
 
@@ -99,6 +141,63 @@ def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
     df["pos"] = df["pos"].astype(int)
 
     counts = df["consensus_read_count"].str.split(",", expand=True).astype(int)
+    counts.columns = ["A_count", "T_count", "C_count", "G_count"]
+
+    priors = df["prior_ATCG"].str.split(",", expand=True).astype(float)
+    priors.columns = ["A_prior", "T_prior", "C_prior", "G_prior"]
+
+    df = pd.concat([df, counts, priors], axis=1, copy=False)
+
+    counts_np = counts.to_numpy()
+    priors_np = priors.to_numpy()
+
+    df["count"] = counts.sum(axis=1)
+
+    def get_max_other_count(row):
+        ref = row['germline'] 
+        alt = row['mutant']
+        
+        other_bases = [base for base in ['A', 'T', 'C', 'G'] 
+                    if base not in ref+alt]
+        
+        other_counts = [row[f'{base}_count'] for base in other_bases]
+        
+        return max(other_counts) if other_counts else 0
+
+    df['alt2_count'] = df.apply(get_max_other_count, axis=1)
+    
+    base_to_idx = {'A': 0, 'T': 1, 'C': 2, 'G': 3}
+    alt_idx = df["mutant"].map(base_to_idx).to_numpy()
+    row_idx = range(len(df))
+    df["alt_count"] = counts_np[row_idx, alt_idx]
+    df["alt_prior"] = priors_np[row_idx, alt_idx]
+
+    single_mask = ~df['germline'].str.contains(',')
+    
+    df['ref_count'] = df.apply(
+        lambda r: sum(r[f"{b}_count"] for b in r['germline'].split(',')), axis=1
+    )
+    # if germline has 1 allele
+    ref_idx = df.loc[single_mask, "germline"].map(base_to_idx).to_numpy()
+    df.loc[single_mask, "ref_count"] = counts_np[df.index[single_mask], ref_idx]
+
+    
+    # if germline has 2 alleles
+    df['ref_prior'] = df.apply(
+        lambda r: ','.join(str(r[f"{b}_prior"]) for b in r['germline'].split(',')), axis=1
+    )
+    
+    del counts
+    del priors
+    del counts_np
+    del priors_np
+    return df
+
+
+def _prepare_germline_df_for_feature(df: pd.DataFrame) -> pd.DataFrame:
+    df["pos"] = df["pos"].astype(int)
+
+    counts = df["germ_count"].str.split(",", expand=True).astype(int)
     counts.columns = ["A_count", "T_count", "C_count", "G_count"]
 
     priors = df["prior_ATCG"].str.split(",", expand=True).astype(float)
@@ -191,17 +290,17 @@ class RNAFeatureStep(BaseStep):
             raise ValueError(f"No ind_geno_filter_file found in manifest: {genotype_results}")
 
         table_files_raw = collect_files_from_manifest(genotype_results, "ind_geno_file")
-        merge_table_files_from_list(
-            table_files_raw,
-            outputs["merged_ind_geno_file"],
-            sep="\t"
-        )
-        
-        return merge_table_files_from_list(
+        ind_geno_file=merge_table_files_from_list(
+                            table_files_raw,
+                            outputs["merged_ind_geno_file"],
+                            sep="\t"
+                        )
+        ind_geno_filter_file=merge_table_files_from_list(
             table_files,
             outputs["merged_ind_geno_filter_file"],
             sep="\t"
         )
+        return ind_geno_file,ind_geno_filter_file
 
     def _resolve_germline_file(self, inputs, outputs):
         genotype_results = inputs.get("genotype_results", "")
@@ -293,7 +392,7 @@ class RNAFeatureStep(BaseStep):
         if not error_count_results or not os.path.exists(error_count_results):
             raise FileNotFoundError(f"error_count_results not found: {error_count_results}")
 
-        ind_geno_filter_file = self._resolve_ind_geno_filter_file(inputs, outputs)
+        ind_geno_file,ind_geno_filter_file = self._resolve_ind_geno_filter_file(inputs, outputs)
         germline_file = self._resolve_germline_file(inputs, outputs)
         error_count_file = self._resolve_error_count_file(inputs, outputs)
 
@@ -429,10 +528,31 @@ class RNAFeatureStep(BaseStep):
         else:
             result_df["hFDR"] = "unknown"
 
+        if PON_file and os.path.exists(PON_file):
+            PON_df = pd.read_csv(PON_file, sep="\t", header=None)
+
+            if len(PON_df.columns) >= 5:
+                PON_df = PON_df.iloc[:, :5]
+                PON_df.columns = ['chrom', 'pos', 'ref', 'alt', 'sample']
+                PON_df = PON_df[PON_df["sample"] != self.sample]
+                PON_df = PON_df[['chrom', 'pos', 'ref', 'alt']]
+
+            elif len(PON_df.columns) == 4:
+                PON_df.columns = ['chrom', 'pos', 'ref', 'alt']
+
+            else:
+                raise ValueError(
+                    f"PON file format error: expected at least 4 columns, got {len(PON_df.columns)}"
+                )
+        else:
+            PON_df = pd.DataFrame()
+
+        result_df["PON"] = add_col_from_mutant_from_df(df, PON_df)
+
+
         # others (if file is '', will return unknown)
         result_df["imprinted"] = add_col_from_bed(df, imprinted_bed)
         result_df["editing_database"] = add_col_from_bed(df, editing_bed)
-        result_df["PON"] = add_col_from_mutant(df, PON_file)
 
         del df
         gc.collect()

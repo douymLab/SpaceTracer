@@ -7,7 +7,7 @@ channels:
 dependencies:
   # ========== Python ==========
   - python=3.9.23
-  - pip=25.2
+  - pip
   
   # ========== Pytorch ==========
   - pytorch=1.9.1
@@ -51,7 +51,8 @@ dependencies:
   - imbalanced-learn=0.12.4
   - wordcloud=1.9.4
   - hyperopt=0.2.7
-
+  - graphviz
+  
   # ========== binoformatics ==========
   - pysam=0.23.3
   - samtools=1.23

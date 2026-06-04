@@ -251,10 +251,12 @@ def _parallel_core(
     debug_children_every_print: bool = False,
     max_in_flight: Optional[int] = None,
     memory_limit_bytes=None,
-    memory_soft_ratio=0.85,
+    memory_soft_ratio=0.9,
     memory_check_interval=0.5,
     wait_on_memory_pressure=True,
 ) -> Generator[Tuple[int, Any], None, None]:
+    if not max_in_flight:
+        max_in_flight=max_workers
 
     items = list(items)
     if not items:
@@ -383,10 +385,15 @@ def _parallel_core(
         )
         sys.stderr.flush()
 
-        if debug_children_every_print and snap["top_children"]:
+        if debug_children_every_print and snap["top_children"]: 
             top_rss = _format_top_children(snap["top_children"], use_uss=False)
             sys.stderr.write(f"[{label}] top_children_rss: {top_rss}\n")
             sys.stderr.flush()
+            has_any_uss = any(row["uss_mb"] is not None for row in snap["top_children"])
+            if has_any_uss: 
+                top_uss = _format_top_children(snap["top_children"], use_uss=True)
+                sys.stderr.write(f"[{label}] top_children_uss: {top_uss}\n")
+                sys.stderr.flush()
 
         last_print_pct = current_pct
 
@@ -487,7 +494,7 @@ def parallel_map(
     debug_children_every_print: bool = False,
     max_in_flight: Optional[int] = None,
     memory_limit_bytes=None,
-    memory_soft_ratio=0.85,
+    memory_soft_ratio=0.9,
     memory_check_interval=0.5,
     wait_on_memory_pressure=True,
 ) -> List[Any]:
@@ -534,7 +541,7 @@ def parallel_imap(
     debug_children_every_print: bool = False,
     max_in_flight: Optional[int] = None,
     memory_limit_bytes=None,
-    memory_soft_ratio=0.85,
+    memory_soft_ratio=0.9,
     memory_check_interval=0.5,
     wait_on_memory_pressure=True,
 ) -> Generator[Tuple[int, Any], None, None]:
@@ -557,3 +564,24 @@ def parallel_imap(
         memory_check_interval=memory_check_interval,
         wait_on_memory_pressure=wait_on_memory_pressure,
     )
+
+
+def compute_events_threshold(
+    memory_limit_bytes,
+    n_workers,
+    bytes_per_event=300,
+    events_mem_fraction=0.5,
+    min_threshold=3000000,
+    max_threshold=100000000000, # a conserved value
+):
+    if memory_limit_bytes is None or n_workers <= 0:
+        return min_threshold
+
+    per_worker_budget = memory_limit_bytes * events_mem_fraction / n_workers
+    threshold = int(per_worker_budget / bytes_per_event)
+
+    if threshold < min_threshold:
+        threshold = min_threshold
+    if threshold > max_threshold:
+        threshold = max_threshold
+    return threshold

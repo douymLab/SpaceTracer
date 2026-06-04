@@ -139,6 +139,8 @@ def load_spot_genotypes_data(file: str, prefer_parquet: bool = True) -> pd.DataF
     # Check for Parquet version
     if file_path.suffix in ['.txt', '.tsv', '.out']:
         parquet_path = file_path.with_suffix('.parquet')
+    elif file_path.suffix in ['.parquet']:
+        parquet_path=file_path
     else:
         parquet_path = file_path.with_name(file_path.stem + '.parquet')
     

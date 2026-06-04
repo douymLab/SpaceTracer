@@ -118,14 +118,18 @@ class UMICombiner_from_spot:
         df = df.copy()
         if '#chrom' in df.columns and 'chrom' not in df.columns:
             df = df.rename(columns={'#chrom': 'chrom'})
-
+        print("*********combine_bins_df_before",df)
         df = self._rebin_spots(df, bins)
         if cluster_df.empty:
             df['cluster'] = "bulk"
         else:
             df = self._merge_clusters(df, cluster_df)
 
+        print("*********combine_bins_df_after",df)
+
         result = self._aggregate(df)
+        print("*********combine_bins_df_final",result)
+
         return result
 
     # ----------------------------
@@ -233,7 +237,7 @@ class ClusterAlleleFilter:
             .astype(str)
             .agg(','.join, axis=1)
         )
-        df['alt'] = df.apply(self._check_alt, axis=1)
+        df['alt'] = self._build_alt_from_counts(df)
 
         df = df[[
             'chrom', 'pos', 'strand', 'ref', 'alt', 'cluster',
@@ -310,6 +314,24 @@ class ClusterAlleleFilter:
         alt_counts_sorted = sorted(alt_counts, key=lambda x: x[1], reverse=True)
         alt = ','.join([allele for allele, _ in alt_counts_sorted]) if len(alt_counts_sorted) > 0 else '.'
         return alt
+
+    def _build_alt_from_counts(self, df):
+        nucleotide_list = ["A", "T", "C", "G"]
+        base_indices = {"A": 0, "T": 1, "C": 2, "G": 3}
+        count_matrix = df[['A_count', 'T_count', 'C_count', 'G_count']].to_numpy(dtype=int)
+        ref_indices = df['ref'].map(base_indices).fillna(-1).to_numpy(dtype=int)
+
+        alt_list = []
+        for counts, ref_idx in zip(count_matrix, ref_indices):
+            alt_counts = [
+                (nucleotide_list[i], counts[i])
+                for i in range(4)
+                if counts[i] > 0 and i != ref_idx
+            ]
+            alt_counts_sorted = sorted(alt_counts, key=lambda x: x[1], reverse=True)
+            alt = ','.join([allele for allele, _ in alt_counts_sorted]) if len(alt_counts_sorted) > 0 else '.'
+            alt_list.append(alt)
+        return alt_list
 
 
 class UMICombiner_from_cluster:

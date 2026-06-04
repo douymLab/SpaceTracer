@@ -48,8 +48,9 @@ class PriorCalculator(BaseStep):
             query_file=self.get_inputs(context)['filter_mpileup_file']
             gnomAD_dict=gnomAD(gnomad_path).get_chrom_list_from_file()
             auto_chrom=self.genome_details['chromosomes']['autosomes']
-            
-            prior_dict=query_sites_for_prior(query_file, gnomAD_dict,auto_chrom)
+            sex_chrom=self.genome_details['chromosomes']['sex_chromosomes']
+
+            prior_dict=query_sites_for_prior(query_file, gnomAD_dict,auto_chrom+sex_chrom)
 
             out_prior_file=self.get_outputs(context)['prior_file']
             try:

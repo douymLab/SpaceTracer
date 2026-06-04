@@ -43,3 +43,16 @@ def add_col_from_mutant(df: pd.DataFrame, file:str) -> pd.Series:
         return pd.Series(is_in_pon, index=df.index) # True means in pon list
     else:
         return pd.Series("unknown", index=df.index)
+
+
+def add_col_from_mutant_from_df(df: pd.DataFrame, filter_df) -> pd.Series:
+    if not filter_df.empty:
+        filter_index = pd.MultiIndex.from_arrays(
+            [filter_df['chrom'], filter_df['pos'], filter_df['ref'], filter_df['alt']],
+            names=['chrom', 'pos', 'ref', 'alt']
+        )
+
+        is_in_pon = df.index.isin(filter_index)
+        return pd.Series(is_in_pon, index=df.index)
+    else:
+        return pd.Series("unknown", index=df.index)

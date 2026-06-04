@@ -181,6 +181,9 @@ class MergeFeatureStep(BaseStep):
         return load_single_feature_file(path, sep="\t")
 
     def _run(self, context):
+        auto_chrom=self.genome_details['chromosomes']['autosomes']
+        sex_chrom=self.genome_details['chromosomes']['sex_chromosomes']
+
         inputs = self.get_inputs(context)
         outputs = self.get_outputs(context)
 
@@ -244,14 +247,20 @@ class MergeFeatureStep(BaseStep):
         cluster_event_result=inputs.get("cluster_event_result", "")
         if cluster_event_result:
             cluster_event_df = pd.read_csv(cluster_event_result, sep="\t")
-            cluster_event_df=cluster_event_df.rename(columns={
+            cluster_event_df = cluster_event_df.rename(columns={
                 "#chr": "#chrom",
                 "germline": "ref",
                 "mutant": "alt",
             })
 
+            key = ["#chrom", "pos", "ref", "alt"]
+            if all(col in cluster_event_df.columns for col in key):
+                dup_n = cluster_event_df.duplicated(subset=key).sum()
+                if dup_n > 0:
+                    # logger.warning(f"cluster_event_df has {dup_n} duplicated rows by variant key, dropping duplicates.")
+                    cluster_event_df = cluster_event_df.drop_duplicates(subset=key, keep="first")
         else:
-            cluster_event_df=pd.DataFrame()
+            cluster_event_df = pd.DataFrame()
 
         # reformat the index for each df
         RNA_feature_df = _ensure_variant_multiindex(RNA_feature_df)
@@ -287,9 +296,10 @@ class MergeFeatureStep(BaseStep):
         ]:
             if df is None:
                 continue
-            
+                    
             if not df.empty:
                 merged_df = merged_df.join(df, how="left")
+                    
             else:
                 for col in df.columns:
                     if col not in merged_df.columns:
@@ -297,15 +307,29 @@ class MergeFeatureStep(BaseStep):
                 
         if not cluster_event_df.empty:
             merged_df = merged_df.join(cluster_event_df, how="left")
-            merged_df["cluster_event"] = merged_df["cluster_event"].fillna(False).astype(bool)
+            merged_df["cluster_event"] = (
+                merged_df["cluster_event"]
+                .astype("boolean")
+                .fillna(False)
+                .astype(bool)
+            )
         else:
-            merged_df["cluster_event"]=False
+            merged_df["cluster_event"] = False
+
 
         if "mappabilityScore" in merged_df.columns:
             merged_df["mappabilityScore"] = merged_df["mappabilityScore"].apply(list2min)
 
+        if "falt" in merged_df.columns:
+            merged_df["falt"] = merged_df["falt"].astype(float)
+
         thr_altcount = 3
         thr_popAF = 1e-4
+        min_vaf = 0.01
+        max_vaf = 0.5
+        min_spot_num = 30
+
+        filtrations_dict = self.get_step_config()
 
         CONDITION_GROUPS = {
             "ASE": ["ASE"],
@@ -321,11 +345,15 @@ class MergeFeatureStep(BaseStep):
             "NEAR_READ_END": ["NEAR_READ_END1", "NEAR_READ_END2"],
             "LOW_MAPQ": ["LOW_MAPQ"],
             "LOW_BASEQ": ["LOW_BASEQ"],
-            "MAPPABILITY": ["MAPPABILITY"],
+            # "MAPPABILITY": ["MAPPABILITY"],
             "INDEL_PROPORTION": ["INDEL_PROPORTION"],
             "ALT_ALLELE_COUNT": ["ALT_ALLELE_COUNT"],
             "POPULATION_AF": ["POPULATION_AF"],
-            "CLUSTER_EVENTS": ["CLUSTER_EVENTS"]
+            "CLUSTER_EVENTS": ["CLUSTER_EVENTS"],
+            "CONTIG_OR_MT": ["CONTIG_OR_MT"],
+            "LOW_VAF": ["LOW_VAF"],
+            "HIGH_VAF": ["HIGH_VAF"],
+            "LOW_SPOT_NUM": ["LOW_SPOT_NUM"]
         }
 
         ALL_FILTER_CONDITIONS = {
@@ -360,20 +388,22 @@ class MergeFeatureStep(BaseStep):
             "homopolymer": lambda df: df["homopolymer"].notna(),
             "PON": lambda df: df["PON"] == True,
             "RNA_editing": lambda df: df["RNA_editing"] == True,
-            "MAPPABILITY": lambda df: df["mappabilityScore"] != 0,
-            "INDEL_PROPORTION": lambda df: df["indel_proportion_for_site"] < 0.05,
-            "ALT_ALLELE_COUNT": lambda df: df["consensus_alt_allele_count"] >= thr_altcount,
-            "POPULATION_AF": lambda df: df["falt"] < thr_popAF,
-            "CLUSTER_EVENTS": lambda df: df["cluster_event"] == True
+            # "MAPPABILITY": lambda df: df["mappabilityScore"] == 0,
+            "INDEL_PROPORTION": lambda df: df["indel_proportion_for_site"] > 0.05,
+            "ALT_ALLELE_COUNT": lambda df: df["consensus_alt_allele_count"] < thr_altcount,
+            "POPULATION_AF": lambda df: df["falt"] > thr_popAF,
+            "CLUSTER_EVENTS": lambda df: df["cluster_event"] == True,
+            "CONTIG_OR_MT": lambda df: pd.Series(~df.index.get_level_values("#chrom").isin(auto_chrom + sex_chrom),index=df.index),
+            "LOW_VAF": lambda df: df["AFind"] < min_vaf,
+            "HIGH_VAF": lambda df: df["AFind"] > max_vaf,
+            "LOW_SPOT_NUM": lambda df: df["num_spots"] < min_spot_num,
         }
 
-        filtrations_dict = self.get_step_config()
+        enabled_groups = [k for k, v in filtrations_dict.items() if v in [True,'true','TRUE','True',1]]
 
-        if filtrations_dict.keys():
-            enabled_groups = list(filtrations_dict.keys())
-        else:
+        if not enabled_groups:
             enabled_groups = list(CONDITION_GROUPS.keys())
-
+        
         merged_df["Filtration"] = compute_group_filtration(
             merged_df,
             CONDITION_GROUPS,
@@ -403,7 +433,6 @@ class MergeFeatureStep(BaseStep):
 
 def compute_group_filtration(df, condition_groups, all_filter_conditions, enabled_groups):
     group_masks = {}
-
     for group_key in enabled_groups:
         if group_key not in condition_groups:
             continue

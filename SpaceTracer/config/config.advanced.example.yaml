@@ -1,0 +1,44 @@
+genome: hg38
+sequence_type: visium
+spaceranger_dir: /path/to/sample/outs
+output_dir: /path/to/output
+sample: BCC-1
+resource_dir: /path/to/resource_dir
+
+# Optional advanced settings
+model_name: spatial_preserved_model
+model_dir: /path/to/SpaceTracer/models
+cluster_file: /path/to/cluster_info/result/sample_cluster.txt
+cluster_method: SpaGCN # choices: default, SpaGCN, 
+cell_number: /path/to/cellNum.txt # both int and path are supported
+cell_info: /path/to/cell_info.txt # work for read feature extraction, colum1 is barcode, colum2 is cell
+
+run:
+  threads: 60
+  memory: "400G"
+  max_parallel: 100
+  keep_intermediates: true
+  skip_validation: false
+
+logging:
+  level: "INFO"
+  log_file: "pipeline.log"
+
+# If spaceranger_dir is not available, use input_details instead
+input_details:
+  bam_file: /path/to/possorted_genome_bam.bam
+  tissue_position: /path/to/tissue_positions_list.csv 
+  barcode_key: CB
+  barcode_mapping: /path/to/barcode_mappings.parquet
+
+# If resource_dir is not available, use resource_details instead
+resource_details:
+  genome_fasta: /path/to/genome.fa
+  gnomad_path: /path/to/gnomad_af
+  mappability_path: /path/to/k24.umap.bedgraph
+  gene_bed: /path/to/gene_region.bed
+  dbsnp_vcf_file: /path/to/Homo_sapiens_assembly38.dbsnp138.vcf.gz
+  imprinted_bed: /path/to/imprinted_genes.region.bed
+  editing_bed: /path/to/known_editing.bed
+  PON_file: /path/to/PON.txt
+  reference_error_profile: /path/to/Artifacts.Sigprofile.txt
