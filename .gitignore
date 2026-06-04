@@ -182,4 +182,4 @@ SpaceTracer.egg-info/
 *.bai
 
 SpaceTracer/installer
-SpaceTracer/third_party/phylosolid/*.R
+SpaceTracer/third_party/phylosolid/6*.R
