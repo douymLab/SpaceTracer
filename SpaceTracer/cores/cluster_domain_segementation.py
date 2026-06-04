@@ -16,9 +16,8 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import math
-import SpaGCN as spg
 from scipy.sparse import issparse
-import random, torch
+import random
 import warnings
 from sklearn.cluster import DBSCAN
 
@@ -35,11 +34,35 @@ from scanpy import read_10x_h5
 
 from sklearn import metrics
 import multiprocessing as mp
-# pip install POT
-from GraphST import GraphST
-from GraphST.utils import clustering
 import subprocess
 import shutil
+
+
+def _require_spagcn():
+    """Import SpaGCN and PyTorch only when a SpaGCN clustering path is used."""
+    try:
+        import torch
+        import SpaGCN as spg
+    except ImportError as exc:
+        raise ImportError(
+            "SpaGCN clustering requires PyTorch and SpaGCN. "
+            "Install them before setting the clustering method to SpaGCN."
+        ) from exc
+    return torch, spg
+
+
+def _require_graphst():
+    """Import GraphST and PyTorch only when a GraphST clustering path is used."""
+    try:
+        import torch
+        from GraphST import GraphST
+        from GraphST.utils import clustering
+    except ImportError as exc:
+        raise ImportError(
+            "GraphST clustering requires PyTorch and GraphST. "
+            "Install them before setting the clustering method to GraphST."
+        ) from exc
+    return torch, GraphST, clustering
 
 def cluster_spot_SpaGCN(data_dir, h5_file_name, spatial_file_name, image_file_name, output_dir, sample_name, n_clusters, \
                         plot=False, init_cluster="louvain", s=1, b=49, histology=True, p=0.5, seed=100, tol=5e-3, lr=0.05, max_epochs_run=200, \
@@ -77,6 +100,8 @@ def cluster_spot_SpaGCN(data_dir, h5_file_name, spatial_file_name, image_file_na
         out_cluster_file - the output cluster file if provided
         out_cell_num_file - the output cell number file if provided
     """
+
+    torch, spg = _require_spagcn()
 
     # Create plot folder
     res_dir = os.path.join(output_dir, "result")
@@ -258,6 +283,8 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
         out_cluster_file - the output cluster file if provided
         out_cell_num_file - the output cell number file if provided
     """
+
+    torch, GraphST, clustering = _require_graphst()
 
     # Create plot folder
     res_dir = os.path.join(output_dir, "result")
@@ -475,6 +502,8 @@ def cluster2domain(output_dir, sample_name, plot=False, distance_threshold=2, mi
         keep - whether keep the small domain if their result is still itself
     """
 
+    _, spg = _require_spagcn()
+
     # read and format the result data
     res_dir = os.path.join(output_dir, "result")
     results_file = os.path.join(res_dir, sample_name+"_results.h5ad")
@@ -614,6 +643,8 @@ def tissue_separate(data_dir, h5_file_name, spatial_file_name, output_dir, sampl
         shape - the shape of the cluster location  (default = "hexagon")
         plot - the Boolean variable of whether plotting the prediction and refined prediction (default = False)
     """
+
+    _, spg = _require_spagcn()
 
     # check plot folder
     res_dir = os.path.join(output_dir, "result")
