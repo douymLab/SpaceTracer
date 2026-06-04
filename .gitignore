@@ -180,4 +180,6 @@ SpaceTracer.egg-info/
 *.log
 *.bam
 *.bai
-third_party/phylosolid/*.R
+
+SpaceTracer/installer
+SpaceTracer/third_party/phylosolid/*.R
