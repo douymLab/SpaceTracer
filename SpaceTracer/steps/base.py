@@ -41,6 +41,11 @@ class BaseStep(ABC):
         
         # get the basic context from contig
         self.config = context['config']
+        self.sample = context['config']['sample']
+
+        self.seq_type = self.config.get("sequence_type")
+        self.bin_size = self.config.get("bin_size")
+
         self.work_dir = self.config.get('output_dir')
         self.threads=int(self.config.get('run').get('threads'))
         self.memory=self.config.get('run').get('memory')

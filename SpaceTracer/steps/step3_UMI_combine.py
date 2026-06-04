@@ -17,13 +17,13 @@ import pyarrow.parquet as pq
 
 from SpaceTracer.steps.base import BaseStep
 from SpaceTracer.utils.logger import get_logger
-from SpaceTracer.utils.parallel import parallel_map
+from SpaceTracer.utils.parallel import compute_events_threshold, parallel_map
 from SpaceTracer.utils.read_files import (
     load_manifest_files_for_chunk_tasks_only_umi_combine,
     read_bam,
     read_chunk_bytes_by_offset,
 )
-from SpaceTracer.cores.UMI_combine import process_single_region_for_umi_combine
+from SpaceTracer.cores.UMI_combine import process_single_region_for_umi_combine_auto
 from SpaceTracer.utils.utils import build_region_tasks_for_UMI_combine
 
 model_name = __name__
@@ -43,23 +43,60 @@ COLUMNS_MAIN = [
 COLUMNS_ERROR_ALLELE = ["#chrom", "pos", "ref", "alt", "strand"]
 
 # the configuration for per chunck
-normal_cfg = {
-    "task_type": "normal",
-    "thread_per_chunk": 1,   # 1 means no parallel among chunk
+small_cfg = {
+    "task_type": "small",
+    "thread_per_chunk": 1,
     "main_flush_rows": 20000,
     "err_flush_rows": 1000,
     "max_region_size": 20000,
-    "max_variants_per_region": 100,
+    "max_variants_per_region": 30,
+}
+
+medium_cfg = {
+    "task_type": "medium",
+    "thread_per_chunk": 1,
+    "main_flush_rows": 10000,
+    "err_flush_rows": 1000,
+    "max_region_size": 5000,
+    "max_variants_per_region": 10,
+}
+
+huge_cfg = {
+    "task_type": "huge",
+    "thread_per_chunk": 1,
+    "main_flush_rows": 5000,
+    "err_flush_rows": 1000,
+    "max_region_size": 1000,
+    "max_variants_per_region": 3,
 }
 
 mito_cfg = {
     "task_type": "mito",
-    "thread_per_chunk": 1,   # 1 means no parallel among chunk
+    "thread_per_chunk": 1,
     "main_flush_rows": 5000,
     "err_flush_rows": 1000,
     "max_region_size": 150,
-    "max_variants_per_region": 10,
+    "max_variants_per_region": 3,
 }
+
+def _pick_runtime_cfg_for_umi_chunk(task, small_cfg, medium_cfg, huge_cfg, mito_cfg=None):
+    chrom = task.get("chrom", "")
+    is_mito = chrom in ("chrM", "MT", "M")
+
+    max_depth = task.get("max_depth", 0) or 0
+    mean_depth = task.get("mean_depth", 0) or 0
+    cost = task.get("cost", 0) or 0
+
+    if is_mito and mito_cfg is not None:
+        return mito_cfg, "mito"
+
+    if max_depth >= 100000 or mean_depth >= 50000 or cost >= 150000:
+        return huge_cfg, "huge"
+
+    if max_depth >= 20000 or mean_depth >= 5000 or cost >= 20000:
+        return medium_cfg, "medium"
+
+    return small_cfg, "small"
 
 
 # ── Step class ────────────────────────────────────────────────────────────────
@@ -92,17 +129,37 @@ class UMICombineStep(BaseStep):
         bin_size = 1
         thread = self.threads
         max_mem = self.memory
+        tmp_root= self.step_dir
 
         outputs = self.get_outputs(context)
         spot_count_file = outputs["spot_count_file"]
         error_count_file = outputs["error_count_file"]
 
         chunk_output_dir = os.path.join(self.step_dir, "chunk_outputs")
-        final_output_dir = os.path.join(self.step_dir, "final_outputs")
+        # final_output_dir = os.path.join(self.step_dir, "final_outputs")
+        if seq_type=="visium":
+            events_mem_fraction=1
+            events_threshold=compute_events_threshold(
+                    memory_limit_bytes=max_mem,
+                    n_workers=thread,
+                    bytes_per_event = 300,
+                    events_mem_fraction = events_mem_fraction,
+            )
+        else:
+            events_mem_fraction=0.7
+            events_threshold=compute_events_threshold(
+                memory_limit_bytes=max_mem,
+                n_workers=thread,
+                bytes_per_event = 300,
+                events_mem_fraction = events_mem_fraction,
+                min_threshold=1000000,
+                max_threshold=3000000
+            )
 
         os.makedirs(chunk_output_dir, exist_ok=True)
-        os.makedirs(final_output_dir, exist_ok=True)
+        # os.makedirs(final_output_dir, exist_ok=True)
 
+        print("************events_threshold",events_threshold)
         t0 = time.time()
         spot_files, error_files = _run_umi_combine_parallel(
             manifest_path=manifest_path,
@@ -112,12 +169,16 @@ class UMICombineStep(BaseStep):
             output_dir=chunk_output_dir,
             max_workers=thread,
             max_mem=max_mem,
-            normal_cfg=normal_cfg,
+            small_cfg=small_cfg,
+            medium_cfg=medium_cfg,
+            huge_cfg=huge_cfg,
             mito_cfg=mito_cfg,
             compression="snappy",
             progress_interval=0.05,
             logger=logger,
-            max_in_flight=thread+1,
+            max_in_flight=thread,
+            tmp_root=tmp_root,
+            events_threshold=events_threshold
         )
         logger.info(f"[parallel umi_combine] {time.time() - t0:.2f}s")
 
@@ -212,6 +273,9 @@ def _umi_combine_to_parquet_buffered(
     main_flush_rows,
     err_flush_rows,
     compression,
+    events_threshold,
+    tmp_root="/tmp",
+    chunk_id=None,
 ):
     main_writer = None
     err_writer = None
@@ -222,12 +286,35 @@ def _umi_combine_to_parquet_buffered(
     try:
         bam_handle = read_bam(bam_file)
 
-        for region_info in region_tasks:
-            result = process_single_region_for_umi_combine(
-                bam_handle,
-                region_info,
-                seq_type,
-                bin_size,
+        for region_idx, region_info in enumerate(region_tasks, 1):
+            # if region_idx == 1 or region_idx % 10 == 0:
+                # log_worker_mem(
+                #         logger,
+                #         "before_region",
+                #         extra=(
+                #             f"chunk_id={chunk_id} region_idx={region_idx}/{len(region_tasks)} "
+                #             f"main_buf={len(main_buffer)} err_buf={len(err_buffer)} "
+                #             f"{obj_size_text(main_buffer, 'main_buffer')} {obj_size_text(err_buffer, 'err_buffer')}"
+                #         ),
+                # )
+            # result = process_single_region_for_umi_combine(
+            #     bam_handle,
+            #     region_info,
+            #     seq_type,
+            #     bin_size,
+            # )
+
+            result = process_single_region_for_umi_combine_auto(
+                bam_handle=bam_handle,
+                region_info=region_info,
+                seq_type=seq_type,
+                bin_size=bin_size,
+                tmp_root=tmp_root,          # 可选
+                threshold=3,
+                weigh=0.5,
+                events_threshold=events_threshold, 
+                cell_dict={},
+                debug_log=False
             )
             if result is None:
                 continue
@@ -240,6 +327,16 @@ def _umi_combine_to_parquet_buffered(
                     err_buffer.append(error_list) 
 
             if len(main_buffer) >= main_flush_rows:
+                #***************
+                # log_worker_mem(
+                #     logger,
+                #     "before_flush_main",
+                #     extra=(
+                #         f"chunk_id={chunk_id} rows={len(main_buffer)} "
+                #         f"{obj_size_text(main_buffer, 'main_buffer')}"
+                #     ),
+                # )
+
                 main_writer = _flush_rows_to_parquet(
                     rows=main_buffer,
                     columns=COLUMNS_MAIN,
@@ -247,10 +344,24 @@ def _umi_combine_to_parquet_buffered(
                     out_file=spot_count_parquet,
                     compression=compression,
                 )
-                main_buffer.clear()
-                gc.collect()
+                main_buffer = []
+                #*****************
+                # log_worker_mem(
+                #     logger,
+                #     "after_flush_main",
+                #     extra=f"chunk_id={chunk_id} rows={len(main_buffer)}",
+                # )
 
             if len(err_buffer) >= err_flush_rows:
+                #*****************
+                # log_worker_mem(
+                #     logger,
+                #     "before_flush_err",
+                #     extra=(
+                #         f"chunk_id={chunk_id} rows={len(err_buffer)} "
+                #         f"{obj_size_text(err_buffer, 'err_buffer')}"
+                #     ),
+                # )
                 err_writer = _flush_rows_to_parquet(
                     rows=err_buffer,
                     columns=COLUMNS_ERROR_ALLELE,
@@ -258,10 +369,21 @@ def _umi_combine_to_parquet_buffered(
                     out_file=error_count_parquet,
                     compression=compression,
                 )
-                err_buffer.clear()
-                gc.collect()
+                err_buffer=[]
+                #*****************
+                # log_worker_mem(
+                #     logger,
+                #     "after_flush_err",
+                #     extra=f"chunk_id={chunk_id} rows={len(err_buffer)}",
+                # )
 
         if main_buffer:
+            #*****************
+            # log_worker_mem(
+            #     logger,
+            #     "before_final_flush_main",
+            #     extra=f"chunk_id={chunk_id} rows={len(main_buffer)} {obj_size_text(main_buffer, 'main_buffer')}",
+            # )
             main_writer = _flush_rows_to_parquet(
                 rows=main_buffer,
                 columns=COLUMNS_MAIN,
@@ -272,6 +394,12 @@ def _umi_combine_to_parquet_buffered(
             main_buffer.clear()
 
         if err_buffer:
+            #***********
+            # log_worker_mem(
+            #     logger,
+            #     "before_final_flush_err",
+            #     extra=f"chunk_id={chunk_id} rows={len(err_buffer)} {obj_size_text(err_buffer, 'err_buffer')}",
+            # )
             err_writer = _flush_rows_to_parquet(
                 rows=err_buffer,
                 columns=COLUMNS_ERROR_ALLELE,
@@ -282,6 +410,7 @@ def _umi_combine_to_parquet_buffered(
             err_buffer.clear()
 
     finally:
+        # log_worker_mem(logger, "before_cleanup", extra=f"chunk_id={chunk_id}")
         try:
             if bam_handle is not None:
                 bam_handle.close()
@@ -309,6 +438,8 @@ def _run_umi_combine_one_chunk(
     main_flush_rows,
     err_flush_rows,
     compression,
+    tmp_root,
+    events_threshold
 ):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -317,12 +448,30 @@ def _run_umi_combine_one_chunk(
 
     spot_count_parquet = os.path.join(output_dir, f"{chunk_prefix}.spot.parquet")
     error_count_parquet = os.path.join(output_dir, f"{chunk_prefix}.error.parquet")
+    
+    # **********
+    # log_worker_mem( 
+    #     logger,
+    #     "chunk_start",
+    #     extra=(
+    #         f"chunk_id={chunk_id} chrom={chunk_task.get('chrom')} "
+    #         f"records={chunk_task.get('records')} span_bp={chunk_task.get('span_bp')} "
+    #         f"max_depth={chunk_task.get('max_depth')} mean_depth={chunk_task.get('mean_depth')}"
+    #     ),
+    # )
 
     region_tasks = _build_region_tasks_from_one_chunk_file_for_UMI_combine(
         chunk_task,
         max_region_size,
         max_variants_per_region,
     )
+
+    # **********
+    # log_worker_mem(
+    #     logger,
+    #     "after_build_region_tasks",
+    #     extra=f"chunk_id={chunk_id} n_region_tasks={len(region_tasks)} {obj_size_text(region_tasks, 'region_tasks')}",
+    # )
 
     if len(region_tasks) == 0:
         return {
@@ -341,11 +490,18 @@ def _run_umi_combine_one_chunk(
         main_flush_rows=main_flush_rows,
         err_flush_rows=err_flush_rows,
         compression=compression,
+        tmp_root=tmp_root,
+        events_threshold=events_threshold
     )
 
-    # 尽快释放 region_tasks
+    # ***************
+    # log_worker_mem(logger, "after_chunk_compute", extra=f"chunk_id={chunk_id}")
+
     del region_tasks
     gc.collect()
+
+    # ***************
+    # log_worker_mem(logger, "after_chunk_gc", extra=f"chunk_id={chunk_id}")
 
     return {
         "chunk_id": chunk_id,
@@ -354,7 +510,7 @@ def _run_umi_combine_one_chunk(
     }
 
 
-def _build_umi_combine_tasks(manifest_path, normal_cfg, mito_cfg):
+def _build_umi_combine_tasks(manifest_path, small_cfg,medium_cfg,huge_cfg, mito_cfg):
     tasks = load_manifest_files_for_chunk_tasks_only_umi_combine(manifest_path)
     if not tasks:
         return []
@@ -363,10 +519,18 @@ def _build_umi_combine_tasks(manifest_path, normal_cfg, mito_cfg):
     for task in tasks:
         chrom = task.get("chrom", "")
         is_mito = chrom in ("chrM", "MT", "M")
-
+        runtime_cfg, risk_type = _pick_runtime_cfg_for_umi_chunk(
+            task=task,
+            small_cfg=small_cfg,
+            medium_cfg=medium_cfg,
+            huge_cfg=huge_cfg,
+            mito_cfg=mito_cfg,
+        )
+        
         new_task = dict(task)
         new_task["is_mito"] = is_mito
-        new_task["runtime_cfg"] = mito_cfg if is_mito else normal_cfg
+        new_task["risk_type"] = risk_type
+        new_task["runtime_cfg"] = runtime_cfg
         merged.append(new_task)
 
     # sort by cost, large->small
@@ -382,7 +546,7 @@ def _build_umi_combine_tasks(manifest_path, normal_cfg, mito_cfg):
         key=lambda x: (x["cost"], x["chrom"], x["chunk_idx"])
     )
 
-    small_gap = 10
+    small_gap = 30
 
     ordered = []
     i = 0
@@ -407,7 +571,9 @@ def _run_single_umi_combine_task(
     seq_type,
     bin_size,
     output_dir,
+    events_threshold,
     compression="snappy",
+    tmp_root="/tmp",
 ):
     cfg = task["runtime_cfg"]
 
@@ -422,6 +588,8 @@ def _run_single_umi_combine_task(
         main_flush_rows=cfg["main_flush_rows"],
         err_flush_rows=cfg["err_flush_rows"],
         compression=compression,
+        tmp_root=tmp_root,
+        events_threshold=events_threshold
     )
 
 
@@ -433,16 +601,22 @@ def _run_umi_combine_parallel(
     output_dir,
     max_workers,
     max_mem,
-    normal_cfg,
+    small_cfg,
+    medium_cfg,
+    huge_cfg,
     mito_cfg,
+    events_threshold,
     compression="snappy",
     progress_interval=0.05,
     logger=None,
     max_in_flight=None,
+    tmp_root="/tmp",
 ):
     tasks = _build_umi_combine_tasks(
         manifest_path=manifest_path,
-        normal_cfg=normal_cfg,
+        small_cfg=small_cfg,
+        medium_cfg=medium_cfg,
+        huge_cfg=huge_cfg,
         mito_cfg=mito_cfg,
     )
 
@@ -466,6 +640,8 @@ def _run_umi_combine_parallel(
         bin_size=bin_size,
         output_dir=output_dir,
         compression=compression,
+        tmp_root=tmp_root,
+        events_threshold=events_threshold
     )
 
     results = parallel_map(
@@ -480,6 +656,8 @@ def _run_umi_combine_parallel(
         logger=logger,
         worker_takes_tuple=False,
         max_in_flight=max_in_flight if max_in_flight is not None else  max_workers,
+        # top_n_children=1, #************
+        # debug_children_every_print=True, #************
     )
 
     all_spot_parquets = []

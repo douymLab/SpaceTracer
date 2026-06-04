@@ -689,22 +689,24 @@ def calculate_rbc_for_paired_wilcoxon(x, y):
     if len(x) != len(y):
         raise ValueError("Input arrays must have the same length.")
     try:
-        # standardize
-        X = np.array([x, y]).T 
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)  # normalizes each column independently
-        x_scaled = X_scaled[:, 0]
-        y_scaled = X_scaled[:, 1] 
-        # Compute RBC
-        diff = x_scaled - y_scaled
+        X = np.array([x, y]).T
+        X_scaled = StandardScaler().fit_transform(X)
+        diff = X_scaled[:, 0] - X_scaled[:, 1]
         non_zero = diff != 0
-        ranks = stats.rankdata(np.abs(diff[non_zero]))
-        signed_ranks = ranks * np.sign(diff[non_zero])
+        if not np.any(non_zero):
+            return 0
+        abs_diff = np.abs(diff[non_zero])
+        signs = np.sign(diff[non_zero])
+        ranks = stats.rankdata(abs_diff)
+        signed_ranks = ranks * signs
         W_plus = signed_ranks[signed_ranks > 0].sum()
         W_minus = -signed_ranks[signed_ranks < 0].sum()
-        rbc = (W_plus - W_minus) / (W_plus + W_minus)
-        return rbc
-    except:
+        denom = W_plus + W_minus
+        if denom == 0 or not np.isfinite(denom):
+            return 0
+        rbc = (W_plus - W_minus) / denom
+        return 0 if not np.isfinite(rbc) else rbc
+    except Exception:
         return 0
 
 
@@ -751,12 +753,26 @@ def handle_per_line_for_sf(barcode_dir,output_dir,in_name,spot_geno_file,barcode
     barcode_mutinfo_file_name=os.path.join(barcode_dir,mutation_name+'.barcode.mutinfo.txt')
     barcode_mutinfo_file=open(barcode_mutinfo_file_name,"w")
     try:
-        short_df = spot_geno_file.loc[mutation_name]
-    except:
+        short_df = spot_geno_file.loc[[mutation_name]]
+    except KeyError:
         return []
 
-    for i in range(len(short_df)): # type: ignore
-        barcode_geno[short_df.iloc[i]["spot_barcode"]]=(short_df.iloc[i]["cluster"],short_df.iloc[i]["depth"],short_df.iloc[i]["vaf"],short_df.iloc[i]["p_mosaic"],short_df.iloc[i]["l_mosaic"])
+    required_cols = ["spot_barcode", "cluster", "depth", "vaf", "p_mosaic", "l_mosaic"]
+    missing_cols = [c for c in required_cols if c not in short_df.columns]
+    if missing_cols:
+        raise KeyError(
+            f"short_df missing required columns: {missing_cols}, columns={list(short_df.columns)}"
+        )
+
+    for row in short_df.itertuples(index=False):
+        barcode_geno[row.spot_barcode] = (
+            row.cluster,
+            row.depth,
+            row.vaf,
+            row.p_mosaic,
+            row.l_mosaic,
+        )
+
 
     for barcode in barcode_dict.keys():
         if barcode not in barcode_geno:  # ← No need for .keys()

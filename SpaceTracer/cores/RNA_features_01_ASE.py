@@ -39,9 +39,13 @@ def read_and_filter_germline_file(germline_file, count_threshold, prior_threshol
     else:
         filtered_df['binomial_p_value'] = filtered_df.apply(binomial_test, axis=1)
         filtered_df = filtered_df[filtered_df['binomial_p_value'] <= p_threshold]
-
-        filtered_df = filtered_df.rename(columns={"#chrom": "chrom", "site": "pos"})
-        filtered_df[['ref', 'alt']] = filtered_df['allele'].str.split(',', expand=True)
+        
+        if filtered_df.empty:
+            return filtered_df
+        else:
+            filtered_df = filtered_df.rename(columns={"#chrom": "chrom", "site": "pos"})
+            split_result = filtered_df['allele'].str.split(',', expand=True)
+            filtered_df[['ref', 'alt']] = filtered_df['allele'].str.split(',', expand=True)
 
     return filtered_df
 

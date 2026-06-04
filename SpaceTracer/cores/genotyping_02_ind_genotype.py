@@ -1,5 +1,8 @@
 import gc
 from operator import add
+from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import math
 import numpy as np
@@ -7,6 +10,19 @@ import pandas as pd
 from scipy.special import comb, beta
 
 from SpaceTracer.utils.utils import str2dict
+
+
+def _normalize_q_input(q):
+    if q is None:
+        return "NA"
+    if isinstance(q, str):
+        return q
+    return str(q)
+
+
+@lru_cache(maxsize=200000)
+def _cached_str2dict(q):
+    return str2dict(q)
 
 
 def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallele=True):
@@ -242,7 +258,10 @@ def quality_format(qA, qT, qC, qG, thr_dp=1000):
     """
     nucleotide_list = ["A", "T", "C", "G"]
     # transfrom the string to dict
-    q_list = [str2dict(q) for q in [qA, qT, qC, qG]]
+    q_list = [
+        _cached_str2dict(_normalize_q_input(q))
+        for q in [qA, qT, qC, qG]
+    ]
 
     # calculate the numbers of the nucleotides
     count_list = [sum(q.values()) for q in q_list]
@@ -361,6 +380,39 @@ def individual_genotype(row, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallel
     return output_list, germline_output
 
 
+def _individual_genotype_from_values(values, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallele=True):
+    (
+        chrom, pos, strand, ref, alt, cluster, spot_number, consensus_read_count,
+        qA, qT, qC, qG, fA, fT, fC, fG
+    ) = values
+    prior_string = ",".join([str(i) for i in [fA, fT, fC, fG]])
+
+    res_list, germline_list = individual_posterior(
+        ref, alt, qA, qT, qC, qG, fA, fT, fC, fG,
+        mu=mu, thr_dp=thr_dp, pop_vaf=pop_vaf,
+        filter_oneallele=filter_oneallele
+    )
+
+    output_list = []
+    write_germline = False
+    for res in res_list:
+        [geno_max, p_mosaic, G_max, ind_ref, alt, vaf] = res
+        if geno_max != "NA":
+            output = [
+                chrom, pos, strand, ind_ref, alt, cluster, spot_number,
+                consensus_read_count, prior_string, geno_max, p_mosaic, G_max, vaf
+            ]
+            output_list.append(output)
+            write_germline = True
+
+    if write_germline:
+        germline_output = [chrom, pos] + germline_list
+    else:
+        germline_output = []
+
+    return output_list, germline_output
+
+
 class IndGenoCalculator:
     def _load_count_file(self, file):
         df = pd.read_csv(file, sep="\t", header=None, comment="#", keep_default_na=False)
@@ -389,6 +441,8 @@ class IndGenoCalculator:
                 how='left'
             )
         merged.fillna(0, inplace=True)
+        for col in ['fA', 'fT', 'fC', 'fG']:
+            merged[col] = pd.to_numeric(merged[col], errors='coerce').fillna(0.0)
         return merged
 
     def _merge_inputs_for_ind_geno(self, ind_count_file, prior_df):
@@ -405,18 +459,32 @@ class IndGenoCalculator:
         mu=1e-7,
         thr_dp=1000,
         pop_vaf=1e-5,
-        filter_oneallele=True
+        filter_oneallele=True,
+        max_workers=1
     ):
         df = self._merge_inputs_for_ind_geno_df(ind_count_df, prior_df)
 
-        results = df.apply(
-            lambda row: individual_genotype(
-                row, mu, thr_dp, pop_vaf, filter_oneallele
-            ),
-            axis=1
+        value_columns = [
+            'chrom', 'pos', 'strand', 'ref', 'alt', 'cluster', 'spot_number', 'consensus_read_count',
+            'qA', 'qT', 'qC', 'qG', 'fA', 'fT', 'fC', 'fG'
+        ]
+        records = list(df[value_columns].itertuples(index=False, name=None))
+        worker_fn = partial(
+            _individual_genotype_from_values,
+            mu=mu,
+            thr_dp=thr_dp,
+            pop_vaf=pop_vaf,
+            filter_oneallele=filter_oneallele
         )
 
+        if max_workers > 1 and len(records) > 1:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                results = list(executor.map(worker_fn, records))
+        else:
+            results = [worker_fn(record) for record in records]
+
         del df
+        del records
         gc.collect()
 
         all_genotypes = []
@@ -449,14 +517,17 @@ class IndGenoCalculator:
         else:
             geno_df = geno_df.copy()
             geno_df['spot_number'] = geno_df['spot_number'].astype(int)
+            # geno_filter_df = geno_df[
+            #     (geno_df['spot_number'] >= 30) &
+            #     (geno_df['genotype'] == 'mosaic')
+            # ].copy()
             geno_filter_df = geno_df[
-                (geno_df['spot_number'] >= 30) &
                 (geno_df['genotype'] == 'mosaic')
             ].copy()
 
             if not geno_filter_df.empty:
                 geno_filter_df['vaf'] = geno_filter_df['vaf'].astype(float)
-                geno_filter_df = geno_filter_df[geno_filter_df["vaf"] <= 0.3]
+                # geno_filter_df = geno_filter_df[geno_filter_df["vaf"] <= 0.3]
 
         if geno_filter_file is not None:
             geno_filter_df.to_csv(geno_filter_file, sep="\t", index=None, na_rep='NA')
@@ -481,7 +552,8 @@ class IndGenoCalculator:
         mu,
         thr_dp,
         pop_vaf,
-        filter_oneallele
+        filter_oneallele,
+        max_workers=1
     ):
         ind_count_df = self._load_count_file(ind_count_file)
         return self.calculate_individual_genotype_df(
@@ -493,7 +565,8 @@ class IndGenoCalculator:
             mu=mu,
             thr_dp=thr_dp,
             pop_vaf=pop_vaf,
-            filter_oneallele=filter_oneallele
+            filter_oneallele=filter_oneallele,
+            max_workers=max_workers
         )
 
 

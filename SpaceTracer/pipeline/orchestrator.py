@@ -70,10 +70,7 @@ class PipelineOrchestrator:
         if cluster_path and cluster_path.exists():
             self.config["cluster"] = str(cluster_path)
         else:
-            if self.config.get("sequence_type") == "visium":
-                self.config["cluster"] = 0 # 0 means the cluster stpe will run
-            else:
-                pass
+            self.config["cluster"] = 0 # 0 means the cluster stpe will run
 
         output_dir = Path(self.config.get("output_dir"))
         if chunk_index is not None:

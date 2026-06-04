@@ -3,10 +3,11 @@ from math import log10
 import os
 import statistics
 from typing import Dict, List, Tuple
-import pandas as pd
-from pathlib import Path
 import numpy as np
 import csv
+import os
+import psutil
+
 
 def check_dir(dir):
     if os.path.exists(dir):
@@ -314,3 +315,65 @@ def save_manifest_tsv(rows: List[Dict[str, str]], output_file: str):
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(valid_rows)
+
+
+try: #************************
+    from pympler import asizeof
+    HAS_PYMPLER = True
+except Exception:
+    HAS_PYMPLER = False
+
+_PROC = psutil.Process(os.getpid())
+
+
+
+def _proc_mem_mb():
+    rss = 0.0
+    uss = None
+    vms = None
+    try:
+        proc = psutil.Process(os.getpid())
+        mi = proc.memory_info()
+        rss = mi.rss / 1024 / 1024
+        vms = mi.vms / 1024 / 1024
+    except Exception:
+        pass
+
+    try:
+        proc = psutil.Process(os.getpid())
+        full = proc.memory_full_info()
+        uss_val = getattr(full, "uss", None)
+        if uss_val is not None:
+            uss = uss_val / 1024 / 1024
+    except Exception:
+        pass
+
+    return rss, uss, vms
+
+def log_worker_mem(logger, label, extra=""):
+    rss, uss, vms = _proc_mem_mb()
+    uss_text = f"{uss:.1f}MB" if uss is not None else "N/A"
+    vms_text = f"{vms:.1f}MB" if vms is not None else "N/A"
+    logger.info(f"{label}... RSS={rss:.1f}MB USS={uss_text} VMS={vms_text} extra={extra}...")
+
+def obj_size_mb(obj):
+    if not HAS_PYMPLER:
+        return None
+    try:
+        return asizeof.asizeof(obj) / 1024 / 1024
+    except Exception:
+        return None
+
+def obj_size_text(obj, name):
+    size = obj_size_mb(obj)
+    if size is None:
+        return f"{name}=N/A"
+    return f"{name}={size:.2f}MB"
+
+
+def handel_hd_barcode_mapping(raw_barcode_mappings_parquet,bin_size):
+    import pandas as pd 
+    barcode_mapping=pd.read_parquet(raw_barcode_mappings_parquet)
+    barcode_mapping.to_csv()
+
+    

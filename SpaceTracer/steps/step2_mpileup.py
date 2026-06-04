@@ -200,7 +200,7 @@ class MpileupStep(BaseStep):
                     "max_depth",
                     "mean_depth",
                     "cost",
-                ],
+                ], delimiter="\t"
             )
             writer.writeheader()
 

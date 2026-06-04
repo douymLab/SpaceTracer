@@ -1,0 +1,115 @@
+steps:
+  cluster:
+    ncluster: 8
+    plot: true
+    method: "SpaGCN"
+    init_method: "louvain"
+    h5_file_name: "filtered_feature_bc_matrix.h5"
+    histology: true
+    spot_area: 49
+    weight_histology: 1
+    distance_threshold: 2
+    min_samples: 1
+    num_threshold: 30
+    percentage: 0.5
+    seed: 100
+    tol: 5e-3
+    lr: 0.05
+    max_epochs: 200
+    graphst_tool: "louvain"
+    radius: 6
+    refinement: true
+
+  bam_processing:
+    nm_threshold: 5
+    mapq_threshold: 255
+
+  mpileup:
+    min_depth: 30
+    max_depth: 200000
+    min_mapq: 0
+    min_baseq: 0
+    exclude_flag: 0
+    enable_split: true
+    split_threshold: 100000
+    chrom_chunk_size: 20000
+    chrM_chunk_size: 5000
+    max_cost: 200000
+
+  UMI_combine:
+    filter_duplicates: true
+    filter_secondary: true
+    filter_qcfail: true
+    filter_supplementary: true
+    min_read_quality: 20
+
+  genotyping:
+    alpha: 0.05
+    epsQ: 20
+    epsAF: 0.003
+    mu: 1e-5
+    thr_dp: 1000
+    pop_vaf: 1e-5
+    filter_oneallele: true
+
+  spatial_feature:
+    alpha: 0.05
+    thr_r2: 0.3
+    thr_prob: 0.9
+    thr_likelihood: 0.9
+    thr_vaf: 0
+    plot_supp: false
+    fig_size: 5
+    method: LDA
+    num_directions: 8
+
+  read_feature:
+    downsample: true
+    downsample_target_depth: 2000
+    max_region_size: 20000
+    max_variants_per_region: 100
+    seed: 42
+
+  RNA_feature:
+    min_count_for_germline: 50
+    min_prior_for_germline: 0.0001
+    default_range_of_gene: 150
+    p_threshold: 0.05
+    previous_base: 5
+
+  phasing:
+    minprior: 0.01
+    min_dp: 20
+    min_total_dp: 50
+    alpha: 0.05
+    phasing_pad: 1000
+    merge_gap: 200
+    max_target: 200000
+    seed: 42
+
+  feature_filtration:
+    LOW_VAF: True
+    HIGH_VAF: True
+    LOW_SPOT_NUM: True
+    ASE: True
+    hFDR: True
+    imprinted: True
+    homopolymer: True
+    PON: True
+    RNA_editing: True
+    ABNORMAL_MISMATCHES: True
+    LOW_READ_DIVERSITY: True
+    HIGH_MULTIPLE_MAPPIN: True
+    WIDE_DISTRIBUTION: True
+    NEAR_READ_END: True
+    CLUSTER_EVENTS: True
+    LOW_MAPQ: True
+    LOW_BASEQ: True
+    INDEL_PROPORTION: True
+    ALT_ALLELE_COUNT: True
+    POPULATION_AF: True
+    CONTIG_OR_MT: True
+
+  mutation_prediction:
+    random_seed: 42
+    plot: true

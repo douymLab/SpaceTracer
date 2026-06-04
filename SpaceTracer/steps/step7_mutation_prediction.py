@@ -7,7 +7,10 @@ from SpaceTracer.utils.utils import check_dir, str2bool
 from importlib.resources import files
 from pathlib import Path
 
+from SpaceTracer.utils.logger import get_logger
 
+model_name=__name__
+logger = get_logger(model_name)
 
 def predict_mutation(args):
     """
@@ -23,12 +26,14 @@ class MutationPredictionStep(BaseStep):
         return inputs
 
     def get_outputs(self, context):
-        sample_name="Sample"
+        sample_name=self.sample
         vcf_output_file = os.path.join(self.step_dir, "results",sample_name + "_total_pred_truesites.vcf")
         vcf_pass_output_file = os.path.join(self.step_dir, "results", sample_name + "_total_pred_truesites_PASS.vcf")
+        mutation_list=os.path.join(self.step_dir, "results", sample_name + "_total_pred_truesites_PASS_mutation_list.txt")
         outputs={
             'raw_pred_vcf':vcf_output_file,
-            'final_vcf':vcf_pass_output_file
+            'final_vcf':vcf_pass_output_file,
+            'final_mutation_list':mutation_list
         }
         return outputs
 
@@ -41,8 +46,10 @@ class MutationPredictionStep(BaseStep):
         parameter=self.get_step_config()
         # model_dir=parameter["model_dir"]
         # model_name=parameter["model_name"]
-        model_name = self.config["model_used"]
-        model_dir = files("SpaceTracer").joinpath("models", model_name)
+        model_name = self.config["model_name"]
+        model_dir = self.config["model_dir"]
+        # model_dir = files("SpaceTracer").joinpath("models", model_name)
+        # model_dir = files("SpaceTracer").joinpath("models", model_name)
 
         random_seed=int(parameter['random_seed'])
         train=False
@@ -78,7 +85,7 @@ class MutationPredictionStep(BaseStep):
 
         mutation_classification(inputs['combine_feature_parquet'], 
                 self.step_dir, 
-                "Sample",
+                self.sample,
                 model_dir=model_dir, 
                 model_name=model_name, 
                 random_seed=random_seed,

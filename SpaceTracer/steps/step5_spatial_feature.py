@@ -131,6 +131,7 @@ class SpatialFeatureStep(BaseStep):
     def _run_one_chunk(
         self,
         row: Dict[str, str],
+        seq_type: str,
         tissue_positions: str,
         alpha: float,
         thr_r2: float,
@@ -190,7 +191,17 @@ class SpatialFeatureStep(BaseStep):
                 "spatial_feature_parquet": parquet_file,
             }
         spot_geno_df = load_spot_genotypes_data(spot_genotype_file)
-        barcode_dict = handle_barcode(tissue_positions)
+        if tissue_positions and seq_type in ["visium","visium-HD"]:
+            barcode_dict = handle_barcode(tissue_positions)
+        elif seq_type=="stereo":
+            spot_barcodes = list(set(spot_geno_df["spot_barcode"].tolist()))
+            barcode_dict={}
+            for barcode in spot_barcodes:
+                x=int(barcode.split('_')[0])
+                y=int(barcode.split('_')[1])
+                barcode_dict[barcode]=(x,y)
+        else:
+            raise RuntimeError(f'Please check your input tissue position file! Or your sequence type are not in ["stereo", "visium", "visium-HD"]')
 
         in_name = None
 
@@ -258,8 +269,13 @@ class SpatialFeatureStep(BaseStep):
         fig_size = int(parameters["fig_size"])
         method = str(parameters["method"])
         num_directions = int(parameters["num_directions"])
-
-        tissue_positions = self.config["tissue_position"]
+        seq_type = self.config.get("sequence_type")
+        if seq_type in ["visium","visium-HD"]:
+            tissue_positions = self.config["tissue_position"]
+        elif seq_type=="stereo":
+            tissue_positions = ""
+        else:
+            raise RuntimeError(f'Wrong sequence type input!')
 
         rows = load_manifest_tsv(manifest_file)
         if not rows:
@@ -293,6 +309,7 @@ class SpatialFeatureStep(BaseStep):
         def chunk_worker(row: Dict[str, str]) -> Dict[str, str]:
             return self._run_one_chunk(
                 row=row,
+                seq_type=seq_type,
                 tissue_positions=tissue_positions,
                 alpha=alpha,
                 thr_r2=thr_r2,

@@ -79,7 +79,6 @@ class BamProcessingStep(BaseStep):
         barcode_file = parameters['tissue_position']
         barcode_key=self.config.get('barcode_key')
         threads=self.threads
-
         step_config=self.get_step_config()
         nm_threshold=step_config["nm_threshold"]
         mapq_threshold=step_config["mapq_threshold"]
@@ -87,7 +86,6 @@ class BamProcessingStep(BaseStep):
         outputs=self.get_outputs(context)
         in_bam=outputs['in_bam']
         in_filter_bam=outputs['in_filter_bam']
-        print(raw_bam,self.step_dir)
 
         if barcode_file:
             in_barcode_file=os.path.join(self.step_dir,"in_barcode.txt")
@@ -203,40 +201,44 @@ class BamProcessingStep(BaseStep):
 
     def _check_index_bam(self, bam_file: str, threads: int):
         """
-        Index BAM file using samtools 
-        bam_file: input bam file to index
+        Return True if a valid BAM index already exists.
+        Rebuild index and return False if missing/outdated.
         """
         bam_file = Path(bam_file)
+        if not bam_file.exists():
+            raise FileNotFoundError(f"BAM file not found: {bam_file}")
 
         possible_index = [
             bam_file.with_suffix('.bam.bai'),
             bam_file.with_suffix('.bai')
         ]
-        
+
+        bam_mtime = bam_file.stat().st_mtime
+
         for index_file in possible_index:
             if index_file.exists():
-                logger.debug(f"Index file created: {index_file}")
-                return True
+                if index_file.stat().st_mtime >= bam_mtime:
+                    # logger.debug(f"Index file is up-to-date: {index_file}")
+                    return True
+                else:
+                    logger.debug(f"Outdated index file found: {index_file}")
 
-        cmd = [
-            'samtools', 'index',
-            '-@', str(threads),
-            str(bam_file)
-        ]
-        
-        logger.debug(f"run samtools index: {' '.join(cmd)}")
+        logger.debug(f"Building BAM index for: {bam_file}")
+        cmd = ["samtools", "index", "-@", str(threads), str(bam_file)]
+
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            encoding='utf-8',
+            encoding="utf-8",
             check=False
         )
-        
-        if result.returncode != 0:
-            raise RuntimeError(f'Samtools index is wrong with command: {cmd}')
 
-        return True
+        if result.returncode != 0:
+            raise RuntimeError(f"samtools index failed for {bam_file}: {result.stderr}")
+
+        return False
+
 
     def _filter_bam(self,bam_file: str, output_bam: str, threads: int, nm_threshold: int, mapq_threshold: int ):
         """
@@ -251,7 +253,7 @@ class BamProcessingStep(BaseStep):
         
         cmd = [
             'samtools', 'view',
-            '-e', f'"[nM] <= {nm_threshold}"',
+            '-e', f'[nM] <= {nm_threshold}',
             '-q', str(mapq_threshold),
             '-o', str(output_bam),
             '-@', str(threads),

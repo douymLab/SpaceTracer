@@ -1,0 +1,11 @@
+genome: hg38
+sequence_type: visium
+spaceranger_dir: /path/to/sample/outs
+output_dir: /path/to/output
+sample: Sample
+resource_dir: /path/to/resource_dir
+model_name: spatial_free_model
+
+run:
+  threads: 60
+  memory: "400G"

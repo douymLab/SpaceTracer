@@ -914,9 +914,10 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                                 title_note=" of Phasing Refinement", file_note="_phase", 
                                 fig_size=6, pca_train=pca_nohet, top_features=top_features_nohet)
             # plot for mutation prediction
-            pca_nohet_pred_data = PCA_pred(X_nohet_df, candidate_nohet_df, plot_dir, sample_name, 
-                        title_note=" of Mutation Classification", file_note="_mutation", 
-                        fig_size=6, pca_train=pca_nohet, top_features=top_features_nohet)
+            if len(nohet_pred_true_barcode) > 1:
+                pca_nohet_pred_data = PCA_pred(X_nohet_df, candidate_nohet_df, plot_dir, sample_name, 
+                            title_note=" of Mutation Classification", file_note="_mutation", 
+                            fig_size=6, pca_train=pca_nohet, top_features=top_features_nohet)
         else:
             if phase_refine:
                 # get feature importances
@@ -946,16 +947,18 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                 else:
                     pca_phased_pred_data = PCA_pred(None, candidate_phased_df, plot_dir, sample_name, title_note=" of Phasing Refinement", file_note="_phase", fig_size=6,
                                 top_features=top_features_nohet)
-            pca_nohet_pred_data = PCA_pred(None, candidate_nohet_df, plot_dir, sample_name, title_note=" of Mutation Classification", file_note="_mutation", fig_size=6,
-                        top_features=top_features_nohet)
+            if len(nohet_pred_true_barcode) > 1:
+                pca_nohet_pred_data = PCA_pred(None, candidate_nohet_df, plot_dir, sample_name, title_note=" of Mutation Classification", file_note="_mutation", fig_size=6,
+                            top_features=top_features_nohet)
         
         # save pca data
         if save_pca:
             if pred_phase and len(candidate_phased_index) > 1:
                 pca_phased_pred_file = os.path.join(pca_data_dir, sample_name+"_pca_phased_pred_data.csv")
                 pca_phased_pred_data.to_csv(pca_phased_pred_file, sep='\t', index=True, header=True)
-            pca_nohet_pred_file = os.path.join(pca_data_dir, sample_name+"_pca_nohet_pred_data.csv")
-            pca_nohet_pred_data.to_csv(pca_nohet_pred_file, sep='\t', index=True, header=True)
+            if len(nohet_pred_true_barcode) > 1:
+                pca_nohet_pred_file = os.path.join(pca_data_dir, sample_name+"_pca_nohet_pred_data.csv")
+                pca_nohet_pred_data.to_csv(pca_nohet_pred_file, sep='\t', index=True, header=True)
 
 
 

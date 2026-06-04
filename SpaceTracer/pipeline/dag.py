@@ -124,13 +124,13 @@ class PipelineDAG:
                 run_level="sample",
                 output_level="sample"
             ),
-            # "phylogeny":DAGStep(
-            #     name="phylogeny",
-            #     dependencies=["mutation_prediction"],
-            #     produces=["phylogeny_results"],
-            #     run_level="sample",
-            #     output_level="sample"
-            # ),
+            "phylogeny":DAGStep(
+                name="phylogeny",
+                dependencies=["mutation_prediction"],
+                produces=["phylogeny_results"],
+                run_level="sample",
+                output_level="sample"
+            ),
         }
 
     # ─────────────────────────────────────────────────────────────
