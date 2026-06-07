@@ -105,7 +105,7 @@ Advanced users can run/debug by step:
 ## Contact:
 
 If you have any questions please contact us:  
-Zhirui Yang: [yangzhirui@westlake.edu.cn](mailto:yangzhirui@westlake.edu.cn)  
-Mengdie Yao: [yaomengdie@westlake.edu.cn](mailto:yaomengdie@westlake.edu.cn)
-Qing Yang: [yangqing@westlake.edu.cn](mailto:yangqing@westlake.edu.cn) (PhyloSOLID)
-Yanmei Dou: [douyanmei@westlake.edu.cn](mailto:douyanmei@westlake.edu.cn) (Corresponding author)
+- Zhirui Yang: [yangzhirui@westlake.edu.cn](mailto:yangzhirui@westlake.edu.cn)
+- Mengdie Yao: [yaomengdie@westlake.edu.cn](mailto:yaomengdie@westlake.edu.cn)
+- Qing Yang: [yangqing@westlake.edu.cn](mailto:yangqing@westlake.edu.cn) (PhyloSOLID)
+- Yanmei Dou: [douyanmei@westlake.edu.cn](mailto:douyanmei@westlake.edu.cn) (Corresponding author)
