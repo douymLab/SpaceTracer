@@ -7,19 +7,19 @@ Use this page when you want to rerun only a part of the pipeline during debuggin
 Run from a specific step:
 
 ```bash
-SpaceTracer run --config config.yaml --start-from <step_name>
+spacetracer run --config config.yaml --start-from <step_name>
 ```
 
 Stop at a specific step:
 
 ```bash
-SpaceTracer run --config config.yaml --stop-at <step_name>
+spacetracer run --config config.yaml --stop-at <step_name>
 ```
 
 Force recompute (ignore completed checkpoints):
 
 ```bash
-SpaceTracer run --config config.yaml --start-from <step_name> --force
+spacetracer run --config config.yaml --start-from <step_name> --force
 ```
 
 ## Recommended debug workflows
@@ -29,7 +29,7 @@ SpaceTracer run --config config.yaml --start-from <step_name> --force
 When adjusting `steps.genotyping` thresholds:
 
 ```bash
-SpaceTracer run --config config.yaml --start-from genotyping --stop-at merge_feature --force
+spacetracer run --config config.yaml --start-from genotyping --stop-at merge_feature --force
 ```
 
 Why: this reruns genotype and all downstream feature integration without redoing BAM/pileup work.
@@ -39,7 +39,7 @@ Why: this reruns genotype and all downstream feature integration without redoing
 When adjusting `steps.RNA_feature` parameters:
 
 ```bash
-SpaceTracer run --config config.yaml --start-from RNA_feature --stop-at merge_feature --force
+spacetracer run --config config.yaml --start-from RNA_feature --stop-at merge_feature --force
 ```
 
 Why: only reruns the relevant branch and final merge.
@@ -49,7 +49,7 @@ Why: only reruns the relevant branch and final merge.
 When adjusting `steps.spatial_feature` thresholds:
 
 ```bash
-SpaceTracer run --config config.yaml --start-from spatial_feature --stop-at merge_feature --force
+spacetracer run --config config.yaml --start-from spatial_feature --stop-at merge_feature --force
 ```
 
 ## D) Rebuild chunk-related evidence
@@ -57,10 +57,24 @@ SpaceTracer run --config config.yaml --start-from spatial_feature --stop-at merg
 When changing mpileup/chunk parameters:
 
 ```bash
-SpaceTracer run --config config.yaml --start-from mpileup --force
+spacetracer run --config config.yaml --start-from mpileup --force
 ```
 
 Why: this refreshes `filter_mpileup_file`, chunk DB, UMI combine, and all downstream outputs.
+
+## E) Rebuild only the PhyloSOLID tree
+
+When mutation prediction outputs already exist and you only want to rerun lineage tree building:
+
+```bash
+spacetracer run --config config.yaml --start-from phylogeny --force
+```
+
+To skip tree building during a normal run:
+
+```bash
+spacetracer run --config config.yaml --stop-at mutation_prediction
+```
 
 ## Quick checklist before partial reruns
 

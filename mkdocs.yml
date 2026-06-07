@@ -12,11 +12,12 @@ nav:
   - Installation: installation.md
   - Resources: resources.md
   - Configuration: configuration.md
-  - Config Reference: config-reference.md
+  - Default Step Config: default-step-config.md
+  - Demo: demo.md
   - Quick Start: quickstart.md
   - Outputs: outputs.md
   - Step Reference:
-    - Code-aligned step map: steps/overview.md
+    - Step-by-step guide: steps/overview.md
     - Step 0 - Cluster Preparation:
       - Overview: steps/step0-cluster.md
       - cluster: steps/cluster.md
@@ -47,7 +48,8 @@ nav:
     - Step 7 - Mutation Prediction:
       - Overview: steps/step7-mutation-prediction.md
       - mutation_prediction: steps/mutation-prediction.md
-    - Post-step - Phylogeny: steps/post-phylogeny.md
+    - Step 8 - PhyloSOLID Tree Building:
+      - phylogeny: steps/phylogeny.md
     - Single-Step Debug Cookbook: steps/debug-cookbook.md
 
 plugins:

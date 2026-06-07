@@ -56,11 +56,21 @@ chr1	46675536	.	G	A	.	PASS	DP=118;ALT_DP=20;VAF=0.160494;NUM_SPOTS=73;NUM_MUT_SP
 chr1	155234903	.	C	T	.	PASS	DP=39;ALT_DP=3;VAF=0.0769231;NUM_SPOTS=39;NUM_MUT_SPOTS=3;DNA_MUT_TYPE=G[C>T]T;RNA_MUT_TYPE=A[G>A]C
 ```
 
+## PhyloSOLID phylogeny outputs
+
+The integrated `phylogeny` step runs after `mutation_prediction` during a full workflow. It is skipped when fewer than 3 PASS mutations are available.
+
+Typical outputs include:
+
+- `output_dir/phylogeny/logs/Sample_phylosolid_prepare.log`
+- `output_dir/phylogeny/logs/Sample_phylosolid_build_tree.log`
+- `output_dir/phylogeny/tree/mutation_integrator/phylo/final_cleaned_M_full_basedPivots.filtered_sites_inferred.tree_scphylo.pdf`
+
 ## Visualization and validation
 
 ### 1) Lineage reconstruction with PhyloSOLID
 
-After obtaining final predicted sites, you can run PhyloSOLID to infer lineage relationships.
+After obtaining final predicted sites, SpaceTracer can run the integrated PhyloSOLID step to infer lineage relationships.
 
 ![Lineage tree example](figures/lineage.png)
 

@@ -16,17 +16,14 @@ For exact input/parameter interpretation, open each step page under this section
 | [Step 5: Feature Extraction and Phasing](step5-feature-extraction.md) | `spatial_feature`<br>`mappability_feature`<br>`read_feature`<br>`RNA_feature`<br>`phasing` | Extract spatial, mappability, read-level, and RNA-level features, then refine candidate sites with phasing evidence. | `step5_spatial_feature.py`<br>`step5_mappability_feature.py`<br>`step5_read_feature.py`<br>`step5_RNA_level_feature.py`<br>`step5_phasing.py` |
 | [Step 6: Feature Merge and Filtration](step6-merge-filtration.md) | `merge_feature` | Merge features and apply filtration tags/switches. | `step6_merge_all_features.py` |
 | [Step 7: Mutation Prediction](step7-mutation-prediction.md) | `mutation_prediction` | Run model inference and export VCF results. | `step7_mutation_prediction.py` |
-
-Post-processing outside `SpaceTracer/steps`:
-
-- [Post-step: Phylogeny (optional)](post-phylogeny.md)
+| [Step 8: PhyloSOLID Tree Building](phylogeny.md) | `phylogeny` | Build a lineage tree from PASS mutation calls. | `step8_phylosolid.py` |
 
 ## How to run
 
 ### Recommended: one-command workflow
 
 ```bash
-SpaceTracer run --config config.yaml
+spacetracer run --config config.yaml
 ```
 
 ### Advanced: inspect by code step order
@@ -41,13 +38,13 @@ Use these pages in code order:
 - [Step 5: Feature Extraction and Phasing](step5-feature-extraction.md)
 - [Step 6: Feature Merge and Filtration](step6-merge-filtration.md)
 - [Step 7: Mutation Prediction](step7-mutation-prediction.md)
-- [Post-step: Phylogeny (optional)](post-phylogeny.md)
+- [Step 8: PhyloSOLID Tree Building](phylogeny.md)
 
 ## Important outputs by stage
 
 - Code step 4: genotype evidence files (for example `ind_geno_filter_file`, `spot_geno_file`, `cluster_vaf_file`)
 - Code step 6: merged/filtered feature tables (`all_feature.txt` and parquet mirror)
 - Code step 7: predicted VCF outputs from mutation prediction
-- Optional post-step phylogeny: lineage analysis from high-confidence loci
+- Code step 8: PhyloSOLID lineage tree from high-confidence PASS loci
 
 For practical rerun recipes (for example, rerun only RNA or spatial branches), see [Single-Step Debug Cookbook](debug-cookbook.md).
