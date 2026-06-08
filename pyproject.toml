@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SpaceTracer"
-version = "2.0.0"
+version = "2.1.1"
 description = "A tool for calling mutations from spatial transcriptome data"
 readme = "README.md"
 requires-python = ">=3.9"

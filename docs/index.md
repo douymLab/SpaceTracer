@@ -6,6 +6,9 @@ SpaceTracer is a computational framework for detecting somatic single-nucleotide
 
 ## Release notes
 
+* **2026-06-08 · Version 2.1.1** ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.1.1))
+  Fixed a PhyloSOLID input formatting issue so the integrated phylogeny step can run successfully.
+
 * **2026-06-05 · Version 2.1.0** ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.1.0))
   Updated the demo package, improved Space Ranger 4.0.1 clustering compatibility, simplified the config templates, and added the integrated PhyloSOLID phylogeny step.
 
