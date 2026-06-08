@@ -10,8 +10,11 @@ SpaceTracer is an open-source algorithm capable of accurately detecting mosaic S
 
 *SpaceTracer is actively maintained. Check the Release Notes below and GitHub Releases for the latest updates.*
 
+- 2026/06/08: Version 2.1.1 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.1.1))
+Fixed a PhyloSOLID input formatting issue so the integrated phylogeny step can run successfully.
+
 - 2026/06/05: Version 2.1.0 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.1.0))
-This release updates the packaged demo, improves Space Ranger 4.0.1 clustering compatibility, simplifies the config templates, and adds the integrated PhyloSOLID phylogeny step. 
+This release updates the packaged demo, improves Space Ranger 4.0.1 clustering compatibility, simplifies the config templates, and adds the integrated PhyloSOLID phylogeny step.
 
 - 2026/04/30: Version 2.0.0 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.0.0))  
 This release introduces one-command workflow execution, integrates lysis error calculation into the main pipeline, and significantly improves running speed.

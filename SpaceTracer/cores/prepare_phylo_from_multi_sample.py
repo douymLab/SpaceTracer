@@ -315,7 +315,7 @@ class MutationExtractor:
         with open(out_name, "w") as out_file:
             for line in out_list:
                 write_info = ",".join([str(k) for k in line if k != ""])
-                out_file.write(f'{write_info}')
+                out_file.write(f'{write_info}\n')
         
         # 2. save barcode file
         outsuffix = os.path.basename(self.outprefix)

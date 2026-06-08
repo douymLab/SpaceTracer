@@ -4,7 +4,7 @@ This page explains how to choose and edit the SpaceTracer input config YAML used
 
 ## Which template should I use?
 
-SpaceTracer v2.1.0 keeps the main user config small and moves most step-specific parameters into a separate default file.
+SpaceTracer keeps the main user config small and moves most step-specific parameters into a separate default file.
 
 | Template | Best for | What to edit |
 | --- | --- | --- |
