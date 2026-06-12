@@ -35,10 +35,12 @@ Extract references:
 tar -xf resources.tar
 
 # mm10
-mkdir -p mm10 && zstd -d mm10_resources.tar.zst | tar -xf - -C mm10
+mkdir -p mm10
+zstd -dc mm10_resources.tar.zst | tar -xf - -C mm10
 
 # hg38
-mkdir -p hg38 && zstd -d hg38_resources.tar.zst | tar -xf - -C hg38
+mkdir -p hg38
+zstd -dc hg38_resources.tar.zst | tar -xf - -C hg38
 ```
 
 Extract the demo package:
