@@ -18,21 +18,28 @@ Before running SpaceTracer, make sure all required dependencies are available in
 
 #### Option 1: Conda environment
 
-Alternatively, you can create your own Conda environment using the provided `environment.yaml` file:
+You can create your own Conda environment using the provided `environment.yaml` file:
 
 ```bash
 conda env create -f environment.yaml
 conda activate SpaceTracer
 ```
 
-For faster dependency solving, you can use `mamba` instead:
+Because `environment.yaml` contains many dependencies, we **strongly recommend using `mamba`** to create the environment:
 
 ```bash
 mamba env create -f environment.yaml
 conda activate SpaceTracer
 ```
 
-This step may take some time with Conda on Linux, while mamba is usually much faster.
+!!! note
+    During environment creation, the `pot` or `sorted-nearest` packages may fail to install on some systems. If this happens, activate the `SpaceTracer` environment and install them separately:
+
+    ```bash
+    mamba install -c conda-forge pot
+    pip install sorted-nearest
+    ```
+
 
 Install SpaceTracer into the activated environment (this provides the `spacetracer` command):
 
