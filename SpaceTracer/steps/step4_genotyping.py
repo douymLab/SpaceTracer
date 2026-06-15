@@ -460,7 +460,7 @@ class GenotypingStep(BaseStep):
         outputs = self.get_outputs(context)
         result_manifest = outputs["genotype_results"]
 
-        cell_num = self.config.get("cell_num")
+        cell_num = context.get("cell_num")
         seq_type = self.config.get("sequence_type")
         if seq_type == "stereo":
             bins = self.config.get("bin_size", 100)
