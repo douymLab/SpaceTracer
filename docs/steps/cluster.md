@@ -79,7 +79,7 @@ Context keys:
 Typical files:
 
 - `output_dir/cluster/cluster.txt` (if computed)
-- `output_dir/cell_num.txt` (if computed from Visium data)
+- `output_dir/refined_cell_num.txt` (if computed from Visium data)
 
 ## Tuning notes
 

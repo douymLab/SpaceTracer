@@ -10,6 +10,9 @@ SpaceTracer is an open-source algorithm capable of accurately detecting mosaic S
 
 *SpaceTracer is actively maintained. Check the Release Notes below and GitHub Releases for the latest updates.*
 
+- 2026/06/15: Version 2.1.2 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.1.2))
+Fixed genotyping to use per-spot cell numbers from the `cell_num` step output.
+
 - 2026/06/08: Version 2.1.1 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.1.1))
 Fixed a PhyloSOLID input formatting issue so the integrated phylogeny step can run successfully.
 

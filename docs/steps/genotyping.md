@@ -24,7 +24,7 @@ Performs cluster-level and spot-level genotype inference from UMI counts and pri
 | `spot_count_file` | `umi_combine` manifest output | Yes | Chunk manifest pointing to spot-level count parquet files used for genotype inference. |
 | `prior_file` | `prior` output (or fixed/empty mode) | Yes | Prior-frequency table for genotype calculations; behavior differs if fixed/empty prior is used. |
 | `cluster` | `cluster` output (`cluster_file`) | Yes | Spot-to-cluster mapping used for cluster-level aggregation before individual calls. |
-| `cell_num` | `steps.cell_number` / context | Yes | Cell-number support used in spot-level genotype refinement logic. |
+| `cell_num` | `cell_num` step output in pipeline context | Yes | Per-spot or constant cell-number support used in spot genotype inference (`refined_cell_num.txt` when `steps.cell_number` is unset or `0`, otherwise the configured integer or file path). |
 
 ## Parameters (`steps.genotyping`)
 
