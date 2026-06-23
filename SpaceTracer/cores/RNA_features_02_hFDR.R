@@ -213,6 +213,7 @@ process_chunk <- function(chunk_idx) {
     }
     
     alpha <- 1 - pbbinom(altreads - 1, dp, beta_a, beta_b)
+    alpha <- max(0, alpha) # hFDR should not lower than 0
     beta_val <- (dp - altreads + 1) / (dp + 1)
     
     chunk_df[i, "refine_hFDR"] <- alpha / (alpha + beta_val * chunk_df[i, "rweigh"] * 1/49)

@@ -27,9 +27,11 @@ class MutationPredictionStep(BaseStep):
 
     def get_outputs(self, context):
         sample_name=self.sample
-        vcf_output_file = os.path.join(self.step_dir, "results",sample_name + "_total_pred_truesites.vcf")
-        vcf_pass_output_file = os.path.join(self.step_dir, "results", sample_name + "_total_pred_truesites_PASS.vcf")
-        mutation_list=os.path.join(self.step_dir, "results", sample_name + "_total_pred_truesites_PASS_mutation_list.txt")
+        model_name = self.config["model_name"]
+        new_name=sample_name+"_"+model_name
+        vcf_output_file = os.path.join(self.step_dir, "results",new_name + "_total_pred_truesites.vcf")
+        vcf_pass_output_file = os.path.join(self.step_dir, "results", new_name + "_total_pred_truesites_PASS.vcf")
+        mutation_list=os.path.join(self.step_dir, "results", new_name + "_total_pred_truesites_PASS_mutation_list.txt")
         outputs={
             'raw_pred_vcf':vcf_output_file,
             'final_vcf':vcf_pass_output_file,
@@ -83,9 +85,10 @@ class MutationPredictionStep(BaseStep):
         max_depth=None
         min_samples_split=2
 
+        new_name=self.sample+"_"+model_name
         mutation_classification(inputs['combine_feature_parquet'], 
                 self.step_dir, 
-                self.sample,
+                new_name,
                 model_dir=model_dir, 
                 model_name=model_name, 
                 random_seed=random_seed,

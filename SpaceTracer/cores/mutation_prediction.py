@@ -29,7 +29,7 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                             true_to_artifact_ratio=None, encoder="label", save_models=True, \
                             plot=True, annotate_mosaic=True, annotate_outlier=False, n_features=20, \
                             save_pca=True, save_shap=False, use_lr=False, not_pred_het=True, transform_old_name=False, \
-                            smote=True, tune="random_search", k_neighbors=4, sampling_strategy="auto", n_jobs=None, \
+                            smote=True, tune="random_search", k_neighbors=4, sampling_strategy="auto", n_jobs=-1, \
                             n_estimators=100, max_depth=None, min_samples_split=2):
     """
     Apply Random Forest and Logistic Regression method to classify somatic mutation from candidate sites
@@ -86,9 +86,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                 'not majority': resample all classes but the majority class;
                 'all': resample all classes;
                 'auto': equivalent to 'not majority'.
-        n_jobs - number of jobs to run in parallel (default=None) 
-                None means 1 unless in a joblib.parallel_backend context. 
-                -1 means using all processors.         
+        n_jobs - number of jobs to run in parallel (default=-1)
+                -1 means using all processors. Pass None or a positive integer to override.         
         n_estimators - the number of trees in the forest (default=100)
         max_depth - the maximum depth of the tree (default=None)
         min_samples_split - the minimum number of samples required to split an internal node (default=2)
@@ -146,49 +145,40 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # all haplotype-related columns (keeping these as they are not in the mapping)
     haplotype_columns = ['phasing_most_phase_haplotype', 'phasing_nearest_phase_haplotype']
     # find the most frequent haplotype
-    df['haplotype'] = df.apply(lambda row: merge_haplotype_columns(row, haplotype_columns), axis=1)
+    df["haplotype"] = merge_haplotype_columns_vectorized(df, haplotype_columns)
     # drop the original haplotype columns
     df = df.drop(haplotype_columns, axis=1)
 
     # set heterozygosity-related features
     het_features = ['AFind',
-                    'mut_vs_nonmut_spots_KS_p',  # updated from 'KS_p'
-                    'mut_spots_prop_by_vaf',      # updated from 'mut_rate_vaf'
-                    'all_spots_vaf_mean',         # updated from 'mean_AFspot'
-                    'mut_vs_nonmut_spots_MI_p',   # updated from 'MI_p'
-                    'mut_spots_prop_by_probablity', # updated from 'mut_rate_prob'
-                    'mismatches_p_adj']
+                    'mut_vs_nonmut_spots_KS_p',
+                    'mut_spots_prop_by_vaf',
+                    'all_spots_vaf_mean',
+                    'mut_vs_nonmut_spots_MI_p',
+                    'mut_spots_prop_by_probablity']
     
     # ====================================================================
     # Remove the Not-used Features
     # ====================================================================
     if train:    
-        # delete the gene function related columns and other non-reasonable features (updated with new column names)
+        # delete the gene function related columns and other non-reasonable features
         not_related_columns = ['major_read_strand', 'GCcontent', 'DNAMutationType', 'RNAMutationType', \
                                'num_mut_spots', 'num_spots', 'hFDR', 'falt', 'fref', \
                                'consensus_ref_allele_count', 'consensus_alt2_allele_count', 'consensus_alt_allele_count', \
                                'Filtration', 'editing_AtoG', 'editing_database', 'RNA_editing', \
                                'imprinted', 'ASE', 'hFDR', 'homopolymer', 'PON', 'cluster_event', \
-                               '#chrom', 'pos', 'ref', 'alt', 'phasing_nearest_mut_origin', 'phasing_most_mut_origin']
-        for col in not_related_columns:
-            if col in df.columns:
-                df = df.drop(col, axis=1)
-
-        # drop some features which are not distinguishable for classification (updated with new column names)
+                               '#chrom', 'pos', 'ref', 'alt', 'phasing_nearest_mut_origin', 'phasing_most_mut_origin', \
+                               'AtoG_clustered_noise', 'other_clustered_noise']
+        # drop some features which are not distinguishable for classification
         undistinguishable_columns = ['consensus_UMI_count', 'alt_read_number_perUMI_max', 'vaf', \
                                      'indel_proportion_for_site', 'mappabilityScore', 'cause_poly_alt']
-
-        for col in undistinguishable_columns:
-            if col in df.columns:
-                df = df.drop(col, axis=1)
-
-        # delete the columns which are the statistics for the features but relate to sample size (updated with new column names)
+        # delete columns which are statistics for features but relate to sample size
         removed_stats_columns = ['baseq_p', 'alt_baseq1b_p', 'querypos_p', 'leftpos_p', 'seqpos_p', 'mismatches_p', \
                                  'mapq_p', 'read_number_p', 'softclip_length_p', 'softclip_prop_p', 'strand_bias_p', \
                                  'reads_with_indel_p', 'multi_mapper_p', 'per_UMI_end_remove_clip_p']
-        for col in removed_stats_columns:
-            if col in df.columns:
-                df = df.drop(col, axis=1)
+        _drop_train = [c for c in (not_related_columns + undistinguishable_columns + removed_stats_columns) if c in df.columns]
+        if _drop_train:
+            df = df.drop(columns=_drop_train)
 
     # Keep the features according to the model given
     else:
@@ -212,35 +202,38 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # ====================================================================
     # Treat Missing Values
     # ====================================================================
-    # log transform all p-values
+    # interpolate the NAs in the p-value columns with 1
     pval_cols = df.filter(regex='_p$|p_adj').columns
+    if len(pval_cols) > 0:
+        df[pval_cols] = df[pval_cols].fillna(1)
+    # log transform all p-values
     def log10_1p(x):
         return np.log10(1 + x)
     df[pval_cols] = log10_1p(df[pval_cols])
 
-    # interpolate the NAs in the p-value and t-value columns as log(1)=0 and 0
-    psval_cols = [col for col in df.columns if col.endswith('_p') or 
-                  col.endswith('_s') or col.endswith('_odds') or col.endswith('_rbc')]
-    for col in psval_cols:
-        if col in df.columns:
-            df[col] = df[col].fillna(0)
+    # interpolate the NAs in the test statistics columns with 0
+    stats_cols = [col for col in df.columns if col.endswith('_s') or col.endswith('_odds') or col.endswith('_rbc')]
+    if stats_cols:
+        df[stats_cols] = df[stats_cols].fillna(0)
 
     # interpolate the NAs in the phasing-related columns but not p-values as 0
     phase_rel_cols = ['phasing_support_reads_prop_across_hSNPs', 'phasing_nearest_info_mutant_prop', \
                       'phasing_nearest_discordant_prop', 'phasing_nearest_phase_distance', 'phasing_most_info_mutant_prop', \
                       'phasing_most_discordant_prop', 'phasing_most_phase_distance']
-    for col in phase_rel_cols:
-        if col in df.columns:
-            df[col] = df[col].fillna(0)
+    phase_present = [c for c in phase_rel_cols if c in df.columns]
+    if phase_present:
+        df[phase_present] = df[phase_present].fillna(0)
             
     # interpolate the other NAs with 0 (updated with new column names)
     other_num_cols = ['consensus_alt2_proportion', 'alt2_proportion_per_UMI', \
                       'alt_multi_map_prop', 'ref_multi_map_prop', 'multi_map_prop', \
-                      'ref_softclip_prop', 'alt_softclip_prop', 'softclip_prop']
-    
-    for col in other_num_cols:
-        if col in df.columns:
-            df[col] = df[col].fillna(0)
+                      'ref_softclip_prop', 'alt_softclip_prop', 'softclip_prop', 'alt_vs_total_dp_r2', \
+                      'alt_UMI_avg_consistence', 'alt_UMI_avg_consistence_remove_single_read', \
+                      'alt_consistent_UMI_prop_strict', 'alt_consistent_UMI_prop_strict_remove_single_read', \
+                      'alt_consistent_UMI_prop_relaxed', 'alt_consistent_UMI_prop_relaxed_remove_single_read']
+    other_present = [c for c in other_num_cols if c in df.columns]
+    if other_present:
+        df[other_present] = df[other_present].fillna(0)
         
     # delete the columns with all missing values
     df = df.dropna(axis=1, how='all')
@@ -249,14 +242,14 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
 
     # replace the infinity value to finite one
     very_large_number = 1e10
-    df.replace(to_replace=np.inf, value=very_large_number, inplace=True)
-    df.replace(to_replace=-np.inf, value=-very_large_number, inplace=True)
+    df.replace(to_replace={np.inf: very_large_number, -np.inf: -very_large_number}, inplace=True)
 
     # avoid duplicate rows in the data frame
-    num_duplicates = df.index.duplicated().sum()
+    dup_mask = df.index.duplicated()
+    num_duplicates = int(dup_mask.sum())
     if num_duplicates > 0:
         print(f"There exist {num_duplicates} duplicate rows, only keep the first appearance.")
-        df = df[~df.index.duplicated(keep='first')]
+        df = df[~dup_mask]
 
     # ====================================================================
     # Sub Dataframe
@@ -298,29 +291,25 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     if no_spatial:
         spatial_features = ['pass_spatial_test', 'mut_vs_nonmut_spots_KS_p', 'mut_vs_nonmut_spots_KS_s', \
                             'mut_vs_nonmut_spots_MI_p', 'mut_vs_nonmut_spots_MI_s']
-        for col in spatial_features:
-            if col in df.columns:
-                df = df.drop(col, axis=1)
+        _drop_spatial = [c for c in spatial_features if c in df.columns]
+        if _drop_spatial:
+            df = df.drop(columns=_drop_spatial)
     
     # get selected features for mutation classification
     if select_features is not None:
         phased_all_cols = list(set(select_features + phase_rel_cols))
         df = df[phased_all_cols]
     if drop_features is not None:
-        for col in drop_features:
-            if col in df.columns:
-                df = df.drop(col, axis=1)
+        _drop_user = [c for c in drop_features if c in df.columns]
+        if _drop_user:
+            df = df.drop(columns=_drop_user)
 
-    # remove phase-related columns
+    # remove phase-related and het-related columns from a copy used for non-phased mutation classification
     df_nophase = df.copy()
-    for col in phase_rel_cols:
-        if col in df_nophase.columns:
-            df_nophase = df_nophase.drop(col, axis=1)
-    # remove het-related columns
     het_used_cols = ['AFind', 'all_spots_vaf_mean']  # updated from 'mean_Afspot'
-    for col in het_used_cols:
-        if col in df_nophase.columns:
-            df_nophase = df_nophase.drop(col, axis=1)
+    _drop_nophase = [c for c in (phase_rel_cols + het_used_cols) if c in df_nophase.columns]
+    if _drop_nophase:
+        df_nophase = df_nophase.drop(columns=_drop_nophase)
 
     # ====================================================================
     # Training Set Identify
@@ -380,17 +369,38 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # build final artifact set
     random.seed(random_seed)
     if true_to_artifact_ratio is None:
+        selected_validated_artifact_set = validated_artifact_set
         selected_phasable_artifact_set = phasable_artifact_set
     else:
         target_artifact_count = int(true_to_artifact_ratio * len(true_sites))
-        phasable_needed = target_artifact_count - len(validated_artifact_set)
-        if phasable_needed <= 0:
+        if target_artifact_count <= 0:
+            selected_validated_artifact_set = set()
             selected_phasable_artifact_set = set()
-        elif phasable_needed >= len(phasable_artifact_set):
-            selected_phasable_artifact_set = phasable_artifact_set
+        elif target_artifact_count < len(validated_artifact_set):
+            # When validated artifacts exceed target, downsample both sources with ~7:3 ratio.
+            target_validated_count = int(round(target_artifact_count * 0.7))
+            target_validated_count = min(target_validated_count, len(validated_artifact_set))
+            target_phasable_count = target_artifact_count - target_validated_count
+            if target_phasable_count > len(phasable_artifact_set):
+                deficit = target_phasable_count - len(phasable_artifact_set)
+                target_phasable_count = len(phasable_artifact_set)
+                target_validated_count = min(len(validated_artifact_set), target_validated_count + deficit)
+            if target_validated_count > len(validated_artifact_set):
+                deficit = target_validated_count - len(validated_artifact_set)
+                target_validated_count = len(validated_artifact_set)
+                target_phasable_count = min(len(phasable_artifact_set), target_phasable_count + deficit)
+            selected_validated_artifact_set = set(random.sample(list(validated_artifact_set), target_validated_count)) if target_validated_count > 0 else set()
+            selected_phasable_artifact_set = set(random.sample(list(phasable_artifact_set), target_phasable_count)) if target_phasable_count > 0 else set()
         else:
-            selected_phasable_artifact_set = set(random.sample(list(phasable_artifact_set), phasable_needed))
-    artifact_set = validated_artifact_set | selected_phasable_artifact_set
+            selected_validated_artifact_set = validated_artifact_set
+            phasable_needed = target_artifact_count - len(selected_validated_artifact_set)
+            if phasable_needed <= 0:
+                selected_phasable_artifact_set = set()
+            elif phasable_needed >= len(phasable_artifact_set):
+                selected_phasable_artifact_set = phasable_artifact_set
+            else:
+                selected_phasable_artifact_set = set(random.sample(list(phasable_artifact_set), phasable_needed))
+    artifact_set = selected_validated_artifact_set | selected_phasable_artifact_set
     artifact_index = pd.MultiIndex.from_tuples(list(artifact_set), names=df.index.names).intersection(df.index)
 
     # get the remaining candidate sets
@@ -406,7 +416,7 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
         print("validated phased mosaic:", len(phased_true_index))
         print("validated mosaic:", len(true_sites))
         print("validated het:", len(het_index))
-        print("validated artifact:", len(validated_artifact_set))
+        print("validated artifact (used):", len(selected_validated_artifact_set))
         print("phasable artifact (used):", len(selected_phasable_artifact_set))
         print("total artifact:", len(artifact_set))
         print("haplotype=3:", len(haplo3_index))
@@ -619,6 +629,28 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                 rf_feature_names_file = os.path.join(model_dir, sample_name+"_rf_feature_names.joblib")
                 dump(nohet_feature_names, rf_feature_names_file)
                 print("Save the somatic mutation classification random forest model")
+
+            # calculate and save the SHAP values
+            if save_shap:
+                # SHAP explainer
+                explainer = shap.TreeExplainer(rf)
+                SHAP_data_dir = os.path.join(output_dir, "SHAP_values")
+                check_dir(SHAP_data_dir)
+                # calculate SHAP values
+                shap_values_train_nohet = explainer.shap_values(X_nohet)
+                # find the index of mosaic
+                mosaic_class_index_train_nohet = list(rf.classes_).index("mosaic")
+                mosaic_shap_values_train_nohet = shap_values_train_nohet[:, :, mosaic_class_index_train_nohet]
+                # save SHAP values and expected values to a CSV file
+                shap_train_nohet_df = pd.DataFrame(mosaic_shap_values_train_nohet, columns=X_nohet_df.columns, index=X_nohet_df.index)
+                shap_values_train_nohet_file = os.path.join(SHAP_data_dir, sample_name+"_shap_values_train_nohet.csv")
+                shap_train_nohet_df.to_csv(shap_values_train_nohet_file, sep='\t', index=True, header=True)
+                # save the expected value for SHAP
+                shap_expected_values_train_nohet_file = os.path.join(SHAP_data_dir, sample_name+"_shap_expected_values_train_nohet.csv")
+                np.savetxt(shap_expected_values_train_nohet_file, [explainer.expected_value[mosaic_class_index_train_nohet]])
+                # save training data for further analysis
+                train_nohet_file = os.path.join(SHAP_data_dir, sample_name+"_train_nohet_data.csv")
+                X_nohet_df.to_csv(train_nohet_file, sep='\t', index=True, header=True)
         # plots
         if plot:
             if use_lr:
@@ -685,12 +717,11 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
             # load pca models
             with open(pca_nohet_file, 'rb') as file:
                 pca_nohet = pickle.load(file)
-
-    # create the folder to save SHAP values
-    if save_shap and not use_lr:
-        explainer = shap.TreeExplainer(rf)
-        SHAP_data_dir = os.path.join(output_dir, "SHAP_values")
-        check_dir(SHAP_data_dir)
+        # create the folder to save SHAP values
+        if save_shap and not use_lr:
+            explainer = shap.TreeExplainer(rf)
+            SHAP_data_dir = os.path.join(output_dir, "SHAP_values")
+            check_dir(SHAP_data_dir)
         
 
     # ====================================================================
@@ -716,6 +747,12 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                 candidate_phased_pred = lr_nohet_model.predict(candidate_phased)
             else:
                 candidate_phased_pred = rf.predict(candidate_phased)
+                # # save the rf score
+                # mosaic_idx = list(rf.classes_).index("mosaic")
+                # candidate_phased_prob = rf.predict_proba(candidate_phased)[:, mosaic_idx]
+                # candidate_phased_score_df = pd.DataFrame(index=candidate_phased_df.index)
+                # candidate_phased_score_df["pred"] = candidate_phased_pred
+                # candidate_phased_score_df["pred_prob_mosaic"] = candidate_phased_prob
             # get the number of each values
             phsed_pred_counts = Counter(candidate_phased_pred)
             # print("Phased set somatic mutation prediction result:")
@@ -787,7 +824,12 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
         candidate_nohet_pred = lr_nohet_model.predict(candidate_nohet)
     else:        
         candidate_nohet_pred = rf.predict(candidate_nohet)
-        
+        # # save the rf score
+        # mosaic_idx = list(rf.classes_).index("mosaic")
+        # candidate_nohet_prob = rf.predict_proba(candidate_nohet)[:, mosaic_idx]
+        # candidate_nohet_score_df = pd.DataFrame(index=candidate_nohet_df.index)
+        # candidate_nohet_score_df["pred"] = candidate_nohet_pred
+        # candidate_nohet_score_df["pred_prob_mosaic"] = candidate_nohet_prob
 
     # get the number of each values
     nohet_pred_counts = Counter(candidate_nohet_pred)
@@ -825,8 +867,17 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     # combine the predicted sites
     if pred_phase:
         total_pred_true_barcode = phased_pred_true_barcode.union(nohet_pred_true_barcode)
+        # all_score_df = pd.concat([candidate_phased_score_df, candidate_nohet_score_df], axis=0)
+        # all_score_df = all_score_df.sort_index()
     else:
         total_pred_true_barcode = nohet_pred_true_barcode
+        # all_score_df = candidate_nohet_score_df
+
+    # # save the RF scores
+    # score_dir = os.path.join(output_dir, "RF_scores")
+    # check_dir(score_dir)
+    # all_score_file = os.path.join(score_dir, sample_name + "_candidate_all_pred_prob.csv")
+    # all_score_df.to_csv(all_score_file, sep="\t", index=True, header=True)
 
     # save the total predicted true sites
     results_dir = os.path.join(output_dir, "results")
@@ -861,31 +912,21 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
 
     # PASS-only sites
     df_output_pass = df_output[df_output["FILTER"] == "PASS"].copy()
+    df_output_chrM = df_output[df_output["FILTER"] == "MITOCHONDRIA"].copy()
 
     # output paths
-    # parquet_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites.parquet")
-    # tsv_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites.tsv")
     vcf_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites.vcf")
-    # parquet_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.parquet")
-    # tsv_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.tsv")
     vcf_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.vcf")
     pass_mutation_list_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS_mutation_list.txt")
+    chrM_mutation_list_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_MITO_mutation_list.txt")
     # save all sites
-    # df_output.to_parquet(parquet_output_file, index=False)
-    # df_output.to_csv(tsv_output_file, sep="\t", index=False, float_format="%.6g")
     write_simple_vcf(df_output, vcf_output_file, sample_name=sample_name)
     # save PASS-only sites
-    # df_output_pass.to_parquet(parquet_pass_output_file, index=False)
-    # df_output_pass.to_csv(tsv_pass_output_file, sep="\t", index=False, float_format="%.6g")
     write_simple_vcf(df_output_pass, vcf_pass_output_file, sample_name=sample_name)
     # save PASS-only mutation list in chrom_pos_ref_alt format
-    with open(pass_mutation_list_file, "w") as file:
-        for _, row in df_output_pass.iterrows():
-            chrom = str(row["#CHROM"])
-            pos = int(row["POS"]) if pd.notna(row["POS"]) else row["POS"]
-            ref = str(row["REF"])
-            alt = str(row["ALT"])
-            file.write(f"{chrom}_{pos}_{ref}_{alt}\n")
+    write_pass_mutation_list_file(df_output_pass, pass_mutation_list_file)
+    # save chrM sites mutation list in chrom_pos_ref_alt format
+    write_pass_mutation_list_file(df_output_chrM, chrM_mutation_list_file)
     # print notes
     print(f"Total predicted true sites: {len(df_output)}")
     print(f"PASS predicted true sites: {len(df_output_pass)}")
@@ -893,6 +934,7 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     print(f"  - All sites: {vcf_output_file}")
     print(f"  - PASS sites: {vcf_pass_output_file}")
     print(f"  - PASS mutation list: {pass_mutation_list_file}")
+    print(f"  - MITO mutation list: {chrM_mutation_list_file}")
 
 
     # pca scatter plot
@@ -994,7 +1036,6 @@ def list2frequent(value):
         return value
     else:
         return Counter(value.split(',')).most_common(1)[0][0]
-    
 
 
 def merge_haplotype_columns(row, haplotype_columns):
@@ -1017,6 +1058,34 @@ def merge_haplotype_columns(row, haplotype_columns):
         return most_frequent.iloc[0] if not most_frequent.empty else NA_name
     else:
         return NA_name
+
+
+def merge_haplotype_columns_vectorized(df, haplotype_columns):
+    """Same merge rules as merge_haplotype_columns; vectorized when exactly two columns (typical case)."""
+    if len(haplotype_columns) != 2:
+        return df.apply(lambda row: merge_haplotype_columns(row, haplotype_columns), axis=1)
+    NA_name = "unphased"
+    c1, c2 = haplotype_columns[0], haplotype_columns[1]
+    s1 = df[c1]
+    s2 = df[c2]
+    out = pd.Series(NA_name, index=df.index, dtype=object)
+    only_s1 = s1.notna() & s2.isna()
+    only_s2 = s2.notna() & s1.isna()
+    both = s1.notna() & s2.notna()
+    eq = both & (s1 == s2)
+    neq = both & (s1 != s2)
+    out.loc[only_s1] = s1.loc[only_s1]
+    out.loc[only_s2] = s2.loc[only_s2]
+    out.loc[eq] = s1.loc[eq]
+    h3_neq = neq & ((s1 == "haplo=3") | (s2 == "haplo=3"))
+    out.loc[h3_neq] = "haplo=3"
+    rem = neq & ~h3_neq
+    if rem.any():
+        va = s1.loc[rem]
+        vb = s2.loc[rem]
+        pick_first = va.astype(str) <= vb.astype(str)
+        out.loc[rem] = np.where(pick_first.to_numpy(), va.to_numpy(), vb.to_numpy())
+    return out
     
 
 def load_site_index(path, sample_name):
@@ -1046,7 +1115,7 @@ def load_or_default_sites(site_file, default_index, label, sample_name):
 
 
 def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="random_search", \
-                  n_labels = 2, k_neighbors=4, sampling_strategy="auto", n_jobs=None, \
+                  n_labels = 2, k_neighbors=4, sampling_strategy="auto", n_jobs=-1, \
                   n_estimators=100, max_depth=None, min_samples_split=2):
     """
     Generate a random forest model for the classification of each type for the candidate mutation sets
@@ -1070,9 +1139,8 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
                 'not majority': resample all classes but the majority class;
                 'all': resample all classes;
                 'auto': equivalent to 'not majority'.
-        n_job - number of jobs to run in parallel (default = None) 
-                None means 1 unless in a joblib.parallel_backend context. 
-                -1 means using all processors.         
+        n_job - number of jobs to run in parallel (default = -1)
+                -1 means using all processors. Pass None or a positive integer to override.
         n_estimators - the number of trees in the forest (default = 100)
         max_depth - the maximum depth of the tree (default = None)
         min_samples_split - the minimum number of samples required to split an internal node (default = 2)
@@ -1109,8 +1177,8 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
         # objective function to minimize
         def objective(space):
             model = RandomForestClassifier(n_estimators=space['n_estimators'], max_depth=space['max_depth'], \
-                                           min_samples_split=space['min_samples_split'])
-            accuracy = cross_val_score(model, X_train, y_train, cv=5).mean()
+                                           min_samples_split=space['min_samples_split'], n_jobs=n_jobs)
+            accuracy = cross_val_score(model, X_train, y_train, cv=5, n_jobs=n_jobs).mean()
             return {'loss': -accuracy, 'status': STATUS_OK}
 
         # run the algorithm
@@ -1127,8 +1195,8 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
         rf = RandomForestClassifier(n_estimators=n_estimators_opt, 
                                     max_depth=max_depth_opt, 
                                     min_samples_split=min_samples_split_opt,
-                                    bootstrap=True, oob_score=True, 
-                                    random_state=random_state)
+                                    bootstrap=True, oob_score=False,
+                                    random_state=random_state, n_jobs=n_jobs)
     
     elif tune == "random_search":
         # define the parameter distribution
@@ -1138,7 +1206,7 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
             'min_samples_split': randint(2, 11)
         }
         # initialize the classifier
-        rf = RandomForestClassifier(bootstrap=True, oob_score=True, random_state=random_state)
+        rf = RandomForestClassifier(bootstrap=True, oob_score=False, random_state=random_state, n_jobs=n_jobs)
         # initialize the Random Search model
         random_search = RandomizedSearchCV(estimator=rf, param_distributions=param_dist, n_iter=100, cv=5, verbose=0, \
                                            random_state=random_state, n_jobs=n_jobs)
@@ -1149,7 +1217,7 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
         best_params = random_search.best_params_
         print("Optimized hyperparameters:", best_params)
         # get the random forest model
-        rf = RandomForestClassifier(**best_params, bootstrap=True, oob_score=True, random_state=random_state)
+        rf = RandomForestClassifier(**best_params, bootstrap=True, oob_score=False, random_state=random_state, n_jobs=n_jobs)
     
     elif tune == "grid_search":
         # define the parameter grid
@@ -1159,7 +1227,7 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
             'min_samples_split': [2, 5, 10]
         }
         # initialize the classifier
-        rf = RandomForestClassifier(bootstrap=True, oob_score=True, random_state=random_state)
+        rf = RandomForestClassifier(bootstrap=True, oob_score=False, random_state=random_state, n_jobs=n_jobs)
         # initialize the Grid Search model
         grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, verbose=0, n_jobs=n_jobs)
         # fit the Grid Search to the data
@@ -1168,12 +1236,12 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
         best_params = grid_search.best_params_
         print("Optimized hyperparameters:", best_params)
         # get the random forest model
-        rf = RandomForestClassifier(**best_params, bootstrap=True, oob_score=True, random_state=random_state)
+        rf = RandomForestClassifier(**best_params, bootstrap=True, oob_score=False, random_state=random_state, n_jobs=n_jobs)
     
     else:
         # create a Gaussian classifier with the default hyperparameters
         rf = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, min_samples_split=min_samples_split, \
-                                    bootstrap=True, oob_score=True, random_state=random_state)
+                                    bootstrap=True, oob_score=False, random_state=random_state, n_jobs=n_jobs)
     
 
     # ======================================================================
@@ -1182,7 +1250,7 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
     # train
     rf.fit(X_train, y_train)
     # print the average out-of-bag accuracy
-    print("OOB Score:", rf.oob_score_)
+    # print("OOB Score:", rf.oob_score_)
 
     if test_size != 0:
         # predict for the test set
@@ -1218,7 +1286,7 @@ def random_forest(X, y, test_size=0.3, random_state=100, smote=True, tune="rando
 
 
 def logistic_regression(X, y, test_size=0.3, random_state=100, penalty='l2', solver='lbfgs', max_iter=1000, \
-                        class_weight='balanced', smote=True, k_neighbors=4, sampling_strategy="auto", n_jobs=None):
+                        class_weight='balanced', smote=True, k_neighbors=4, sampling_strategy="auto", n_jobs=-1):
     """
     Use Logistic regression method to seperate heterozygous sites from candidate sites
 
@@ -1240,9 +1308,8 @@ def logistic_regression(X, y, test_size=0.3, random_state=100, penalty='l2', sol
                 'not majority': resample all classes but the majority class;
                 'all': resample all classes;
                 'auto': equivalent to 'not majority'.
-        n_job - number of jobs to run in parallel (default = None) 
-                None means 1 unless in a joblib.parallel_backend context. 
-                -1 means using all processors.
+        n_job - number of jobs to run in parallel (default = -1)
+                -1 means using all processors. Pass None or a positive integer to override.
     """
     # split dataset into training set and test set
     if test_size != 0:
@@ -1272,7 +1339,7 @@ def logistic_regression(X, y, test_size=0.3, random_state=100, penalty='l2', sol
     # ======================================================================
     # initialize the Logistic Regression model
     lr_model = LogisticRegression(random_state=random_state, penalty=penalty, solver=solver,
-                                  max_iter=max_iter, class_weight=class_weight)
+                                  max_iter=max_iter, class_weight=class_weight, n_jobs=n_jobs)
     # fit model with the training data
     lr_model.fit(X_train, y_train)
 
@@ -1684,6 +1751,31 @@ def make_vcf_info(row, info_columns):
             if val is not None:
                 items.append(f"{col}={val}")
     return ";".join(items) if items else "."
+
+
+def write_pass_mutation_list_file(df, output_file):
+    """Write PASS sites as chrom_pos_ref_alt lines (expects #CHROM, POS, REF, ALT)."""
+    if len(df) == 0:
+        with open(output_file, "w"):
+            pass
+        return
+    _pc = df["POS"]
+    _mask = _pc.notna()
+    _nums = pd.to_numeric(_pc, errors="coerce")
+    _pos_str = np.empty(len(df), dtype=object)
+    _pos_str[_mask.to_numpy()] = _nums.loc[_mask].astype(np.int64).astype(str)
+    _pos_str[~_mask.to_numpy()] = _pc.loc[~_mask].astype(str).to_numpy()
+    _lines = (
+        df["#CHROM"].astype(str).to_numpy()
+        + "_"
+        + _pos_str.astype(str)
+        + "_"
+        + df["REF"].astype(str).to_numpy()
+        + "_"
+        + df["ALT"].astype(str).to_numpy()
+    )
+    with open(output_file, "w") as file:
+        file.write("\n".join(_lines.tolist()) + "\n")
 
 
 def write_simple_vcf(df, output_file, sample_name=None, reference_name=None):

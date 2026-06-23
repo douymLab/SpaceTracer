@@ -91,6 +91,7 @@ steps:
     LOW_VAF: True
     HIGH_VAF: True
     LOW_SPOT_NUM: True
+    LOW_ALT_SPOT_NUM: True
     ASE: True
     hFDR: True
     imprinted: True
@@ -108,7 +109,10 @@ steps:
     INDEL_PROPORTION: True
     ALT_ALLELE_COUNT: True
     POPULATION_AF: True
-    CONTIG_OR_MT: True
+    CONTIG: True
+    MITOCHONDRIA: True
+    CLUSTERED_NOISE(RNA_editing): True
+    CLUSTERED_NOISE: True
 
   mutation_prediction:
     random_seed: 42

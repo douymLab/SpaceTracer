@@ -30,9 +30,10 @@ def handle_reads_per_pos_allele_count(
 
     use_filter = barcode_list is not None and len(barcode_list) > 0
     barcode_set = set(barcode_list) if use_filter else set()
-
+    
     for item in reads:
         barcode_name, UMI_name = handle_seq_type(item, seq_type, bins,cell_dict)
+
         if barcode_name is None or UMI_name is None:
             continue
 
@@ -76,7 +77,6 @@ def handle_reads_per_pos_allele_count(
         geno_index = "ATCG".index(geno)
         umi_entry["count"][geno_index] += 1
         umi_entry["quality"][geno][quality] += 1
-
     return site_barcode_UMI_dict
 
 
@@ -315,7 +315,7 @@ class MutationExtractor:
         with open(out_name, "w") as out_file:
             for line in out_list:
                 write_info = ",".join([str(k) for k in line if k != ""])
-                out_file.write(f'{write_info}')
+                out_file.write(f'{write_info}\n')
         
         # 2. save barcode file
         outsuffix = os.path.basename(self.outprefix)

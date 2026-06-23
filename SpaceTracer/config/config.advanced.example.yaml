@@ -12,6 +12,7 @@ cluster_file: /path/to/cluster_info/result/sample_cluster.txt
 cluster_method: SpaGCN # choices: default, SpaGCN, 
 cell_number: /path/to/cellNum.txt # both int and path are supported
 cell_info: /path/to/cell_info.txt # work for read feature extraction, colum1 is barcode, colum2 is cell
+contain_chrM: False
 
 run:
   threads: 60

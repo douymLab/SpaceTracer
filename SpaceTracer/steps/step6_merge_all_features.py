@@ -181,8 +181,10 @@ class MergeFeatureStep(BaseStep):
         return load_single_feature_file(path, sep="\t")
 
     def _run(self, context):
-        auto_chrom=self.genome_details['chromosomes']['autosomes']
-        sex_chrom=self.genome_details['chromosomes']['sex_chromosomes']
+        # auto_chrom=self.genome_details['chromosomes']['autosomes']
+        # sex_chrom=self.genome_details['chromosomes']['sex_chromosomes']
+        mitochondrial=self.genome_details['chromosomes']['mitochondrial']
+        contigs=self.genome_details['chromosomes']['contigs']
 
         inputs = self.get_inputs(context)
         outputs = self.get_outputs(context)
@@ -198,6 +200,7 @@ class MergeFeatureStep(BaseStep):
         # 3. spatial_feature_results
         spatial_feature_df = pd.DataFrame()
         spatial_input = inputs.get("spatial_feature_results", "")
+        print("******spatial_input",spatial_input)
         if spatial_input:
             if str(spatial_input).endswith(".tsv"):
                 rows = load_manifest_tsv(spatial_input)
@@ -212,7 +215,6 @@ class MergeFeatureStep(BaseStep):
             else:
                 logger.info("The spatial_feature_df is empty! Please check!")
                 spatial_feature_df = self._load_single_feature(spatial_input)
-
         # 4. read_feature_results
         read_feature_df = pd.DataFrame()
         read_input = inputs.get("read_feature_results", "")
@@ -296,15 +298,20 @@ class MergeFeatureStep(BaseStep):
         ]:
             if df is None:
                 continue
-                    
-            if not df.empty:
-                merged_df = merged_df.join(df, how="left")
-                    
-            else:
-                for col in df.columns:
-                    if col not in merged_df.columns:
-                        merged_df[col] = pd.NA
+            try:
+                if not df.empty:
+                    merged_df = merged_df.join(df, how="left")
+                        
+                else:
+                    for col in df.columns:
+                        if col not in merged_df.columns:
+                            merged_df[col] = pd.NA
                 
+            except:
+                print("******",name)
+                print("******",df)
+                print("******",merged_df)
+
         if not cluster_event_df.empty:
             merged_df = merged_df.join(cluster_event_df, how="left")
             merged_df["cluster_event"] = (
@@ -328,7 +335,11 @@ class MergeFeatureStep(BaseStep):
         min_vaf = 0.01
         max_vaf = 0.5
         min_spot_num = 30
-
+        if self.seq_type=="visium":
+            min_alt_spot_num = 1
+        else:
+            min_alt_spot_num = 6
+        
         filtrations_dict = self.get_step_config()
 
         CONDITION_GROUPS = {
@@ -349,11 +360,15 @@ class MergeFeatureStep(BaseStep):
             "INDEL_PROPORTION": ["INDEL_PROPORTION"],
             "ALT_ALLELE_COUNT": ["ALT_ALLELE_COUNT"],
             "POPULATION_AF": ["POPULATION_AF"],
-            "CLUSTER_EVENTS": ["CLUSTER_EVENTS"],
-            "CONTIG_OR_MT": ["CONTIG_OR_MT"],
+            "CLUSTER_EVENTS": ["CLUSTER_EVENTS","OTHER_CLUSTERED_NOISE"],
+            "CONTIG": ["CONTIG"],
+            "MITOCHONDRIA": ["MITOCHONDRIA"],
             "LOW_VAF": ["LOW_VAF"],
             "HIGH_VAF": ["HIGH_VAF"],
-            "LOW_SPOT_NUM": ["LOW_SPOT_NUM"]
+            "LOW_SPOT_NUM": ["LOW_SPOT_NUM"],
+            "LOW_ALT_SPOT_NUM": ["LOW_ALT_SPOT_NUM"],
+            "CLUSTERED_NOISE(RNA_editing)": ["CLUSTERED_NOISE(RNA_editing)"],
+            "CLUSTERED_NOISE": ["CLUSTERED_NOISE"]
         }
 
         ALL_FILTER_CONDITIONS = {
@@ -388,15 +403,21 @@ class MergeFeatureStep(BaseStep):
             "homopolymer": lambda df: df["homopolymer"].notna(),
             "PON": lambda df: df["PON"] == True,
             "RNA_editing": lambda df: df["RNA_editing"] == True,
+            # "RNA_editing": lambda df: df["editing_database"] == True,
+            "CLUSTERED_NOISE(RNA_editing)": lambda df: df["AtoG_clustered_noise"] == True,
+            "CLUSTERED_NOISE": lambda df: df["other_clustered_noise"] == True,
+            # "OTHER_CLUSTERED_NOISE": lambda df: df["other_clustered_noise"] == True,
             # "MAPPABILITY": lambda df: df["mappabilityScore"] == 0,
             "INDEL_PROPORTION": lambda df: df["indel_proportion_for_site"] > 0.05,
             "ALT_ALLELE_COUNT": lambda df: df["consensus_alt_allele_count"] < thr_altcount,
             "POPULATION_AF": lambda df: df["falt"] > thr_popAF,
             "CLUSTER_EVENTS": lambda df: df["cluster_event"] == True,
-            "CONTIG_OR_MT": lambda df: pd.Series(~df.index.get_level_values("#chrom").isin(auto_chrom + sex_chrom),index=df.index),
+            "CONTIG": lambda df: pd.Series(df.index.get_level_values("#chrom").isin(contigs),index=df.index),
+            "MITOCHONDRIA": lambda df: pd.Series(df.index.get_level_values("#chrom").isin(mitochondrial),index=df.index),
             "LOW_VAF": lambda df: df["AFind"] < min_vaf,
             "HIGH_VAF": lambda df: df["AFind"] > max_vaf,
             "LOW_SPOT_NUM": lambda df: df["num_spots"] < min_spot_num,
+            "LOW_ALT_SPOT_NUM": lambda df: df["num_mut_spots"] < min_alt_spot_num,
         }
 
         enabled_groups = [k for k, v in filtrations_dict.items() if v in [True,'true','TRUE','True',1]]

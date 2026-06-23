@@ -282,6 +282,7 @@ class GenotypingStep(BaseStep):
         spot_geno_workers: int,
         context: Dict,
     ) -> Dict[str, str]:
+        
         chunk = row["chunk"]
         spot_count = row["parquet_file"]
 
@@ -460,7 +461,7 @@ class GenotypingStep(BaseStep):
         outputs = self.get_outputs(context)
         result_manifest = outputs["genotype_results"]
 
-        cell_num = self.config.get("cell_num")
+        cell_num = context.get("cell_num")
         seq_type = self.config.get("sequence_type")
         if seq_type == "stereo":
             bins = self.config.get("bin_size", 100)
@@ -506,7 +507,6 @@ class GenotypingStep(BaseStep):
         return self.config.get("steps", {}).get("genotyping", {})
 
 
-# [KEPT] 保留原函数，方便回滚；当前版本不再使用它
 def _load_prior_file(file):
     if file == "":
         df = pd.DataFrame()
