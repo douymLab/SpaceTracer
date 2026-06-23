@@ -1,6 +1,6 @@
 ## Installation
 
-SpaceTracer requires **Python 3.9.0**, `samtools`, `bedtools`, and `vcftools`.
+SpaceTracer requires **Python 3.9**, `samtools`, `bedtools` and `bcftools`.
 
 ### Clone the repository
 
@@ -15,7 +15,46 @@ cd SpaceTracer
 
 Before running SpaceTracer, make sure all required dependencies are available in your environment. We provide two recommended ways to prepare the environment.
 
-#### Option 1: Docker image
+
+#### Option 1: Conda environment
+
+You can create your own Conda environment using the provided `environment.yaml` file:
+
+```bash
+conda env create -f environment.yaml
+conda activate SpaceTracer
+```
+
+Because `environment.yaml` contains many dependencies, we **strongly recommend using `mamba`** to create the environment:
+
+```bash
+mamba env create -f environment.yaml
+conda activate SpaceTracer
+```
+
+!!! note
+    During environment creation, the `pot` or `sorted-nearest` packages may fail to install on some systems. If this happens, activate the `SpaceTracer` environment and install them separately:
+
+    ```bash
+    mamba install -c conda-forge pot
+    pip install sorted-nearest
+    ```
+
+
+Install SpaceTracer into the activated environment (this provides the `spacetracer` command):
+
+```bash
+pip install .
+spacetracer --help
+```
+
+!!! note
+    Conda must be installed before running these commands.
+    Please refer to the [official Conda documentation](https://docs.conda.io/en/latest/).
+    If you plan to use mamba, please install it first from the [mamba documentation](https://mamba.readthedocs.io/en/latest/).
+
+
+#### Option 2: Docker image
 
 We provide a Docker image, `spacetracer`, with all required dependencies preinstalled. The image is available on [Docker Hub](https://hub.docker.com/r/xiayh17/spacetracer):
 
@@ -31,29 +70,6 @@ This command runs the Docker container in interactive mode (`-it`), mounts the c
 !!! note
     Docker must be installed on your machine before using this option.
     If Docker is not installed, please follow the [official Docker installation guide](https://docs.docker.com/get-started/get-docker/).
-
-#### Option 2: Conda environment
-
-Alternatively, you can create your own Conda environment using the provided `environment.yaml` file:
-
-```bash
-conda env create -f environment.yaml
-conda activate SpaceTracer
-```
-
-For faster dependency solving, you can use `mamba` instead:
-
-```bash
-mamba env create -f environment.yaml
-conda activate SpaceTracer
-```
-
-This step may take some time with Conda on Linux, while mamba is usually much faster.
-
-!!! note
-    Conda must be installed before running these commands.
-    Please refer to the [official Conda documentation](https://docs.conda.io/en/latest/).
-    If you plan to use mamba, please install it first from the [mamba documentation](https://mamba.readthedocs.io/en/latest/).
 
 
 #### Additional Python packages
