@@ -24,6 +24,7 @@ output_dir: /path/to/output
 sample: Sample
 resource_dir: /path/to/resource_dir
 model_name: spatial_free_model
+contain_chrM: False
 
 run:
   threads: 60
@@ -54,6 +55,7 @@ cluster_file: /path/to/cluster_info/result/sample_cluster.txt
 cluster_method: SpaGCN # choices: default, SpaGCN,
 cell_number: /path/to/cellNum.txt # both int and path are supported
 cell_info: /path/to/cell_info.txt # colum1 is barcode, colum2 is cell
+contain_chrM: False
 
 run:
   threads: 60
@@ -104,6 +106,7 @@ If `spaceranger_dir` or `resource_dir` is not available, fill in the correspondi
 - `cluster_method`: clustering strategy used when SpaceTracer needs to generate clusters. Supported values are `default`, `SpaGCN`, and `GraphST`.
 - `cell_number`: fixed cell number or path to a cell-number file.
 - `cell_info`: optional barcode-to-cell annotation file used by read-level feature extraction. The first column is barcode and the second column is cell.
+- `contain_chrM`: top-level shortcut for mitochondrial-call filtration behavior; set according to whether mitochondrial chromosomes are included in the run.
 
 ### `run`
 

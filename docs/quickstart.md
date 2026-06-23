@@ -90,6 +90,7 @@ Common output files from downstream feature and prediction stages include:
 
 - `output_dir/all_feature.txt`
 - `output_dir/all_feature.parquet`
-- `output_dir/mutation_prediction/results/Sample_total_pred_truesites.vcf`
-- `output_dir/mutation_prediction/results/Sample_total_pred_truesites_PASS.vcf`
+- `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites.vcf`
+- `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS.vcf`
+- `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS_mutation_list.txt`
 - `output_dir/phylogeny/tree/mutation_integrator/phylo/final_cleaned_M_full_basedPivots.filtered_sites_inferred.tree_scphylo.pdf`

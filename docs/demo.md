@@ -109,7 +109,8 @@ Important outputs include:
 
 - `human_visium/all_feature.txt`
 - `human_visium/all_feature.parquet`
-- `human_visium/mutation_prediction/results/demo_total_pred_truesites.vcf`
-- `human_visium/mutation_prediction/results/demo_total_pred_truesites_PASS.vcf`
+- `human_visium/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites.vcf`
+- `human_visium/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS.vcf`
+- `human_visium/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS_mutation_list.txt`
 
 You can compare your generated output folder with the extracted `human_visium` example output.
