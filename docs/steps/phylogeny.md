@@ -30,14 +30,15 @@ Builds a lineage tree from high-confidence mutation calls using the integrated P
 | --- | --- | --- | --- |
 | `final_mutation_list` | `mutation_prediction` output | Yes | PASS mutation list used for tree building. |
 | `in_filter_bam` | `bam_processing` output | Yes | Filtered BAM used to build the mutation matrix. |
-| `tissue_position` | resolved from `spaceranger_dir` or `input_details.tissue_position` | Yes for automatic tree building | Barcode/tissue-position file used to map mutations to spatial spots. |
+| `tissue_position` | resolved from `spaceranger_dir` or `input_details.tissue_position` | Yes unless `target_barcodes` is provided | Barcode/tissue-position file used to map mutations to spatial spots. |
+| `target_barcodes` | `steps.phylogeny.target_barcodes` | No | Optional file containing target barcodes for tree input preparation. |
 | `cell_info` | top-level `cell_info` or read-feature settings | No | Optional barcode-to-cell annotation file. |
 
 ## Skip behavior
 
 The step is skipped when fewer than 3 PASS mutations are available, because there is not enough mutation signal to infer a useful tree.
 
-If `tissue_position` cannot be resolved, the current implementation logs that automatic tree building is not supported for that run instead of building the tree.
+If neither `tissue_position` nor `target_barcodes` can be resolved, the current implementation logs that automatic tree building is not supported for that run instead of building the tree.
 
 ## Dependencies
 

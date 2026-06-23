@@ -120,6 +120,7 @@ steps:
     LOW_VAF: True
     HIGH_VAF: True
     LOW_SPOT_NUM: True
+    LOW_ALT_SPOT_NUM: True
     ASE: True
     hFDR: True
     imprinted: True
@@ -137,7 +138,10 @@ steps:
     INDEL_PROPORTION: True
     ALT_ALLELE_COUNT: True
     POPULATION_AF: True
-    CONTIG_OR_MT: True
+    CONTIG: True
+    MITOCHONDRIA: True
+    CLUSTERED_NOISE(RNA_editing): True
+    CLUSTERED_NOISE: True
 
   mutation_prediction:
     random_seed: 42
@@ -266,6 +270,7 @@ Controls which filtration tags are applied during feature merge and filtration.
 - `LOW_VAF`: filter low variant allele frequency calls.
 - `HIGH_VAF`: filter unusually high variant allele frequency calls.
 - `LOW_SPOT_NUM`: filter calls supported by too few spots.
+- `LOW_ALT_SPOT_NUM`: filter calls supported by too few mutant spots.
 - `ASE`: filter allele-specific expression artifacts.
 - `hFDR`: filter calls failing hFDR-related criteria.
 - `imprinted`: filter imprinted-region artifacts.
@@ -283,7 +288,10 @@ Controls which filtration tags are applied during feature merge and filtration.
 - `INDEL_PROPORTION`: filter calls with high nearby indel proportion.
 - `ALT_ALLELE_COUNT`: filter calls with insufficient alternate allele count.
 - `POPULATION_AF`: filter common population variants.
-- `CONTIG_OR_MT`: filter contig or mitochondrial calls when appropriate.
+- `CONTIG`: filter calls on configured contig chromosomes.
+- `MITOCHONDRIA`: filter mitochondrial calls.
+- `CLUSTERED_NOISE(RNA_editing)`: filter clustered A-to-G/T-to-C noise patterns consistent with RNA-editing-like artifacts.
+- `CLUSTERED_NOISE`: filter other clustered technical-noise patterns.
 
 ## `mutation_prediction`
 

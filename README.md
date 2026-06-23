@@ -10,6 +10,9 @@ SpaceTracer is an open-source algorithm capable of accurately detecting mosaic S
 
 *SpaceTracer is actively maintained. Check the Release Notes below and GitHub Releases for the latest updates.*
 
+- 2026/06/23: Version 2.2.0 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.2.0))
+Updated mutation-prediction models, added clustered-noise and mitochondrial/contig filtration controls, and improved RNA-feature and PhyloSOLID handling.
+
 - 2026/06/15: Version 2.1.2 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.1.2))
 Fixed genotyping to use per-spot cell numbers from the `cell_num` step output.
 
@@ -97,8 +100,9 @@ Common downstream outputs:
 
 - `output_dir/all_feature.txt`
 - `output_dir/all_feature.parquet`
-- `output_dir/mutation_prediction/results/Sample_total_pred_truesites.vcf`
-- `output_dir/mutation_prediction/results/Sample_total_pred_truesites_PASS.vcf`
+- `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites.vcf`
+- `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS.vcf`
+- `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS_mutation_list.txt`
 - `output_dir/phylogeny/tree/mutation_integrator/phylo/final_cleaned_M_full_basedPivots.filtered_sites_inferred.tree_scphylo.pdf`
 
 ### Optional: advanced step-by-step mode

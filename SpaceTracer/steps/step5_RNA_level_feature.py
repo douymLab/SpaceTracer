@@ -605,9 +605,6 @@ class RNAFeatureStep(BaseStep):
 
         # others (if file is '', will return unknown)
         result_df["imprinted"] = add_col_from_bed(df, imprinted_bed)
-        df["imprinted"] = add_col_from_bed(df, imprinted_bed)
-        df.to_csv("test_imprinted.txt",sep="\t")
-
         result_df["editing_database"] = add_col_from_mutant(df, editing_bed)
 
         # Clustered_Technical_Noise (containing RNA_editing_clustered and other_clustered_noise)

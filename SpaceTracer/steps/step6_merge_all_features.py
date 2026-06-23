@@ -200,7 +200,6 @@ class MergeFeatureStep(BaseStep):
         # 3. spatial_feature_results
         spatial_feature_df = pd.DataFrame()
         spatial_input = inputs.get("spatial_feature_results", "")
-        print("******spatial_input",spatial_input)
         if spatial_input:
             if str(spatial_input).endswith(".tsv"):
                 rows = load_manifest_tsv(spatial_input)
@@ -308,9 +307,7 @@ class MergeFeatureStep(BaseStep):
                             merged_df[col] = pd.NA
                 
             except:
-                print("******",name)
-                print("******",df)
-                print("******",merged_df)
+                pass
 
         if not cluster_event_df.empty:
             merged_df = merged_df.join(cluster_event_df, how="left")

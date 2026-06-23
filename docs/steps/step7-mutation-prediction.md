@@ -12,7 +12,7 @@
 
 - loads merged features from Step 6
 - runs the trained model (`model_dir` + `model_name`)
-- exports mutation prediction VCF files
+- exports mutation prediction VCF files and mutation lists
 
 ## Detailed reference page
 
