@@ -167,7 +167,8 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
                                'consensus_ref_allele_count', 'consensus_alt2_allele_count', 'consensus_alt_allele_count', \
                                'Filtration', 'editing_AtoG', 'editing_database', 'RNA_editing', \
                                'imprinted', 'ASE', 'hFDR', 'homopolymer', 'PON', 'cluster_event', \
-                               '#chrom', 'pos', 'ref', 'alt', 'phasing_nearest_mut_origin', 'phasing_most_mut_origin']
+                               '#chrom', 'pos', 'ref', 'alt', 'phasing_nearest_mut_origin', 'phasing_most_mut_origin', \
+                               'AtoG_clustered_noise', 'other_clustered_noise']
         # drop some features which are not distinguishable for classification
         undistinguishable_columns = ['consensus_UMI_count', 'alt_read_number_perUMI_max', 'vaf', \
                                      'indel_proportion_for_site', 'mappabilityScore', 'cause_poly_alt']
@@ -911,25 +912,21 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
 
     # PASS-only sites
     df_output_pass = df_output[df_output["FILTER"] == "PASS"].copy()
+    df_output_chrM = df_output[df_output["FILTER"] == "MITOCHONDRIA"].copy()
 
     # output paths
-    # parquet_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites.parquet")
-    # tsv_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites.tsv")
     vcf_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites.vcf")
-    # parquet_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.parquet")
-    # tsv_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.tsv")
     vcf_pass_output_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS.vcf")
     pass_mutation_list_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_PASS_mutation_list.txt")
+    chrM_mutation_list_file = os.path.join(results_dir, sample_name + "_total_pred_truesites_MITO_mutation_list.txt")
     # save all sites
-    # df_output.to_parquet(parquet_output_file, index=False)
-    # df_output.to_csv(tsv_output_file, sep="\t", index=False, float_format="%.6g")
     write_simple_vcf(df_output, vcf_output_file, sample_name=sample_name)
     # save PASS-only sites
-    # df_output_pass.to_parquet(parquet_pass_output_file, index=False)
-    # df_output_pass.to_csv(tsv_pass_output_file, sep="\t", index=False, float_format="%.6g")
     write_simple_vcf(df_output_pass, vcf_pass_output_file, sample_name=sample_name)
     # save PASS-only mutation list in chrom_pos_ref_alt format
     write_pass_mutation_list_file(df_output_pass, pass_mutation_list_file)
+    # save chrM sites mutation list in chrom_pos_ref_alt format
+    write_pass_mutation_list_file(df_output_chrM, chrM_mutation_list_file)
     # print notes
     print(f"Total predicted true sites: {len(df_output)}")
     print(f"PASS predicted true sites: {len(df_output_pass)}")
@@ -937,6 +934,7 @@ def mutation_classification(input_file, output_dir, sample_name, model_dir="./",
     print(f"  - All sites: {vcf_output_file}")
     print(f"  - PASS sites: {vcf_pass_output_file}")
     print(f"  - PASS mutation list: {pass_mutation_list_file}")
+    print(f"  - MITO mutation list: {chrM_mutation_list_file}")
 
 
     # pca scatter plot

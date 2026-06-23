@@ -282,6 +282,7 @@ class GenotypingStep(BaseStep):
         spot_geno_workers: int,
         context: Dict,
     ) -> Dict[str, str]:
+        
         chunk = row["chunk"]
         spot_count = row["parquet_file"]
 
@@ -506,7 +507,6 @@ class GenotypingStep(BaseStep):
         return self.config.get("steps", {}).get("genotyping", {})
 
 
-# [KEPT] 保留原函数，方便回滚；当前版本不再使用它
 def _load_prior_file(file):
     if file == "":
         df = pd.DataFrame()

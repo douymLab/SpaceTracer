@@ -48,24 +48,45 @@ class PhylogenyBuildStep(BaseStep):
             parameters['tissue_position'] = None
 
         parameters['cell_info']=self.config.get("steps", {}).get("read_feature", {}).get('cell_info','')
+        parameters['target_barcodes']=self.config.get("steps", {}).get("phylogeny", {}).get('target_barcodes',None)
 
         return parameters
-            
+                
 
-    def build_input_matrix(self,filter_bam,final_mutation_list,cell_dict,tissue_position_barcode):
-
-        extractor = MutationExtractor(
-            samples=self.sample,
-            bams=filter_bam,
-            mutlist=final_mutation_list,
-            outprefix=str(self.step_dir)+"/"+self.sample,  
-            cell_dict=cell_dict,
-            barcode_files=tissue_position_barcode,
-            bins=self.bin_size,                                    
-            seq_type=self.seq_type,                       
-            run_type="UMI"                     
-        )
-
+    def build_input_matrix(self, filter_bam, final_mutation_list, cell_dict, 
+                        tissue_position_barcode, target_barcodes):
+        if target_barcodes is not None and target_barcodes: 
+            extractor = MutationExtractor(
+                samples=self.sample,
+                bams=filter_bam,
+                mutlist=final_mutation_list,
+                outprefix=str(self.step_dir) + "/" + self.sample,  
+                cell_dict=cell_dict,
+                target_barcodes=target_barcodes,
+                bins=self.bin_size,                                    
+                seq_type=self.seq_type,                       
+                run_type="UMI"                     
+            )
+        
+        elif tissue_position_barcode is not None and tissue_position_barcode:
+            extractor = MutationExtractor(
+                samples=self.sample,
+                bams=filter_bam,
+                mutlist=final_mutation_list,
+                outprefix=str(self.step_dir) + "/" + self.sample,  
+                cell_dict=cell_dict,
+                barcode_files=tissue_position_barcode,  # 注意参数名
+                bins=self.bin_size,                                    
+                seq_type=self.seq_type,                       
+                run_type="UMI"                     
+            )
+        
+        else:
+            raise FileNotFoundError(
+                f'Neither target_barcodes ({target_barcodes}) nor '
+                f'tissue_position_barcode ({tissue_position_barcode}) was found!'
+            )
+        
         out_name, out_barcode_file, spot_num = extractor.run()
         return out_name, out_barcode_file, spot_num 
 
@@ -167,21 +188,22 @@ class PhylogenyBuildStep(BaseStep):
         
             parameters=self.optional_parameters()
             tissue_position_barcode=parameters["tissue_position"]
+            target_barcodes=parameters["target_barcodes"]
             cell_info_file = parameters.get("cell_info","")
             
             if cell_info_file:
                 cell_dict = barcode_cell_mapping(cell_info_file)
             else:
                 cell_dict = {}
-
-            if not tissue_position_barcode:
+                
+            if not tissue_position_barcode and not target_barcodes:
                 logger.info(f'The current version of spacetracer not support build the tree automaticlly, please check the update of spacetracer.')
 
             else:
                 tree_output_path = Path(self.step_dir) / "tree"
                 tree_output_path.mkdir(parents=True, exist_ok=True)
 
-                matrix_path, barcode_path, spot_num=self.build_input_matrix(filter_bam,final_mutation_list,cell_dict,tissue_position_barcode)
+                matrix_path, barcode_path, spot_num=self.build_input_matrix(filter_bam,final_mutation_list,cell_dict,tissue_position_barcode,target_barcodes)
                 data_output_path=self.prepare_data(matrix_path, barcode_path, spot_num,self.step_dir)
                 tree_output_path = self.build_tree(data_output_path,tree_output_path)
 

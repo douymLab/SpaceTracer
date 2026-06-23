@@ -266,6 +266,9 @@ class LoadConfig:
         if self.config.get("model_dir") is not None:
             steps["mutation_prediction"]["model_dir"] = self.config["model_dir"]
 
+        if self.config.get("contain_chrM",False) in ["True",True,"TRUE"]:
+            steps["feature_filtration"]["MITOCHONDRIA"] = True
+
     def _validate_resolved_inputs(self):
         if not self.config.get("bam_file"):
             raise ValueError(

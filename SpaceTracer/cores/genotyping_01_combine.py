@@ -1,3 +1,4 @@
+from math import ceil
 import pandas as pd
 from collections import Counter
 from functools import lru_cache
@@ -164,8 +165,8 @@ class UMICombiner_from_spot:
         count[['x', 'y']] = count['barcode'].str.split('_', expand=True)
         count['x'] = count['x'].astype('int32')
         count['y'] = count['y'].astype('int32')
-        count['new_x'] = ((count['x'] // bins) * bins).astype('int32') + bins
-        count['new_y'] = ((count['y'] // bins) * bins).astype('int32') + bins
+        count['new_x'] = ceil((count['x'] / bins) * bins).astype('int32') 
+        count['new_y'] = ceil((count['y'] / bins) * bins).astype('int32') 
         count['barcode'] = count['new_x'].astype(str) + "_" + count['new_y'].astype(str)
         count = count.drop(columns=['x', 'y', 'new_x', 'new_y'])
         return count

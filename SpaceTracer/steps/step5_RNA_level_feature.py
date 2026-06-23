@@ -1,4 +1,5 @@
 from collections import Counter
+from locale import D_FMT
 import os
 import shutil
 import pandas as pd
@@ -61,40 +62,92 @@ def merge_parquet_files_from_list(parquet_files, output_file, compression="snapp
 
     return output_file
 
+def detect_clustered_noise(df, window_size=100, min_mutations=3, homo_thresh=0.8):
 
-# def merge_table_files_from_list(file_list, output_file, sep="\t"):
-#     file_list = [f for f in file_list if f and os.path.exists(f) and os.path.getsize(f) > 0]
-
-#     out_dir = os.path.dirname(output_file)
-#     if out_dir:
-#         os.makedirs(out_dir, exist_ok=True)
-
-#     if not file_list:
-#         raise ValueError(f"No valid table files to merge for {output_file}")
-
-#     wrote_any = False
-#     header_written = False
-
-#     for f in file_list:
-#         df = pd.read_csv(f, sep=sep)
-#         if df is None or df.empty:
-#             del df
-#             continue
-
-#         mode = "w" if not wrote_any else "a"
-#         df.to_csv(output_file, sep=sep, index=False, mode=mode, header=not header_written)
-
-#         wrote_any = True
-#         header_written = True
-
-#         del df
-#         gc.collect()
-
-#     if not wrote_any:
-#         pd.DataFrame().to_csv(output_file, sep=sep, index=False)
-
-#     return output_file
-
+    # 保存原始索引
+    original_index = df.index
+    
+    # 如果 df 是 MultiIndex，先重命名索引的 levels 避免冲突
+    if isinstance(df.index, pd.MultiIndex):
+        # 重命名索引 levels
+        new_index_names = []
+        for i, name in enumerate(df.index.names):
+            if name in df.columns:
+                new_index_names.append(f"{name}_idx")
+            else:
+                new_index_names.append(name)
+        df.index.names = new_index_names
+    
+    # 重置索引
+    df_work = df.reset_index()
+    
+    # 添加行号
+    df_work['_row_id'] = range(len(df_work))
+    
+    # 构建位置字典
+    chrom_pos_dicts = {}
+    for chrom, group in df_work.groupby('chrom'):
+        pos_dict = group.groupby('pos').apply(
+            lambda x: list(zip(x['ref'], x['alt'], x['_row_id']))
+        ).to_dict()
+        chrom_pos_dicts[chrom] = pos_dict
+    
+    bases = ['A', 'C', 'G', 'T']
+    mutation_types = [(r, a) for r in bases for a in bases if r != a]
+    
+    atog_cluster_ids = set()
+    other_cluster_ids = set()
+    
+    for ref_base, alt_base in mutation_types:
+        is_atog_type = (ref_base == 'A' and alt_base == 'G') or (ref_base == 'T' and alt_base == 'C')
+        
+        for chrom, pos_dict in chrom_pos_dicts.items():
+            unique_positions = sorted(pos_dict.keys())
+            n_unique = len(unique_positions)
+            
+            i = 0
+            while i < n_unique:
+                current_pos = unique_positions[i]
+                muts_at_i = pos_dict[current_pos]
+                
+                if not any(r == ref_base and a == alt_base for r, a, idx in muts_at_i):
+                    i += 1
+                    continue
+                    
+                end_pos = current_pos + window_size
+                j = i
+                unique_site_count = 0
+                target_site_count = 0
+                temp_row_ids = []
+                
+                while j < n_unique and unique_positions[j] <= end_pos:
+                    muts_at_j = pos_dict[unique_positions[j]]
+                    unique_site_count += 1
+                    
+                    has_target = False
+                    for r, a, idx in muts_at_j:
+                        if r == ref_base and a == alt_base:
+                            has_target = True
+                            temp_row_ids.append(idx)
+                    
+                    if has_target:
+                        target_site_count += 1
+                    j += 1
+                    
+                if unique_site_count >= min_mutations and (target_site_count / unique_site_count) >= homo_thresh:
+                    if is_atog_type:
+                        atog_cluster_ids.update(temp_row_ids)
+                    else:
+                        other_cluster_ids.update(temp_row_ids)
+                    i = j
+                else:
+                    i += 1
+    
+    # 返回与输入df顺序一致的Series
+    atog_result = pd.Series(df_work['_row_id'].isin(atog_cluster_ids).values, index=original_index)
+    other_result = pd.Series(df_work['_row_id'].isin(other_cluster_ids).values, index=original_index)
+    
+    return atog_result, other_result
 
 
 def merge_table_files_from_list(file_list, output_file, sep="\t"):
@@ -439,6 +492,8 @@ class RNAFeatureStep(BaseStep):
         if missing:
             raise ValueError(f"Merged ind_geno_filter_file missing required columns: {missing}")
 
+        df = df.sort_values(by=['chrom', 'pos'])
+
         df.index = pd.MultiIndex.from_arrays(
             [df["chrom"], df["pos"], df["ref"], df["alt"]],
             names=["chrom", "pos", "ref", "alt"]
@@ -546,20 +601,31 @@ class RNAFeatureStep(BaseStep):
                 )
         else:
             PON_df = pd.DataFrame()
-
         result_df["PON"] = add_col_from_mutant_from_df(df, PON_df)
-
 
         # others (if file is '', will return unknown)
         result_df["imprinted"] = add_col_from_bed(df, imprinted_bed)
-        result_df["editing_database"] = add_col_from_bed(df, editing_bed)
+        df["imprinted"] = add_col_from_bed(df, imprinted_bed)
+        df.to_csv("test_imprinted.txt",sep="\t")
 
+        result_df["editing_database"] = add_col_from_mutant(df, editing_bed)
+
+        # Clustered_Technical_Noise (containing RNA_editing_clustered and other_clustered_noise)
+        window_size=100
+        min_mutations=3
+        homo_thresh=0.8
+        atog_series, other_series = detect_clustered_noise(df,window_size,min_mutations,homo_thresh)
+
+        result_df['AtoG_clustered_noise'] = atog_series
+        result_df['other_clustered_noise'] = other_series
+
+            
         del df
         gc.collect()
         
         result_df["RNA_editing"] = (
             (result_df["editing_database"] == True) |
-            (result_df["editing_AtoG"] == True)
+            (result_df["editing_AtoG"] == True) 
         )
 
         # save

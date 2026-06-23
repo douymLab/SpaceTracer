@@ -596,8 +596,8 @@ def bin_df(df, bins):
     df[['x', 'y']] = df['barcode'].str.split('_', expand=True)
     df['x'] = df['x'].astype(np.int64)
     df['y'] = df['y'].astype(np.int64)
-    df['new_x'] = ((df['x'] + bins - 1) // bins) * bins
-    df['new_y'] = ((df['y'] + bins - 1) // bins) * bins
+    df['new_x'] = np.ceil((df['x']) / bins) * bins
+    df['new_y'] = np.ceil((df['y']) / bins) * bins
     df['new_x'] = df['new_x'].astype(str)
     df['new_y'] = df['new_y'].astype(str)
     df['barcode'] = df['new_x'] + "_" + df['new_y']

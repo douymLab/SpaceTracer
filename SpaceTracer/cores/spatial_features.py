@@ -346,6 +346,10 @@ def spatial_kstest(df, col="mutated", alpha=0.05, method="LDA", num_directions=8
         X_proj = lda.fit_transform(X, df[col])
         # df['proj'] = X_proj
 
+        # if the mutant and non-mutant spots has the same mean, return False
+        if X_proj.size == 0 or X_proj.shape[1] == 0:
+            return df, False, "NA", "NA"
+
         # find the positions of the spots with/without mutantations
         proj_1 = X_proj[df[col]==1]
         proj_0 = X_proj[df[col]==0]

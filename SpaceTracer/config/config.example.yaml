@@ -5,6 +5,7 @@ output_dir: /path/to/output
 sample: Sample
 resource_dir: /path/to/resource_dir
 model_name: spatial_free_model
+contain_chrM: False
 
 run:
   threads: 60
