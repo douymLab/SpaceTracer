@@ -307,9 +307,7 @@ class MergeFeatureStep(BaseStep):
                             merged_df[col] = pd.NA
                 
             except:
-                print("******",name)
-                print("******",df)
-                print("******",merged_df)
+                pass
 
         if not cluster_event_df.empty:
             merged_df = merged_df.join(cluster_event_df, how="left")

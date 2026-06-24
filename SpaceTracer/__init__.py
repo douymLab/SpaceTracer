@@ -9,7 +9,7 @@ Main components:
 - Utils: Utility functions
 """
 
-__version__ = "1.0.0"
+__version__ = "2.1.2"
 __author__ = "Zhirui Yang & Mengdie Yao"
 __email__ = "yangzhirui@westlake.edu.cn"
 
