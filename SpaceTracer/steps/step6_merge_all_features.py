@@ -200,7 +200,6 @@ class MergeFeatureStep(BaseStep):
         # 3. spatial_feature_results
         spatial_feature_df = pd.DataFrame()
         spatial_input = inputs.get("spatial_feature_results", "")
-        print("******spatial_input",spatial_input)
         if spatial_input:
             if str(spatial_input).endswith(".tsv"):
                 rows = load_manifest_tsv(spatial_input)
