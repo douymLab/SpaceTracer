@@ -70,8 +70,8 @@ class MutationPredictionStep(BaseStep):
         annotate_mosaic=True
         annotate_outlier=False
         n_features=20
-        save_pca=True
-        save_shap=True
+        save_pca=False
+        save_shap=False
 
         use_lr=False
         not_pred_het=True

@@ -2,6 +2,7 @@ from collections import Counter
 from locale import D_FMT
 import os
 import shutil
+import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import gc
@@ -190,6 +191,24 @@ def merge_table_files_from_list(file_list, output_file, sep="\t"):
     return output_file
 
 
+def _mask_placeholder_priors(priors: pd.DataFrame) -> pd.DataFrame:
+    """Treat genotyping placeholders 1,1,1,1 and fillna 0,0,0,0 as missing."""
+    fake_prior_mask = (
+        (priors == 1.0).all(axis=1) | (priors == 0.0).all(axis=1)
+    )
+    priors = priors.copy()
+    priors.loc[fake_prior_mask] = np.nan
+    return priors
+
+
+def _format_ref_prior(row) -> object:
+    """Join germline allele priors; return np.nan if any allele prior is missing."""
+    vals = [row[f"{b}_prior"] for b in row["germline"].split(",")]
+    if any(pd.isna(v) for v in vals):
+        return np.nan
+    return ",".join(str(v) for v in vals)
+
+
 def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
     df["pos"] = df["pos"].astype(int)
 
@@ -198,6 +217,7 @@ def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
 
     priors = df["prior_ATCG"].str.split(",", expand=True).astype(float)
     priors.columns = ["A_prior", "T_prior", "C_prior", "G_prior"]
+    priors = _mask_placeholder_priors(priors)
 
     df = pd.concat([df, counts, priors], axis=1, copy=False)
 
@@ -234,11 +254,7 @@ def _prepare_ind_df(df: pd.DataFrame) -> pd.DataFrame:
     ref_idx = df.loc[single_mask, "germline"].map(base_to_idx).to_numpy()
     df.loc[single_mask, "ref_count"] = counts_np[df.index[single_mask], ref_idx]
 
-    
-    # if germline has 2 alleles
-    df['ref_prior'] = df.apply(
-        lambda r: ','.join(str(r[f"{b}_prior"]) for b in r['germline'].split(',')), axis=1
-    )
+    df['ref_prior'] = df.apply(_format_ref_prior, axis=1)
     
     del counts
     del priors
@@ -255,6 +271,7 @@ def _prepare_germline_df_for_feature(df: pd.DataFrame) -> pd.DataFrame:
 
     priors = df["prior_ATCG"].str.split(",", expand=True).astype(float)
     priors.columns = ["A_prior", "T_prior", "C_prior", "G_prior"]
+    priors = _mask_placeholder_priors(priors)
 
     df = pd.concat([df, counts, priors], axis=1, copy=False)
 
@@ -291,11 +308,7 @@ def _prepare_germline_df_for_feature(df: pd.DataFrame) -> pd.DataFrame:
     ref_idx = df.loc[single_mask, "germline"].map(base_to_idx).to_numpy()
     df.loc[single_mask, "ref_count"] = counts_np[df.index[single_mask], ref_idx]
 
-    
-    # if germline has 2 alleles
-    df['ref_prior'] = df.apply(
-        lambda r: ','.join(str(r[f"{b}_prior"]) for b in r['germline'].split(',')), axis=1
-    )
+    df['ref_prior'] = df.apply(_format_ref_prior, axis=1)
     
     del counts
     del priors
@@ -416,7 +429,7 @@ class RNAFeatureStep(BaseStep):
         )
 
         RNA_feature = outputs["RNA_feature"]
-        empty_df.to_csv(RNA_feature, sep="\t", index=True)
+        empty_df.to_csv(RNA_feature, sep="\t", index=True, na_rep="NA")
 
         parquet_file = str(RNA_feature).replace(".txt", ".parquet")
         empty_df.to_parquet(parquet_file, index=True)
@@ -508,12 +521,18 @@ class RNAFeatureStep(BaseStep):
         result_df = df[
             [
                 "strand", "count", "ref_count", "alt_count", "alt2_count",
-                "ref_prior", "alt_prior", "p_mosaic", "vaf",
+                "ref_prior", "alt_prior", "p_mosaic", 
                 "DNAMutationType", "RNAMutationType", "GCcontent", "cause_poly_alt", "homopolymer",
                 "editing_AtoG"
             ]
         ].copy()
 
+        total_count = result_df["count"].astype(float)
+        result_df["AFind"] = np.where(
+            total_count > 0,
+            result_df["alt_count"].astype(float) / total_count,
+            np.nan,
+        )
         result_df = result_df.rename(columns={
             "strand": "major_read_strand",
             "count": "consensus_UMI_count",
@@ -521,12 +540,14 @@ class RNAFeatureStep(BaseStep):
             "alt_count": "consensus_alt_allele_count",
             "alt2_count": "consensus_alt2_allele_count",
             "ref_prior": "fref",
-            "alt_prior": "falt",
-            "vaf": "AFind"
+            "alt_prior": "falt"
         })
 
-        result_df["consensus_alt2_proportion"] = (
-            result_df["consensus_alt2_allele_count"] / result_df["consensus_UMI_count"]
+        total_umi = result_df["consensus_UMI_count"].astype(float)
+        result_df["consensus_alt2_proportion"] = np.where(
+            total_umi > 0,
+            result_df["consensus_alt2_allele_count"].astype(float) / total_umi,
+            np.nan,
         )
 
         # print(germline_file,
@@ -626,9 +647,9 @@ class RNAFeatureStep(BaseStep):
             (result_df["editing_AtoG"] == True) 
         )
 
-        # save
+        # save: txt uses NA; parquet keeps np.nan / null
         result_df.index.names = ["#chrom", "pos", "ref", "alt"]
-        result_df.to_csv(RNA_feature, sep="\t", index=True)
+        result_df.to_csv(RNA_feature, sep="\t", index=True, na_rep="NA")
 
         parquet_file = str(RNA_feature).replace(".txt", ".parquet")
         result_df.to_parquet(parquet_file, index=True)

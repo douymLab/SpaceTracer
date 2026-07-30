@@ -13,12 +13,36 @@ from SpaceTracer.utils.get_read_level_feature import check_UMIconsistence_for_ea
 from SpaceTracer.utils.handle_UMI_combine import handle_pos, handle_quality_matrix, handle_seq,calculate_UMI_combine_phred_count_dict, get_most_candidate_allele, handle_seq_type
 
 
-def handel_bam_file_for_region(bam_file,region_dict,run_type,bins,cell_dict={},readLen=120,downsample=False,target_depth=2000,seed=42):
+def handel_bam_file_for_region(
+    bam_file,
+    region_dict,
+    run_type,
+    bins,
+    cell_dict={},
+    readLen=120,
+    downsample=False,
+    target_depth=2000,
+    seed=42,
+    bam_handle=None,
+):
     region_reads = []
 
-    with pysam.AlignmentFile(bam_file, "rb") as bam:
-        for read in bam.fetch(region_dict['chrom'], region_dict['start'], region_dict['end']):
+    if bam_handle is not None:
+        fetch_iter = bam_handle.fetch(
+            region_dict['chrom'], region_dict['start'], region_dict['end']
+        )
+    else:
+        bam_handle_ctx = pysam.AlignmentFile(bam_file, "rb")
+        fetch_iter = bam_handle_ctx.fetch(
+            region_dict['chrom'], region_dict['start'], region_dict['end']
+        )
+
+    try:
+        for read in fetch_iter:
             region_reads.append(read)
+    finally:
+        if bam_handle is None:
+            bam_handle_ctx.close()
 
     var_result_dict={}
     for var in region_dict['variants']:

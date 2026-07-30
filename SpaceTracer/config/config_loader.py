@@ -5,7 +5,7 @@ import yaml
 from typing import Dict, Any
 from multiprocessing import cpu_count
 from importlib.resources import files
-
+import pandas as pd
 from SpaceTracer.utils.get_genome_info import GenomeDetails
 
 
@@ -98,12 +98,17 @@ class LoadConfig:
                 raise ValueError(f'You have not provided required config: {key}')
 
     def _validate_basic_inputs(self):
-        self._check_required_values([
+        string_keys = [
             "genome",
             "sequence_type",
             "output_dir",
             "sample",
-        ])
+        ]
+        for key in string_keys:
+            value = self.config.get(key)
+            if value is not None:
+                self.config[key] = str(value)
+        self._check_required_values(string_keys)
 
     def _resolve_input_files(self):
         input_details = self.config.get("input_details", {})
@@ -207,6 +212,18 @@ class LoadConfig:
             self._replace_config("barcode_mapping", input_details)
             self._replace_config("barcode_key", input_details)
 
+    def _resolve_sample_condition(self):
+        condition = str(self.config["condition"]).lower()
+        if condition == "tumor":
+            self.config["condition"] = "tumor"
+        elif condition in ("normal", "healthy"):
+            self.config["condition"] = "normal"
+        else:
+            raise ValueError(
+                f"Invalid condition: {self.config.get('condition')!r}. "
+                "Expected tumor or normal/healthy."
+            )
+
     def _resolve_resource_files(self):
         resource_dir = self.config.get("resource_dir")
         resource_details = self.config.get("resource_details", {})
@@ -241,6 +258,49 @@ class LoadConfig:
             self.config["model_name"]="spatial_preserved_model"
         if not self.config.get("model_dir"):
             self.config["model_dir"] = str(files("SpaceTracer").joinpath("models"))
+
+    def _prepare_visium_hd_cell_info(self):
+        if self.config.get("sequence_type") != "visium-HD":
+            return
+
+        if self.config.get("cell_info"):
+            return
+
+        barcode_mapping = self.config.get("barcode_mapping")
+        if not barcode_mapping:
+            raise ValueError(
+                "barcode_mapping is required to generate cell_info for visium-HD"
+            )
+
+        check_file_exist(barcode_mapping)
+
+        output_dir = Path(self.config["output_dir"])
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        cell_info_file = output_dir / f"cell_info.txt"
+        mapping_df = pd.read_parquet(barcode_mapping)
+
+        if {"square_002um", "cell_id", "in_cell"}.issubset(mapping_df.columns):
+            cell_info_df = mapping_df.loc[
+                mapping_df["in_cell"].fillna(False).astype(bool),
+                ["square_002um", "cell_id"],
+            ].copy()
+
+        elif {"square_002um", "square_016um"}.issubset(mapping_df.columns):
+            cell_info_df = mapping_df.loc[
+                :,
+                ["square_002um", "square_016um"],
+            ].dropna(subset=["square_002um", "square_016um"]).copy()
+
+        else:
+            raise ValueError(
+                f"Unsupported barcode mapping schema in {barcode_mapping}. "
+                "Expected columns square_002um/cell_id/in_cell or "
+                "square_002um/square_016um."
+            )
+
+        cell_info_df.to_csv(cell_info_file,index=False,header=False,sep="\t")
+        self.config["cell_info"] = str(cell_info_file)
 
     def _sync_top_level_to_steps(self):
         steps = self.config.setdefault("steps", {})
@@ -302,13 +362,14 @@ class LoadConfig:
     def load_config(self, **kwargs) -> Dict[str, Any]:
         DEFAULT_CONFIG = {
             "sample": 'Sample',
+            "condition": "tumor",
             "genome": None,
             "resource_dir": None,
             "sequence_type": None,
             "bin_size": None,
             "spaceranger_dir": None,
             "regions_file": None,
-            "output_dir": None,
+            "output_dir": "./",
 
             "cluster_file": None,
             "cluster_method": None,
@@ -381,10 +442,12 @@ class LoadConfig:
 
         self._validate_basic_inputs()
         self._resolve_input_files()
+        self._resolve_sample_condition()
         self._resolve_resource_files()
         self._resolve_model_defaults()
-        self._sync_top_level_to_steps()
         self._validate_resolved_inputs()
+        self._prepare_visium_hd_cell_info()
+        self._sync_top_level_to_steps()
 
         self.config["run"]["threads"] = min(int(self.config["run"]["threads"]), cpu_count())
         self.config["run"]["memory"] = self._parse_memory_to_bytes(self.config["run"]["memory"])

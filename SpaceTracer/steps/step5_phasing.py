@@ -56,6 +56,8 @@ class PhasingCandidateStep(BaseStep):
         merge_gap=int(step_config["merge_gap"])
         max_target=int(step_config["max_target"])
         seed=int(step_config["seed"])
+        max_region_span=int(step_config.get("max_region_span", 10000))
+        phasing_max_workers = step_config.get("phasing_max_workers")
         max_dist=10 # fixed
 
         autosomes=genome_details['chromosomes']['autosomes']
@@ -88,7 +90,10 @@ class PhasingCandidateStep(BaseStep):
             phasing_pad=phasing_pad,
             merge_gap=merge_gap,
             max_target=max_target,
-            seed=seed
+            seed=seed,
+            max_region_span=max_region_span,
+            memory_limit_bytes=self.memory,
+            phasing_max_workers=int(phasing_max_workers) if phasing_max_workers else None,
         )
         outfile = run_phase_mode(phase_config)
 

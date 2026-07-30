@@ -147,6 +147,13 @@ class SpotGenoCalculator:
         self.pop_vaf = pop_vaf
         self.cell_num = cell_num
         self.max_workers = max_workers
+        # print(
+        #     f"[DEBUG][SpotGenoCalculator.__init__] "
+        #     f"bins={bins!r} epsQ={epsQ!r} thr_dp={thr_dp!r} pop_vaf={pop_vaf!r} "
+        #     f"cell_num={cell_num!r} (type={type(cell_num).__name__}) "
+        #     f"max_workers={max_workers!r}",
+        #     flush=True,
+        # )
 
     # def run_from_df(self, spot_count_df, ind_geno_df, cluster_df, cluster_vaf_df, output_file):
     #     raw_spot_count_df = spot_count_df.copy()
@@ -174,7 +181,7 @@ class SpotGenoCalculator:
     #         count_cluster_df = pd.merge(spot_count_df, cluster_df, on='barcode', how='left')
             
     #     count_geno_join = pd.merge(count_cluster_df, ind_geno_df, on=['chrom', 'pos', 'strand'], how='inner')
-    #     count_geno_join = count_geno_join.rename(columns={'vaf': 'ind_vaf'})
+    #     count_geno_join = count_geno_join.rename(columns={'vaf_hat': 'ind_vaf'})
     #     count_geno_vaf_join = pd.merge(
     #         count_geno_join,
     #         cluster_vaf_df,
@@ -325,13 +332,32 @@ class SpotGenoCalculator:
             if write_tsv and tsv_file.exists():
                 tsv_file.unlink()
 
-            print(
-                f"[PROFILE] run_from_df start | "
-                f"parquet={parquet_file} write_parquet={write_parquet} | "
-                f"tsv={tsv_file} write_tsv={write_tsv} | "
-                f"parquet_flush_rows={parquet_flush_rows}",
-                flush=True
-            )
+            # print(
+            #     f"[PROFILE] run_from_df start | "
+            #     f"parquet={parquet_file} write_parquet={write_parquet} | "
+            #     f"tsv={tsv_file} write_tsv={write_tsv} | "
+            #     f"parquet_flush_rows={parquet_flush_rows}",
+            #     flush=True
+            # )
+            # print(
+            #     f"[DEBUG][SpotGenoCalculator.run_from_df] calc params | "
+            #     f"bins={self.bins!r} epsQ={self.epsQ!r} thr_dp={self.thr_dp!r} "
+            #     f"pop_vaf={self.pop_vaf!r} cell_num={self.cell_num!r} "
+            #     f"(type={type(self.cell_num).__name__}) max_workers={self.max_workers!r}",
+            #     flush=True,
+            # )
+            # print(
+            #     f"[DEBUG][SpotGenoCalculator.run_from_df] input shapes | "
+            #     f"spot_count={getattr(spot_count_df, 'shape', None)} "
+            #     f"cols={list(getattr(spot_count_df, 'columns', []))} | "
+            #     f"ind_geno={getattr(ind_geno_df, 'shape', None)} "
+            #     f"cols={list(getattr(ind_geno_df, 'columns', []))} | "
+            #     f"cluster={getattr(cluster_df, 'shape', None)} "
+            #     f"cols={list(getattr(cluster_df, 'columns', []))} | "
+            #     f"cluster_vaf={getattr(cluster_vaf_df, 'shape', None)} "
+            #     f"cols={list(getattr(cluster_vaf_df, 'columns', []))}",
+            #     flush=True,
+            # )
 
             # ------------------------------------------------------------------
             # 1. Prepare input DataFrames
@@ -350,13 +376,45 @@ class SpotGenoCalculator:
             )
 
             ind_geno_df = ind_geno_df.drop(
-                ["cluster", "spot_number", "consensus_read_count", "prior_ATCG"],
+                ["cluster", "spot_number", "consensus_read_count", "prior_ATCG","vaf"],
                 axis=1,
                 errors="ignore"
             )
 
             if self.bins is not None:
+                # print(
+                #     f"[DEBUG][SpotGenoCalculator.run_from_df] applying bin_df | "
+                #     f"bins={self.bins} spot_count_before={spot_count_df.shape}",
+                #     flush=True,
+                # )
                 spot_count_df = bin_df(spot_count_df, self.bins)
+                # print(
+                #     f"[DEBUG][SpotGenoCalculator.run_from_df] bin_df done | "
+                #     f"spot_count_after={spot_count_df.shape}",
+                #     flush=True,
+                # )
+            else:
+                pass
+                # print(
+                #     "[DEBUG][SpotGenoCalculator.run_from_df] skip bin_df | bins=None",
+                #     flush=True,
+                # )
+
+            if "vaf_hat" in ind_geno_df.columns:
+                ind_geno_df = ind_geno_df.rename(
+                    columns={"vaf_hat": "ind_vaf"}
+                )
+
+            # Cluster-level VAF used by spot_posterior.
+            if "vaf" not in cluster_vaf_df.columns:
+                raise KeyError(
+                    "cluster_vaf_df must contain a 'vaf' column; "
+                    f"available columns: {list(cluster_vaf_df.columns)}"
+                )
+
+            cluster_vaf_df = cluster_vaf_df.rename(
+                columns={"vaf": "cluster_vaf"}
+            )
 
             spot_count_df = rename_df(spot_count_df)
             ind_geno_df = rename_df(ind_geno_df)
@@ -399,7 +457,14 @@ class SpotGenoCalculator:
                 on=["chrom", "pos", "strand"],
                 how="inner"
             )
-            count_geno_join = count_geno_join.rename(columns={"vaf": "ind_vaf"})
+            count_geno_join = count_geno_join.rename(columns={"vaf_hat": "ind_vaf"})
+            # print(
+            #     f"[DEBUG][SpotGenoCalculator.run_from_df] merge ind_geno | "
+            #     f"count_cluster={getattr(count_cluster_df, 'shape', None)} "
+            #     f"ind_geno={getattr(ind_geno_df, 'shape', None)} "
+            #     f"joined={count_geno_join.shape}",
+            #     flush=True,
+            # )
 
             try:
                 del count_cluster_df
@@ -417,7 +482,41 @@ class SpotGenoCalculator:
                 how="left",
                 validate="m:1"
             )
-            count_geno_vaf_join = count_geno_vaf_join.rename(columns={"vaf": "cluster_vaf"})
+            count_geno_vaf_join = pd.merge(
+                count_geno_join,
+                cluster_vaf_df,
+                on=[
+                    "chrom",
+                    "pos",
+                    "strand",
+                    "germline",
+                    "mutant",
+                    "cluster",
+                ],
+                how="left",
+                validate="m:1"
+            )
+
+            missing_cluster_vaf = int(
+                count_geno_vaf_join["cluster_vaf"].isna().sum()
+            )
+            # print(
+            #     "[DEBUG][SpotGenoCalculator.run_from_df] "
+            #     f"cluster_vaf merge | rows={len(count_geno_vaf_join)} "
+            #     f"missing={missing_cluster_vaf} "
+            #     f"min={count_geno_vaf_join['cluster_vaf'].min()} "
+            #     f"max={count_geno_vaf_join['cluster_vaf'].max()}",
+            #     flush=True
+            # )
+            # count_geno_vaf_join = count_geno_vaf_join.rename(columns={"vaf": "cluster_vaf"})
+            # n_cluster_vaf_na = int(count_geno_vaf_join["cluster_vaf"].isna().sum())
+            # print(
+            #     f"[DEBUG][SpotGenoCalculator.run_from_df] merge cluster_vaf | "
+            #     f"joined={count_geno_vaf_join.shape} "
+            #     f"cluster_vaf_NA={n_cluster_vaf_na} "
+            #     f"cols={list(count_geno_vaf_join.columns)}",
+            #     flush=True,
+            # )
 
             try:
                 del count_geno_join
@@ -435,6 +534,12 @@ class SpotGenoCalculator:
                     use_cell_num_file = Path(self.cell_num).exists()
                 except Exception:
                     use_cell_num_file = False
+
+            # print(
+            #     f"[DEBUG][SpotGenoCalculator.run_from_df] cell_num mode | "
+            #     f"cell_num={self.cell_num!r} use_cell_num_file={use_cell_num_file}",
+            #     flush=True,
+            # )
 
             if use_cell_num_file:
                 cell_num_file = pd.read_csv(self.cell_num, sep="\t", header=0)
@@ -469,6 +574,13 @@ class SpotGenoCalculator:
             mosaic_df = count_geno_vaf_join[
                 count_geno_vaf_join["genotype"].eq("mosaic")
             ]
+            # geno_counts = count_geno_vaf_join["genotype"].value_counts(dropna=False).to_dict()
+            # print(
+            #     f"[DEBUG][SpotGenoCalculator.run_from_df] mosaic filter | "
+            #     f"all_joined={count_geno_vaf_join.shape} mosaic={mosaic_df.shape} "
+            #     f"genotype_counts={geno_counts}",
+            #     flush=True,
+            # )
 
             try:
                 del count_geno_vaf_join
@@ -483,12 +595,56 @@ class SpotGenoCalculator:
                 cell_nums = mosaic_df.iloc[:, -1].to_numpy()
                 mosaic_df_no_cell = mosaic_df.iloc[:, :-1]
                 cell_iter = iter(cell_nums)
+                # try:
+                #     cell_nums_f = pd.to_numeric(pd.Series(cell_nums), errors="coerce").to_numpy()
+                #     # print(
+                #     #     f"[DEBUG][SpotGenoCalculator.run_from_df] per-spot cell_num | "
+                #     #     f"n={len(cell_nums_f)} "
+                #     #     f"min={np.nanmin(cell_nums_f) if len(cell_nums_f) else 'NA'} "
+                #     #     f"max={np.nanmax(cell_nums_f) if len(cell_nums_f) else 'NA'} "
+                #     #     f"nan={int(np.isnan(cell_nums_f).sum()) if len(cell_nums_f) else 0}",
+                #     #     flush=True,
+                #     # )
+                # except Exception as e:
+                #     pass
+                    # print(
+                    #     f"[DEBUG][SpotGenoCalculator.run_from_df] per-spot cell_num | "
+                    #     f"n={len(cell_nums)} summary_failed={e}",
+                    #     flush=True,
+                    # )
             else:
                 mosaic_df_no_cell = mosaic_df
                 cell_iter = repeat(self.cell_num)
+                # print(
+                #     f"[DEBUG][SpotGenoCalculator.run_from_df] fixed cell_num | "
+                #     f"cell_num={self.cell_num!r}",
+                #     flush=True,
+                # )
 
             tuple_cols = list(mosaic_df_no_cell.columns)
             col_idx = {c: i for i, c in enumerate(tuple_cols)}
+            # print(
+            #     f"[DEBUG][SpotGenoCalculator.run_from_df] worker params | "
+            #     f"epsQ={self.epsQ} thr_dp={self.thr_dp} pop_vaf={self.pop_vaf} "
+            #     f"n_mosaic_rows={len(mosaic_df_no_cell)} col_idx={col_idx}",
+            #     flush=True,
+            # )
+            if len(mosaic_df_no_cell) > 0:
+                sample = mosaic_df_no_cell.iloc[0]
+                sample_keys = [
+                    "chrom", "pos", "strand", "barcode", "cluster",
+                    "germline", "mutant", "cluster_vaf", "ind_vaf",
+                    "qA", "qT", "qC", "qG",
+                ]
+                sample_info = {
+                    k: sample[k] if k in mosaic_df_no_cell.columns else "MISSING"
+                    for k in sample_keys
+                }
+                # print(
+                #     f"[DEBUG][SpotGenoCalculator.run_from_df] first mosaic row sample | "
+                #     f"{sample_info}",
+                #     flush=True,
+                # )
 
             worker_fn = partial(
                 _spot_genotype_from_payload,
@@ -588,6 +744,13 @@ class SpotGenoCalculator:
                 schema=schema,
                 compression=parquet_compression
             )
+
+        # print(
+        #     f"[DEBUG][SpotGenoCalculator.run_from_df] done | "
+        #     f"n_seen={n_seen} n_written={n_written} n_skipped_NA={n_seen - n_written} "
+        #     f"parquet={parquet_file}",
+        #     flush=True,
+        # )
 
 
 def bin_df(df, bins):

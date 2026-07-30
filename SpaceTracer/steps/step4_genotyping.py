@@ -3,6 +3,7 @@
 Genotyping Step - DataFrame optimized version
 """
 
+from pathlib import Path
 from typing import Dict
 import os
 from functools import partial
@@ -39,23 +40,23 @@ def _fmt_bytes(n):
         n /= 1024
 
 
-def profile_df(name, df):
-    proc = psutil.Process(os.getpid())
-    rss = proc.memory_info().rss
+# def profile_df(name, df):
+#     proc = psutil.Process(os.getpid())
+#     rss = proc.memory_info().rss
 
-    if df is None:
-        print(f"[PROFILE] {name}: df=None | RSS={_fmt_bytes(rss)}", flush=True)
-        return
+#     if df is None:
+#         # print(f"[PROFILE] {name}: df=None | RSS={_fmt_bytes(rss)}", flush=True)
+#         return
 
-    if not isinstance(df, pd.DataFrame):
-        print(f"[PROFILE] {name}: type={type(df)} | RSS={_fmt_bytes(rss)}", flush=True)
-        return
+#     if not isinstance(df, pd.DataFrame):
+#         # print(f"[PROFILE] {name}: type={type(df)} | RSS={_fmt_bytes(rss)}", flush=True)
+#         return
 
-    mem = df.memory_usage(deep=True).sum()
-    print(
-        f"[PROFILE] {name}: shape={df.shape}, df_mem={_fmt_bytes(mem)}, RSS={_fmt_bytes(rss)}",
-        flush=True
-    )
+#     mem = df.memory_usage(deep=True).sum()
+#     # print(
+#     #     f"[PROFILE] {name}: shape={df.shape}, df_mem={_fmt_bytes(mem)}, RSS={_fmt_bytes(rss)}",
+#     #     flush=True
+#     # )
 
 
 def profile_obj(name, obj):
@@ -66,10 +67,10 @@ def profile_obj(name, obj):
     except Exception:
         n = "NA"
 
-    print(
-        f"[PROFILE] {name}: type={type(obj)}, len={n}, RSS={_fmt_bytes(rss)}",
-        flush=True
-    )
+    # print(
+    #     f"[PROFILE] {name}: type={type(obj)}, len={n}, RSS={_fmt_bytes(rss)}",
+    #     flush=True
+    # )
 
 
 def profile_gc(tag=""):
@@ -161,22 +162,22 @@ def _load_prior_region(prior_file, chrom, start_pos, end_pos, chunksize=200000):
             break
 
     if not parts:
-        print(
-            f"[PROFILE] prior region chrom={chrom} start={start_pos} end={end_pos} "
-            f"read_chunks={chunk_counter} hit_rows=0",
-            flush=True
-        )
+        # print(
+        #     f"[PROFILE] prior region chrom={chrom} start={start_pos} end={end_pos} "
+        #     f"read_chunks={chunk_counter} hit_rows=0",
+        #     flush=True
+        # )
         return _empty_prior_df()
 
     df = pd.concat(parts, ignore_index=True)
     df["identifier"] = df["chrom"].astype(str) + "_" + df["pos"].astype(str)
     df = df[["identifier", "fA", "fT", "fC", "fG"]]
 
-    print(
-        f"[PROFILE] prior region chrom={chrom} start={start_pos} end={end_pos} "
-        f"read_chunks={chunk_counter} hit_rows={hit_rows}",
-        flush=True
-    )
+    # print(
+    #     f"[PROFILE] prior region chrom={chrom} start={start_pos} end={end_pos} "
+    #     f"read_chunks={chunk_counter} hit_rows={hit_rows}",
+    #     flush=True
+    # )
     return df
 
 
@@ -341,6 +342,22 @@ class GenotypingStep(BaseStep):
             end_pos=chunk_end
         )
 
+        # logger.info(
+        #     "[DEBUG][chunk=%s] ind_geno params | mu=%s thr_dp=%s pop_vaf=%s "
+        #     "filter_oneallele=%s max_workers=%s | ind_count_shape=%s prior_shape=%s",
+        #     chunk, mu, thr_dp, pop_vaf, filter_oneallele, ind_geno_workers,
+        #     getattr(ind_count_filter_df, "shape", None),
+        #     getattr(prior_sub_df, "shape", None),
+        # )
+        # print(
+        #     f"[DEBUG][chunk={chunk}] ind_geno params | "
+        #     f"mu={mu} thr_dp={thr_dp} pop_vaf={pop_vaf} "
+        #     f"filter_oneallele={filter_oneallele} max_workers={ind_geno_workers} | "
+        #     f"ind_count_shape={getattr(ind_count_filter_df, 'shape', None)} "
+        #     f"prior_shape={getattr(prior_sub_df, 'shape', None)}",
+        #     flush=True,
+        # )
+
         geno_df, geno_filter_df, germ_df = ind_geno_calc.calculate_individual_genotype_df(
             ind_count_df=ind_count_filter_df,
             prior_df=prior_sub_df,  # [CHANGED]
@@ -353,10 +370,24 @@ class GenotypingStep(BaseStep):
             filter_oneallele=filter_oneallele,
             max_workers=ind_geno_workers
         )
-
         del ind_count_filter_df
 
         has_data = not geno_filter_df.empty
+        # logger.info(
+        #     "[DEBUG][chunk=%s] ind_geno done | geno_shape=%s geno_filter_shape=%s germ_shape=%s has_data=%s",
+        #     chunk,
+        #     getattr(geno_df, "shape", None),
+        #     getattr(geno_filter_df, "shape", None),
+        #     getattr(germ_df, "shape", None),
+        #     has_data,
+        # )
+        # print(
+        #     f"[DEBUG][chunk={chunk}] ind_geno done | "
+        #     f"geno_shape={getattr(geno_df, 'shape', None)} "
+        #     f"geno_filter_shape={getattr(geno_filter_df, 'shape', None)} "
+        #     f"germ_shape={getattr(germ_df, 'shape', None)} has_data={has_data}",
+        #     flush=True,
+        # )
 
         if has_data:
             cluster_count_filter_for_vaf = cluster_count_filter_df.rename(columns={"chrom": "#chrom"})
@@ -368,6 +399,32 @@ class GenotypingStep(BaseStep):
             )
 
             del cluster_count_filter_for_vaf
+
+            # logger.info(
+            #     "[DEBUG][chunk=%s] spot_geno params | bins=%s epsQ=%s thr_dp=%s "
+            #     "pop_vaf=%s cell_num=%s (type=%s) max_workers=%s | "
+            #     "spot_count_shape=%s ind_geno_filter_shape=%s cluster_df_shape=%s "
+            #     "cluster_vaf_shape=%s output=%s",
+            #     chunk, bins, epsQ, thr_dp, pop_vaf, cell_num, type(cell_num).__name__,
+            #     spot_geno_workers,
+            #     getattr(spot_df, "shape", None),
+            #     getattr(geno_filter_df, "shape", None),
+            #     getattr(cluster_df, "shape", None),
+            #     getattr(cluster_vaf_df, "shape", None),
+            #     spot_geno_file,
+            # )
+            # print(
+            #     f"[DEBUG][chunk={chunk}] spot_geno params | "
+            #     f"bins={bins} epsQ={epsQ} thr_dp={thr_dp} pop_vaf={pop_vaf} "
+            #     f"cell_num={cell_num} (type={type(cell_num).__name__}) "
+            #     f"max_workers={spot_geno_workers} | "
+            #     f"spot_count_shape={getattr(spot_df, 'shape', None)} "
+            #     f"ind_geno_filter_shape={getattr(geno_filter_df, 'shape', None)} "
+            #     f"cluster_df_shape={getattr(cluster_df, 'shape', None)} "
+            #     f"cluster_vaf_shape={getattr(cluster_vaf_df, 'shape', None)} "
+            #     f"output={spot_geno_file}",
+            #     flush=True,
+            # )
 
             SpotGenoCalculator(
                 bins,
@@ -421,6 +478,23 @@ class GenotypingStep(BaseStep):
         pop_vaf = float(parameters["pop_vaf"])
         filter_oneallele = str2bool(parameters["filter_oneallele"])
 
+        # logger.info(
+        #     "[DEBUG] genotyping step config | alpha=%s epsQ=%s epsAF=%s mu=%s "
+        #     "thr_dp=%s pop_vaf=%s filter_oneallele=%s raw_config=%s",
+        #     alpha, epsQ, epsAF, mu, thr_dp, pop_vaf, filter_oneallele, parameters,
+        # )
+        # print(
+        #     f"[DEBUG] genotyping step config | "
+        #     f"alpha={alpha} epsQ={epsQ} epsAF={epsAF} mu={mu} "
+        #     f"thr_dp={thr_dp} pop_vaf={pop_vaf} filter_oneallele={filter_oneallele} "
+        #     f"raw_config={parameters}",
+        #     flush=True,
+        # )
+        # print(
+        #     f"[DEBUG]3333 Here is cellnum",
+        #     context.get("cell_num","NOOOOO"),
+        #     context["config"].get("cell_num","NOOOO") 
+        # )
         inputs = self.get_inputs(context)
         spot_count_manifest = inputs["spot_count_file"]
         prior_file = inputs["prior_file"]
@@ -461,7 +535,21 @@ class GenotypingStep(BaseStep):
         outputs = self.get_outputs(context)
         result_manifest = outputs["genotype_results"]
 
-        cell_num = context.get("cell_num")
+        # Prefer context from cell_num step; fall back to orchestrator-normalized config.
+        cell_num = context.get("cell_num", self.config.get("cell_num"))
+        if cell_num is None:
+            raw = self.config.get("steps", {}).get("cell_number", 0)
+            if isinstance(raw, str) and raw and not Path(raw).exists():
+                try:
+                    cell_num = int(raw)
+                except ValueError:
+                    cell_num = raw
+            else:
+                cell_num = raw if raw not in ("", None) else 0
+            # print(
+            #     f"[DEBUG] cell_num missing in context; fallback from config -> {cell_num!r}",
+            #     flush=True,
+            # )
         seq_type = self.config.get("sequence_type")
         if seq_type == "stereo":
             bins = self.config.get("bin_size", 100)
@@ -473,6 +561,25 @@ class GenotypingStep(BaseStep):
 
         ind_geno_workers = 1
         spot_geno_workers = 1
+
+        # logger.info(
+        #     "[DEBUG] genotyping runtime | seq_type=%s bins=%s cell_num=%s (type=%s) "
+        #     "max_workers=%s parallel_backend=%s ind_geno_workers=%s spot_geno_workers=%s "
+        #     "prior_file=%s n_chunks=%s cluster_df_shape=%s",
+        #     seq_type, bins, cell_num, type(cell_num).__name__,
+        #     max_workers, parallel_backend, ind_geno_workers, spot_geno_workers,
+        #     prior_file, len(rows), getattr(cluster_df, "shape", None),
+        # )
+        # print(
+        #     f"[DEBUG] genotyping runtime | "
+        #     f"seq_type={seq_type} bins={bins} cell_num={cell_num} "
+        #     f"(type={type(cell_num).__name__}) max_workers={max_workers} "
+        #     f"parallel_backend={parallel_backend} "
+        #     f"ind_geno_workers={ind_geno_workers} spot_geno_workers={spot_geno_workers} "
+        #     f"prior_file={prior_file} n_chunks={len(rows)} "
+        #     f"cluster_df_shape={getattr(cluster_df, 'shape', None)}",
+        #     flush=True,
+        # )
 
         worker = partial(
             self._run_one_chunk,

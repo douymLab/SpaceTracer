@@ -20,7 +20,7 @@ class CellNumStep(BaseStep):
         }
 
     def get_outputs(self, context):
-        cell_num = context.get('cell_num', self.config.get('cell_num', 0))
+        cell_num = context.get('cell_num', self.config.get('cell_number', 1))
 
         if isinstance(cell_num, int):
             if cell_num == 0:

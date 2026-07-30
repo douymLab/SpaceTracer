@@ -44,6 +44,8 @@ class BaseStep(ABC):
         self.sample = context['config']['sample']
 
         self.seq_type = self.config.get("sequence_type")
+        self.condition = self.config.get("condition")
+        
         self.bin_size = self.config.get("bin_size")
 
         self.work_dir = self.config.get('output_dir')

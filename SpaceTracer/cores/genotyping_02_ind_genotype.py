@@ -433,7 +433,9 @@ class IndGenoCalculator:
 
         if prior_df.empty:
             merged = df.copy()
-            merged[['fA', 'fT', 'fC', 'fG']]=[1,1,1,1]
+            # no population AF available: use 0 (individual_posterior maps 0 -> pop_vaf)
+            # do not write 1,1,1,1 — that is not a valid AF and pollutes prior_ATCG
+            merged[['fA', 'fT', 'fC', 'fG']] = [0, 0, 0, 0]
         else:
             merged = df.merge(
                 prior_df[['identifier', 'fA', 'fT', 'fC', 'fG']],
@@ -499,7 +501,7 @@ class IndGenoCalculator:
 
         geno_columns = ['#chrom', 'pos', 'strand', 'germline', 'mutant',
                         'cluster', 'spot_number', 'consensus_read_count', 'prior_ATCG',
-                        'genotype', 'p_mosaic', 'Gi', 'vaf']
+                        'genotype', 'p_mosaic', 'Gi', 'vaf_hat']
 
         germ_columns = ['#chrom', 'pos', 'germline_geno', 'germline_allele',
                         'germ_count', 'germ_prior']
@@ -526,7 +528,7 @@ class IndGenoCalculator:
             ].copy()
 
             if not geno_filter_df.empty:
-                geno_filter_df['vaf'] = geno_filter_df['vaf'].astype(float)
+                geno_filter_df['vaf'] = geno_filter_df['vaf_hat'].astype(float)
                 # geno_filter_df = geno_filter_df[geno_filter_df["vaf"] <= 0.3]
 
         if geno_filter_file is not None:

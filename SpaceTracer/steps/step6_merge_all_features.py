@@ -307,9 +307,7 @@ class MergeFeatureStep(BaseStep):
                             merged_df[col] = pd.NA
                 
             except:
-                print("******",name)
-                print("******",df)
-                print("******",merged_df)
+                pass
 
         if not cluster_event_df.empty:
             merged_df = merged_df.join(cluster_event_df, how="left")
@@ -332,12 +330,19 @@ class MergeFeatureStep(BaseStep):
         thr_altcount = 3
         thr_popAF = 1e-4
         min_vaf = 0.01
-        max_vaf = 0.5
+        
+        if self.condition=="tumor":
+            max_vaf = 0.5
+        if self.condition=="normal":
+            max_vaf = 0.3
+            
         min_spot_num = 30
         if self.seq_type=="visium":
             min_alt_spot_num = 1
+            max_alt_spot_propotion=0.5
         else:
             min_alt_spot_num = 6
+            max_alt_spot_propotion=0.35
         
         filtrations_dict = self.get_step_config()
 
@@ -381,7 +386,7 @@ class MergeFeatureStep(BaseStep):
             ),
             "LOW_READ_DIVERSITY": lambda df: pd.to_numeric(df["alt_querypos_num"], errors="coerce") <= 1,
             "HIGH_MULTIPLE_MAPPING": lambda df: pd.to_numeric(df["alt_multi_map_prop"], errors="coerce") > 0.2,
-            "HIGH_MUT_PROB": lambda df: pd.to_numeric(df["mut_spots_prop_by_probablity"], errors="coerce") > 0.5,
+            "HIGH_MUT_PROB": lambda df: pd.to_numeric(df["mut_spots_prop_by_probablity"], errors="coerce") > max_alt_spot_propotion,
             "NEAR_READ_END1": lambda df: (
                 pd.to_numeric(df["per_alt_UMI_end_remove_clip_median"], errors="coerce") < 0.05
             ) | (
@@ -417,6 +422,7 @@ class MergeFeatureStep(BaseStep):
             "HIGH_VAF": lambda df: df["AFind"] > max_vaf,
             "LOW_SPOT_NUM": lambda df: df["num_spots"] < min_spot_num,
             "LOW_ALT_SPOT_NUM": lambda df: df["num_mut_spots"] < min_alt_spot_num,
+            "": lambda df: df[""]
         }
 
         enabled_groups = [k for k, v in filtrations_dict.items() if v in [True,'true','TRUE','True',1]]

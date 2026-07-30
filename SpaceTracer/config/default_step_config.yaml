@@ -84,7 +84,9 @@ steps:
     alpha: 0.05
     phasing_pad: 1000
     merge_gap: 200
-    max_target: 200000
+    max_target: 50000
+    max_region_span: 10000
+    phasing_max_workers: 8
     seed: 42
 
   feature_filtration:

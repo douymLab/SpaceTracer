@@ -24,7 +24,7 @@ class FilterCandidatesStep:
     Rule of filtrationL
         candidate_error: 
             - info_depth >= 100
-            - alt1_count / info_depth > 0.95
+            - ref_count / info_depth > 0.95
             - alt1_count >= 5
         
         candidate_somatic:

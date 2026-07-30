@@ -27,12 +27,16 @@ Notes / assumptions:
    Missing values (NA, ".", "") -> coverage 0 (uncovered).
  - If your real files use a different format, adjust parse_allele_entry accordingly.
 """
+import logging
 import os
-import re
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
 import numpy as np
 import pandas as pd
 from typing import Tuple, Optional, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 # -------------------------
 # Low-level parsing helpers
@@ -51,6 +55,62 @@ def _is_float_string(s: str) -> bool:
     except Exception:
         return False
 
+def _parse_alt_total_pair(left: str, right: str) -> Tuple[Optional[int], Optional[int], Optional[float]]:
+    if _is_integer_string(left) and _is_integer_string(right):
+        alt = int(left)
+        total = int(right)
+        if total >= alt and total >= 0:
+            ref = total - alt
+            maf = alt / total if total > 0 else 0.0
+            return ref, alt, maf
+        return None, None, None
+
+    if _is_float_string(left) and _is_float_string(right):
+        alt = float(left)
+        total = float(right)
+        if total >= alt and total >= 0:
+            ref = total - alt
+            maf = alt / total if total > 0 else 0.0
+            return int(round(ref)), int(round(alt)), maf
+        return None, None, None
+
+    return None, None, None
+
+@lru_cache(maxsize=65536)
+def _parse_allele_string(s: str) -> Tuple[Optional[int], Optional[int], Optional[float]]:
+    s = s.strip()
+    if not s:
+        return None, None, None
+
+    lowered = s.lower()
+    if s == "." or lowered == "na" or lowered == "nan":
+        return None, None, None
+
+    for sep in ["/", ":", ",", "|", ";"]:
+        if sep in s:
+            left, _, right = s.partition(sep)
+            if left and right:
+                parsed = _parse_alt_total_pair(left.strip(), right.strip())
+                if parsed != (None, None, None):
+                    return parsed
+
+    parts = s.split()
+    if len(parts) >= 2:
+        parsed = _parse_alt_total_pair(parts[0], parts[1])
+        if parsed != (None, None, None):
+            return parsed
+
+    if _is_integer_string(s):
+        return int(s), None, None
+
+    if _is_float_string(s):
+        val = float(s)
+        if 0.0 <= val <= 1.0:
+            return None, None, float(val)
+        return int(round(val)), None, None
+
+    return None, None, None
+
 def parse_allele_entry(entry: Any) -> Tuple[Optional[int], Optional[int], Optional[float]]:
     """
     Parse one cell x mutation entry from allele count matrix.
@@ -61,53 +121,11 @@ def parse_allele_entry(entry: Any) -> Tuple[Optional[int], Optional[int], Option
       - if NA or '.', return (None, None, None) and caller will set coverage=0
     Supported separators: ':', ',', '/', '|', ';', whitespace
     """
-    if pd.isna(entry):
+    if entry is None or entry is pd.NA:
         return None, None, None
-    s = str(entry).strip()
-    if s == "" or s == "." or s.lower() == "nan":
+    if isinstance(entry, float) and math.isnan(entry):
         return None, None, None
-    
-    # Try common two-number separators (alt/total format)
-    for sep in [":", ",", "/", "|", ";", " "]:
-        if sep in s:
-            parts = [p for p in re.split(re.escape(sep), s) if p != ""]
-            if len(parts) >= 2:
-                # try parse as alt/total format (VCF style)
-                a, b = parts[0], parts[1]
-                if _is_integer_string(a) and _is_integer_string(b):
-                    alt = int(a)
-                    total = int(b)
-                    if total >= alt and total >= 0:
-                        ref = total - alt
-                        maf = alt / total if total > 0 else 0.0
-                        return ref, alt, maf
-                    else:
-                        return None, None, None
-                # allow floats too
-                if _is_float_string(a) and _is_float_string(b):
-                    alt = float(a)
-                    total = float(b)
-                    if total >= alt and total >= 0:
-                        ref = total - alt
-                        maf = alt / total if total > 0 else 0.0
-                        return int(round(ref)), int(round(alt)), maf
-                    else:
-                        return None, None, None
-    
-    # Single integer: treat as coverage
-    if _is_integer_string(s):
-        return int(s), None, None
-    
-    # Single float: treat as MAF
-    if _is_float_string(s):
-        val = float(s)
-        if 0.0 <= val <= 1.0:
-            return None, None, float(val)
-        else:
-            # If outside 0-1 range, treat as coverage
-            return int(round(val)), None, None
-    
-    return None, None, None
+    return _parse_allele_string(str(entry))
 
 # -------------------------
 # Loaders
@@ -161,7 +179,59 @@ def load_reads(reads_path: str) -> pd.DataFrame:
     df = pd.read_csv(reads_path, sep="\t", index_col=0, dtype=str)
     return df.T
 
-def derive_MCA_from_reads(df_reads: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def _resolve_load_workers(num_workers: Optional[int], num_columns: int) -> int:
+    if num_columns <= 1:
+        return 1
+
+    if num_workers is not None:
+        requested = int(num_workers)
+        if requested > 0:
+            return min(requested, num_columns)
+
+    cpu_count = os.cpu_count() or 1
+    if cpu_count <= 1 or num_columns < 8:
+        return 1
+    return min(num_columns, min(cpu_count, 8))
+
+def _parse_reads_block(values: np.ndarray, start_col: int, end_col: int) -> Tuple[int, np.ndarray, np.ndarray, np.ndarray]:
+    row_count = values.shape[0]
+    width = end_col - start_col
+    v_block = np.full((row_count, width), np.nan, dtype=float)
+    c_block = np.zeros((row_count, width), dtype=np.int32)
+    a_block = np.zeros((row_count, width), dtype=np.int32)
+
+    for local_col, col_idx in enumerate(range(start_col, end_col)):
+        v_col = v_block[:, local_col]
+        c_col = c_block[:, local_col]
+        a_col = a_block[:, local_col]
+
+        for row_idx, entry in enumerate(values[:, col_idx]):
+            ref, alt, maf = parse_allele_entry(entry)
+
+            if ref is None and alt is None:
+                if maf is not None:
+                    v_col[row_idx] = float(maf)
+                    c_col[row_idx] = 1
+                    a_col[row_idx] = int(round(maf))
+                continue
+
+            if ref is not None and alt is not None:
+                total = ref + alt
+                if total > 0:
+                    v_col[row_idx] = alt / total
+                    c_col[row_idx] = total
+                    a_col[row_idx] = alt
+                continue
+
+            if ref is not None:
+                c_col[row_idx] = int(ref)
+
+    return start_col, v_block, c_block, a_block
+
+def derive_MCA_from_reads(
+    df_reads: pd.DataFrame,
+    num_workers: Optional[int] = None,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     输入: df_reads (cells x muts)，每个元素可能是:
       - "alt:total", "alt/total", "alt,total" 等 (alt/total格式)
@@ -175,57 +245,46 @@ def derive_MCA_from_reads(df_reads: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Data
     """
     cells = df_reads.index
     muts = df_reads.columns
-    V = pd.DataFrame(index=cells, columns=muts, dtype=float)
-    C = pd.DataFrame(index=cells, columns=muts, dtype=int)
-    A = pd.DataFrame(index=cells, columns=muts, dtype=int)
-    
-    for i in cells:
-        for j in muts:
-            entry = df_reads.at[i, j]
-            ref, alt, maf = parse_allele_entry(entry)
-            
-            if ref is None and alt is None and maf is None:
-                # uncovered
-                V.at[i, j] = np.nan
-                C.at[i, j] = 0
-                A.at[i, j] = 0
-            
-            elif maf is not None and ref is None and alt is None:
-                # direct maf
-                V.at[i, j] = float(maf)
-                C.at[i, j] = 1
-                A.at[i, j] = int(round(maf))
-            
-            elif ref is not None and alt is not None:
-                # alt/total format: ref = total - alt, alt = alt
-                total = ref + alt
-                if total == 0:
-                    V.at[i, j] = np.nan
-                    C.at[i, j] = 0
-                    A.at[i, j] = 0
-                else:
-                    V.at[i, j] = alt / total
-                    C.at[i, j] = total
-                    A.at[i, j] = alt
-            
-            elif ref is not None and alt is None:
-                # only coverage (total)
-                C.at[i, j] = int(ref)
-                V.at[i, j] = np.nan
-                A.at[i, j] = 0
-            
-            else:
-                # fallback
-                C.at[i, j] = 0
-                V.at[i, j] = np.nan
-                A.at[i, j] = 0
-    
+    values = df_reads.to_numpy(dtype=object, copy=False)
+    worker_count = _resolve_load_workers(num_workers, len(muts))
+
+    if worker_count == 1:
+        blocks = [_parse_reads_block(values, 0, len(muts))]
+    else:
+        chunk_size = math.ceil(len(muts) / worker_count)
+        ranges = [
+            (start_col, min(start_col + chunk_size, len(muts)))
+            for start_col in range(0, len(muts), chunk_size)
+        ]
+        logger.info(
+            "Parsing allele count matrix with %d worker threads across %d mutation columns",
+            worker_count,
+            len(muts),
+        )
+        blocks = []
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = [
+                executor.submit(_parse_reads_block, values, start_col, end_col)
+                for start_col, end_col in ranges
+            ]
+            for future in as_completed(futures):
+                blocks.append(future.result())
+
+        blocks.sort(key=lambda item: item[0])
+
+    v_values = np.concatenate([block[1] for block in blocks], axis=1)
+    c_values = np.concatenate([block[2] for block in blocks], axis=1)
+    a_values = np.concatenate([block[3] for block in blocks], axis=1)
+
+    V = pd.DataFrame(v_values, index=cells, columns=muts)
+    C = pd.DataFrame(c_values, index=cells, columns=muts)
+    A = pd.DataFrame(a_values, index=cells, columns=muts)
     return V, C, A
 
 # -------------------------
 # High level loader
 # -------------------------
-def load_all(inputpath: str) -> Dict[str, pd.DataFrame]:
+def load_all(inputpath: str, load_workers: Optional[int] = None) -> Dict[str, pd.DataFrame]:
     """
     Read the standard set of input files from a directory (matching your example):
       - data.posterior_matrix.txt
@@ -246,7 +305,10 @@ def load_all(inputpath: str) -> Dict[str, pd.DataFrame]:
     
     P = load_posterior(files['posterior'])
     df_reads = load_reads(files['reads'])
-    V, C, A = derive_MCA_from_reads(df_reads)
+    V, C, A = derive_MCA_from_reads(df_reads, num_workers=load_workers)
+    V_raw_reads = V.copy()
+    C_raw_reads = C.copy()
+    A_raw_reads = A.copy()
     features = load_features(files['features'])
     ll_mut = load_likelihoods(files['ll_mut'])
     ll_unmut = load_likelihoods(files['ll_unmut'])
@@ -275,6 +337,9 @@ def load_all(inputpath: str) -> Dict[str, pd.DataFrame]:
         "V": V,
         "A": A,
         "C": C,
+        "V_raw_reads": V_raw_reads,
+        "A_raw_reads": A_raw_reads,
+        "C_raw_reads": C_raw_reads,
         "df_reads": df_reads,
         "features": features,
         "ll_mut": ll_mut,
@@ -293,10 +358,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--inputpath", default="./data", type=str)
     parser.add_argument("-o", "--outputpath", default="./results", type=str)
+    parser.add_argument("--load_workers", default=None, type=int)
     args = parser.parse_args()
     
     print(f"Loading from: {args.inputpath}")
-    out = load_all(args.inputpath)
+    out = load_all(args.inputpath, load_workers=args.load_workers)
     print("Loaded matrices:")
     for k, v in out.items():
         if isinstance(v, pd.DataFrame):
