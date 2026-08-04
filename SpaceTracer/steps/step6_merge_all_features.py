@@ -322,7 +322,7 @@ class MergeFeatureStep(BaseStep):
 
 
         if "mappabilityScore" in merged_df.columns:
-            merged_df["mappabilityScore"] = merged_df["mappabilityScore"].apply(list2min)
+            merged_df["mappabilityScore"] = merged_df["mappabilityScore"].astype(str).apply(list2min)
 
         if "falt" in merged_df.columns:
             merged_df["falt"] = merged_df["falt"].astype(float)

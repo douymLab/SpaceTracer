@@ -149,7 +149,6 @@ class PhylogenyBuildStep(BaseStep):
             "-i", str(data_output_path),
             "-o", str(tree_output_path) + "/",
             "-c", "None",
-            "--features_file", "None",
             "--is_predict_germ", "no",
             "--is_detect_passtree_by_dp", "no",
             "--is_filter_quality", "yes"
