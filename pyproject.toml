@@ -22,6 +22,7 @@ dependencies = [
     "scikit-learn",
     "joblib",
     "matplotlib",
+    "colorcet",
     "seaborn",
     "tqdm",
     "psutil",

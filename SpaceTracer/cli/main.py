@@ -8,6 +8,7 @@ from SpaceTracer import __version__
 from SpaceTracer.pipeline.orchestrator import PipelineOrchestrator
 from SpaceTracer.config.config_loader import LoadConfig
 from SpaceTracer.utils.logger import setup_logger
+from SpaceTracer.cli.plot import build_plot_parser
 
 
 def parse_only_steps(only_steps_str: str):
@@ -124,6 +125,7 @@ def build_parser():
     subparsers = parser.add_subparsers(dest="command")
 
     build_run_parser(subparsers)
+    build_plot_parser(subparsers)
 
     version_parser = subparsers.add_parser(
         "version",

@@ -15,47 +15,37 @@ warnings.filterwarnings(
 import pandas as pd
 import numpy as np
 import scanpy as sc
-import math
-from scipy.sparse import issparse
 import random
-import warnings
 from sklearn.cluster import DBSCAN
 
 from SpaceTracer.utils.utils import check_dir, check_file
 warnings.filterwarnings("ignore")
-import matplotlib.colors as clr
 import matplotlib.pyplot as plt
 import colorcet as cc
-#In order to read in image data, we need to install some package. Here we recommend package "opencv"
-#install opencv in python
-#!pip3 install opencv-python
 import cv2
 from scanpy import read_10x_h5
 
-from sklearn import metrics
-import multiprocessing as mp
 import subprocess
 import shutil
 
 
 def _require_spagcn():
-    """Import SpaGCN and PyTorch only when a SpaGCN clustering path is used."""
+    """Import SpaGCN only when a SpaGCN function is used."""
     try:
-        import torch
         import SpaGCN as spg
     except ImportError as exc:
         raise ImportError(
             "SpaGCN clustering requires PyTorch and SpaGCN. "
             "Install them before setting the clustering method to SpaGCN."
         ) from exc
-    return torch, spg
+    return spg
 
 
 def _require_graphst():
-    """Import GraphST and PyTorch only when a GraphST clustering path is used."""
+    """Import GraphST and PyTorch only when GraphST clustering is used."""
     try:
         import torch
-        from GraphST import GraphST
+        from GraphST.GraphST import GraphST
         from GraphST.utils import clustering
     except ImportError as exc:
         raise ImportError(
@@ -101,7 +91,8 @@ def cluster_spot_SpaGCN(data_dir, h5_file_name, spatial_file_name, image_file_na
         out_cell_num_file - the output cell number file if provided
     """
 
-    torch, spg = _require_spagcn()
+    spg = _require_spagcn()
+    import torch
 
     # Create plot folder
     res_dir = os.path.join(output_dir, "result")
@@ -387,9 +378,9 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
         adata.obsm['spatial'] = adata.obsm['spatial'].astype(float)
         # define model
         if type in  ["Visium","visium"]:
-            model = GraphST.GraphST(adata, device=device)
+            model = GraphST(adata, device=device)
         else:
-            model = GraphST.GraphST(adata, datatype='Stereo', device=device)
+            model = GraphST(adata, datatype='Stereo', device=device)
             refinement = False  # Stereo-seq do not need refinement
         # train model
         adata = model.train()
@@ -438,7 +429,7 @@ def cluster_spot_GraphST(data_dir, output_dir, sample_name, n_clusters, type="Vi
     final_output_df.to_csv(out_cell_num_file, index=True,sep="\t")
     
     # Plot the results
-    if plot and typein  ["Visium","visium"]:
+    if plot and type in  ["Visium","visium"]:
         # Set colors used
         plot_color=["#F56867","#FEB915","#C798EE","#59BE86","#7495D3","#D1D1D1","#6D1A9C",
                     "#15821E","#3A84E6","#997273","#787878","#DB4C6C","#9E7A7A","#554236",
@@ -502,7 +493,7 @@ def cluster2domain(output_dir, sample_name, plot=False, distance_threshold=2, mi
         keep - whether keep the small domain if their result is still itself
     """
 
-    _, spg = _require_spagcn()
+    spg = _require_spagcn()
 
     # read and format the result data
     res_dir = os.path.join(output_dir, "result")
@@ -644,7 +635,7 @@ def tissue_separate(data_dir, h5_file_name, spatial_file_name, output_dir, sampl
         plot - the Boolean variable of whether plotting the prediction and refined prediction (default = False)
     """
 
-    _, spg = _require_spagcn()
+    spg = _require_spagcn()
 
     # check plot folder
     res_dir = os.path.join(output_dir, "result")
