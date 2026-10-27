@@ -2,9 +2,56 @@
 
 This page lists reference resources commonly used with SpaceTracer.
 
-To help users get started quickly, we provide two prebuilt reference packages for **mm10** and **hg38**, which can be downloaded from [Zenodo](https://zenodo.org/records/19896967).
+## Start here: prebuilt reference packages (recommended)
 
-If you would like to build your own reference, please refer to the resources below.
+**Recommended for first-time users** to avoid manual reference setup.
+
+- Source: [Zenodo resource package (SpaceTracer v2.1.0)](https://zenodo.org/records/19896967)
+- Main archive: `resources.tar.tar` (~11.5 GB)
+- Demo archive: `demo.zip` (~4.4 MB)
+- Includes:
+  - `mm10_resources.tar.zst` (mouse, mm10 / GRCm38)
+  - `hg38_resources.tar.zst` (human, hg38 / GRCh38)
+
+Download from Zenodo with `wget` (append `?download=1` so the server serves the file directly):
+
+```bash
+# Full reference package (~11.5 GB) — pick a working directory first
+wget -O resources.tar "https://zenodo.org/records/19896967/files/resources.tar.tar?download=1"
+
+# Optional: small demo package from the same record
+wget -O demo.zip "https://zenodo.org/records/19896967/files/demo.zip?download=1"
+```
+
+If you prefer `curl`, use:
+
+```bash
+curl -L -o resources.tar "https://zenodo.org/records/19896967/files/resources.tar.tar?download=1"
+```
+
+Extract references:
+
+```bash
+tar -xf resources.tar
+
+# mm10
+mkdir -p mm10
+zstd -dc mm10_resources.tar.zst | tar -xf - -C mm10
+
+# hg38
+mkdir -p hg38
+zstd -dc hg38_resources.tar.zst | tar -xf - -C hg38
+```
+
+Extract the demo package:
+
+```bash
+unzip demo.zip
+```
+
+The demo package contains `human_visium_demo_input.tar` and `human_visium_demo_output.tar`. See [Demo](demo.md) for extraction, config editing, and run instructions.
+
+If you need custom references, use the resource links below to build your own.
 
 ## Human reference genome example
 

@@ -41,9 +41,9 @@ This step is mostly controlled by:
 
 ## Outputs
 
-- `cell_num` key
-  - generated file: `output_dir/refined_umi_read_cellNum.txt`, or
-  - passthrough integer/path from config
+- `cell_num` context key (consumed by `genotyping`)
+  - generated file: `output_dir/refined_cell_num.txt` (columns: `barcode`, `cluster`, `UMI_counts`, `refined_cell_num`), or
+  - passthrough integer/path from config when `steps.cell_number` is a fixed value or external table
 
 ## Tuning notes
 
