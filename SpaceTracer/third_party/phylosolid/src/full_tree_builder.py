@@ -10,16 +10,19 @@ Sub-modules:
     - build_refined_tree(): Step 7 - Prune-and-regraft (PRG) refinement
     - tree_QC_and_filter(): Step 8 - Quality control and filtration
     - build_fully_resolved_tree(): Master function orchestrating all three steps
+    - export_phylo_results_for_cv(): Export phylo results for each CV threshold
 
 Input:  T_scaffold, M_scaffold, I_attached, P_attached, ...
 Output: Refined tree (T_current, M_current) and QC statistics
 
 Author: Qing
 Date: 2026/07/22
+Update: 2026/08/14 - Added export_phylo_results_for_cv function for parallel CV search
 """
 
 import os
 import copy
+import json
 import logging
 import pandas as pd
 import numpy as np
@@ -141,7 +144,7 @@ def build_initial_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -174,7 +177,7 @@ def build_initial_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -208,7 +211,7 @@ def build_initial_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -229,7 +232,7 @@ def build_initial_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -259,7 +262,7 @@ def build_initial_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -525,7 +528,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -540,7 +543,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -566,7 +569,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -747,7 +750,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -762,7 +765,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -801,7 +804,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -828,7 +831,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -933,7 +936,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -954,7 +957,7 @@ def build_refined_tree(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
         all_conflict_mutations.extend(conflict_mutations_temp)
@@ -1109,7 +1112,7 @@ def build_refined_tree(
                 ω_NA=omega_NA,
                 fnfp_ratio=fnfp_ratio,
                 φ=phi,
-                logger=logger_obj,
+                logger_obj=logger_obj,
                 root_mutations=root_mutations
             )
             all_conflict_mutations.extend(conflict_mutations_temp)
@@ -1184,20 +1187,6 @@ def build_refined_tree(
     logger_obj.info(f"  │  Mutations                               : {M_for_omega_clean.shape[1]:>10}│")
     logger_obj.info("  └─────────────────────────────────────────────────────────────────────┘")
     
-    omega_checkpoint_file = os.path.join(outputpath_full, "weighted_discordance_index_pre_qc.txt")
-    with open(omega_checkpoint_file, 'w') as f:
-        f.write("=" * 60 + "\n")
-        f.write("WEIGHTED DISCORDANCE INDEX (PRE-QC)\n")
-        f.write("=" * 60 + "\n\n")
-        f.write(f"Omega (Weighted Discordance Index): {omega_before_qc:.2f}\n")
-        f.write(f"  N_deltaFP: {N_deltaFP}\n")
-        f.write(f"  N_deltaFN: {N_deltaFN}\n")
-        f.write(f"  lambda (FN/FP weight): {params.get('fnfp_ratio', 0.1)}\n\n")
-        f.write(f"Cells: {M_for_omega_clean.shape[0]}\n")
-        f.write(f"Mutations: {M_for_omega_clean.shape[1]}\n")
-        f.write("=" * 60 + "\n")
-    
-    logger_obj.info(f"  Checkpoint saved to: {omega_checkpoint_file}")
     logger_obj.info("")
     
     return T_current, M_current, root_mutations, all_conflict_mutations, omega_before_qc, outgroup_mutations
@@ -1447,7 +1436,7 @@ def tree_QC_and_filter(
         to_be_removed_mutations_by_fp_mutations_cross_all_cells = artifact_candidates
         
         logger_obj.warning("=" * 80)
-        logger_obj.warning(f"🔴 PERMANENTLY REMOVED ARTIFACTUAL LOCI (M_artifact)")
+        logger_obj.warning(f"  PERMANENTLY REMOVED ARTIFACTUAL LOCI (M_artifact)")
         logger_obj.warning("-" * 80)
         logger_obj.warning(f"  |M_artifact|: {len(to_be_removed_mutations_by_fp_mutations_cross_all_cells)} total")
         for mut in to_be_removed_mutations_by_fp_mutations_cross_all_cells:
@@ -1570,13 +1559,13 @@ def tree_QC_and_filter(
                     ω_NA=omega_NA,
                     fnfp_ratio=fnfp_ratio,
                     φ=phi,
-                    logger=logger_obj,
+                    logger_obj=logger_obj,
                     root_mutations=root_mutations
                 )
                 all_conflict_mutations.extend(conflict_mutations_temp)
     
     else:
-        logger_obj.info(f"  ⚠️ Artifact mutation removal is DISABLED (remove_artifact_mutations=no)")
+        logger_obj.info(f"  Artifact mutation removal is DISABLED (remove_artifact_mutations=no)")
         logger_obj.info(f"  |M_artifact| candidates identified but NOT removed: {len(artifact_candidates)}")
         
         pd.Series(artifact_candidates).to_csv(
@@ -1631,7 +1620,7 @@ def tree_QC_and_filter(
             ω_NA=omega_NA,
             fnfp_ratio=fnfp_ratio,
             φ=phi,
-            logger=logger_obj,
+            logger_obj=logger_obj,
             root_mutations=root_mutations
         )
     
@@ -1727,6 +1716,243 @@ def tree_QC_and_filter(
 
 
 # ============================================================================
+# Helper function: Export phylo results for each CV threshold
+# ============================================================================
+
+def export_phylo_results_for_cv(
+    T_current: TreeNode,
+    M_current: pd.DataFrame,
+    I_attached: pd.DataFrame,
+    root_mutations: List[str],
+    all_conflict_mutations: List[str],
+    outputpath_full: str,
+    sampleid: str,
+    cv_value: float,
+    params: Dict[str, Any],
+    logger_obj: Optional[logging.Logger] = None,
+) -> bool:
+    """
+    Export phylo results (matrices, tree files, flipping statistics) for a specific CV threshold.
+    
+    This function is called within the parallel CV search to save complete phylo results
+    for each CV value, enabling direct comparison across thresholds.
+    
+    Parameters
+    ----------
+    T_current : TreeNode
+        Final tree
+    M_current : pd.DataFrame
+        Final mutation matrix
+    I_attached : pd.DataFrame
+        Original mutation matrix with NA values
+    root_mutations : List[str]
+        Root mutations
+    all_conflict_mutations : List[str]
+        Conflict mutations
+    outputpath_full : str
+        Base output directory for this CV run
+    sampleid : str
+        Sample ID
+    cv_value : float
+        CV threshold value
+    params : Dict[str, Any]
+        Parameters dictionary
+    logger_obj : logging.Logger, optional
+        Logger instance
+    
+    Returns
+    -------
+    bool : True if successful, False otherwise
+    """
+    if logger_obj is None:
+        logger_obj = logging.getLogger(__name__)
+    
+    try:
+        # Create phylo results directory
+        phylo_dir = os.path.join(outputpath_full, "phylo_results")
+        os.makedirs(phylo_dir, exist_ok=True)
+        
+        cv_label = str(cv_value).replace('.', '_')
+        
+        logger_obj.info(f"  Exporting phylo results for CV={cv_value} to: {phylo_dir}")
+        
+        # ---- Step 1: Prepare final data ----
+        M_current_filtered = M_current.drop(columns=['ROOT'], errors='ignore')
+        
+        # Add root mutations back
+        for mut_on_root in root_mutations:
+            if mut_on_root not in M_current_filtered.columns:
+                M_current_filtered.insert(0, mut_on_root, 1)
+        
+        # Expand merged columns
+        mutations_on_T_current = M_current_filtered.columns.to_series().apply(
+            lambda x: x.split("|")
+        ).explode().unique().tolist()
+        
+        T_full = copy.deepcopy(T_current)
+        M_full = split_merged_columns(M_current_filtered, mutations_on_T_current)
+        
+        # ---- Step 2: Export I matrix with NA=3 ----
+        I_full_withNA3 = I_attached.replace({np.nan: 3}).astype(int)
+        I_full_withNA3.to_csv(
+            os.path.join(phylo_dir, f"I_full_withNA3_CV{cv_label}.txt"),
+            sep="\t"
+        )
+        
+        # ---- Step 3: Export M matrix ----
+        WriteTfile(
+            os.path.join(phylo_dir, f"M_full_basedPivots.filtered_sites_inferred_CV{cv_label}"),
+            M_full,
+            M_full.index.tolist(),
+            M_full.columns.tolist(),
+            judge="yes"
+        )
+        
+        # ---- Step 4: Clean and export final matrices ----
+        final_cleaned_M_full = M_full.loc[:, (M_full != 0).any(axis=0)]
+        final_cleaned_M_full = final_cleaned_M_full.loc[(final_cleaned_M_full != 0).any(axis=1)]
+        
+        kept_rows = final_cleaned_M_full.index
+        kept_cols = final_cleaned_M_full.columns
+        
+        final_cleaned_I_full_withNA3 = I_full_withNA3.loc[kept_rows, kept_cols]
+        
+        WriteTfile(
+            os.path.join(phylo_dir, f"final_cleaned_M_full_basedPivots.filtered_sites_inferred_CV{cv_label}"),
+            final_cleaned_M_full,
+            final_cleaned_M_full.index.tolist(),
+            final_cleaned_M_full.columns.tolist(),
+            judge="yes"
+        )
+        final_cleaned_I_full_withNA3.to_csv(
+            os.path.join(phylo_dir, f"final_cleaned_I_full_withNA3_for_circosPlot_CV{cv_label}.txt"),
+            sep="\t"
+        )
+        
+        # ---- Step 5: Identify flipping spots ----
+        df_bin_withNA3_for_flipping = final_cleaned_I_full_withNA3.copy()
+        df_phylogeny = final_cleaned_M_full.copy()
+        
+        # Compute flipping spots
+        false_negative_flipping_spots = df_bin_withNA3_for_flipping.apply(
+            lambda col: find_flipping_spots(col, df_phylogeny[col.name], 
+                                          condition_in_bin=0, condition_phylogeny=1)
+        )
+        false_positive_flipping_spots = df_bin_withNA3_for_flipping.apply(
+            lambda col: find_flipping_spots(col, df_phylogeny[col.name], 
+                                          condition_in_bin=1, condition_phylogeny=0)
+        )
+        NAto1_flipping_spots = df_bin_withNA3_for_flipping.apply(
+            lambda col: find_flipping_spots(col, df_phylogeny[col.name], 
+                                          condition_in_bin=3, condition_phylogeny=1)
+        )
+        NAto0_flipping_spots = df_bin_withNA3_for_flipping.apply(
+            lambda col: find_flipping_spots(col, df_phylogeny[col.name], 
+                                          condition_in_bin=3, condition_phylogeny=0)
+        )
+        
+        # Handle empty results
+        if false_negative_flipping_spots.empty:
+            false_negative_flipping_spots = {col: [] for col in df_bin_withNA3_for_flipping.columns}
+        if false_positive_flipping_spots.empty:
+            false_positive_flipping_spots = {col: [] for col in df_bin_withNA3_for_flipping.columns}
+        if NAto1_flipping_spots.empty:
+            NAto1_flipping_spots = {col: [] for col in df_bin_withNA3_for_flipping.columns}
+        if NAto0_flipping_spots.empty:
+            NAto0_flipping_spots = {col: [] for col in df_bin_withNA3_for_flipping.columns}
+        
+        # Build flipping spots dataframe
+        df_flipping_spots = pd.DataFrame({
+            'Mutation': df_bin_withNA3_for_flipping.columns,
+            'delta_FN_spots': [', '.join(false_negative_flipping_spots.get(col, [])) 
+                             for col in df_bin_withNA3_for_flipping.columns],
+            'delta_FP_spots': [', '.join(false_positive_flipping_spots.get(col, [])) 
+                             for col in df_bin_withNA3_for_flipping.columns],
+            'NA_to_1_spots': [', '.join(NAto1_flipping_spots.get(col, [])) 
+                            for col in df_bin_withNA3_for_flipping.columns],
+            'NA_to_0_spots': [', '.join(NAto0_flipping_spots.get(col, [])) 
+                            for col in df_bin_withNA3_for_flipping.columns]
+        })
+        df_flipping_spots.to_csv(
+            os.path.join(phylo_dir, f"df_flipping_spots_CV{cv_label}.txt"),
+            sep="\t", index=False
+        )
+        
+        # ---- Step 6: Calculate total flipping counts ----
+        total_FN_flipping = ((df_bin_withNA3_for_flipping == 0) & (df_phylogeny == 1)).sum().sum()
+        total_FP_flipping = ((df_bin_withNA3_for_flipping == 1) & (df_phylogeny == 0)).sum().sum()
+        total_NAto0 = ((df_bin_withNA3_for_flipping == 3) & (df_phylogeny == 0)).sum().sum()
+        total_NAto1 = ((df_bin_withNA3_for_flipping == 3) & (df_phylogeny == 1)).sum().sum()
+        
+        fnfp_ratio = params.get('fnfp_ratio', 0.1)
+        omega_final = total_FP_flipping + fnfp_ratio * total_FN_flipping
+        
+        df_total_flipping_count = pd.DataFrame({
+            'total_delta_FP': [total_FP_flipping],
+            'total_delta_FN': [total_FN_flipping],
+            'total_NA_to_0': [total_NAto0],
+            'total_NA_to_1': [total_NAto1],
+            'weighted_discordance_index_Omega': [omega_final]
+        })
+        df_total_flipping_count.to_csv(
+            os.path.join(phylo_dir, f"df_total_flipping_count_CV{cv_label}.txt"),
+            sep="\t", index=False
+        )
+        
+        # Save per-site flipping counts
+        df_flip_counts_tree = calculate_flip_counts_per_site(df_bin_withNA3_for_flipping, df_phylogeny)
+        df_flip_counts_tree.to_csv(
+            os.path.join(phylo_dir, f"df_flipping_count_for_each_mut_CV{cv_label}.txt"),
+            sep="\t", index=True
+        )
+        
+        # ---- Step 7: Tree format and clone information ----
+        # Export tree as JSON
+        tree_dict = tree_to_dict(T_full)
+        with open(os.path.join(phylo_dir, f'final_cleaned_tree_node_CV{cv_label}.json'), 'w') as f:
+            json.dump(tree_dict, f, indent=4)
+        
+        # Export tree as text
+        T_full.save_to_file(
+            os.path.join(phylo_dir, f'final_cleaned_tree_node_CV{cv_label}.txt')
+        )
+        
+        # Assign clone labels to cells
+        mutation_clones = get_mutation_clone_and_backbone_mut_as_keys_by_first_level_with_frequency(
+            T_full, I_attached
+        )
+        df_barcode_clones = assign_clone_labels(M_full, mutation_clones)
+        df_barcode_clones.to_csv(
+            os.path.join(phylo_dir, f"df_barcode_clones_from_phylo_tree_CV{cv_label}.csv"),
+            sep=',', index=False
+        )
+        
+        # ---- Step 8: Create summary file ----
+        with open(os.path.join(phylo_dir, f"summary_CV{cv_label}.txt"), 'w') as f:
+            f.write("=" * 80 + "\n")
+            f.write(f"PhyloSOLID Results Summary - CV={cv_value}\n")
+            f.write("=" * 80 + "\n\n")
+            f.write(f"Sample ID: {sampleid}\n")
+            f.write(f"CV threshold: {cv_value}\n")
+            f.write(f"Omega (final): {omega_final:.4f}\n")
+            f.write(f"Total cells: {final_cleaned_M_full.shape[0]}\n")
+            f.write(f"Total mutations: {final_cleaned_M_full.shape[1]}\n")
+            f.write(f"Total FP flipping: {total_FP_flipping}\n")
+            f.write(f"Total FN flipping: {total_FN_flipping}\n")
+            f.write(f"FN/FP weight (lambda): {fnfp_ratio}\n")
+            f.write("=" * 80 + "\n")
+        
+        logger_obj.info(f"  ✓ CV={cv_value} phylo results exported successfully")
+        return True
+        
+    except Exception as e:
+        logger_obj.error(f"  ✗ Failed to export phylo results for CV={cv_value}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+# ============================================================================
 # Master function: Orchestrate Steps 6-8
 # ============================================================================
 
@@ -1746,6 +1972,8 @@ def build_fully_resolved_tree(
     conflict_mutations: List[str] = None,
     remove_artifact_mutations: str = "yes",
     logger_obj: Optional[logging.Logger] = None,
+    cv_value: Optional[float] = None,
+    export_phylo: bool = False,
 ) -> Tuple[TreeNode, pd.DataFrame, List[str], List[str], float, List[str], List[str], List[str], List[str], List[str]]:
     """
     Master function orchestrating Steps 6-8 to build a fully-resolved tree.
@@ -1787,6 +2015,10 @@ def build_fully_resolved_tree(
         'yes' or 'no'
     logger_obj : logging.Logger, optional
         Logger instance
+    cv_value : float, optional
+        CV threshold value for file naming
+    export_phylo : bool
+        Whether to export phylo results for this CV
     
     Returns
     -------
@@ -1816,8 +2048,10 @@ def build_fully_resolved_tree(
     
     if immune_mutations is None:
         immune_mutations = []
+    
     if spots_to_split is None:
         spots_to_split = []
+    
     if conflict_mutations is None:
         conflict_mutations = []
     
@@ -1902,6 +2136,34 @@ def build_fully_resolved_tree(
     logger_obj.info(f"  Mutations removed (artifact): {len(to_be_removed_mutations_by_fp_mutations_cross_all_cells)}")
     logger_obj.info("=" * 80)
     logger_obj.info("")
+    
+    # ---- Export phylo results if requested ----
+    if export_phylo and cv_value is not None:
+        logger_obj.info("=" * 80)
+        logger_obj.info("EXPORTING PHYLO RESULTS FOR THIS CV")
+        logger_obj.info("=" * 80)
+        
+        # Store omega_before_qc in params for the summary
+        params_with_omega = params.copy()
+        params_with_omega['omega_before_qc'] = omega_before_qc
+        
+        export_success = export_phylo_results_for_cv(
+            T_current=T_current,
+            M_current=M_current,
+            I_attached=I_attached,
+            root_mutations=root_mutations,
+            all_conflict_mutations=all_conflict_mutations,
+            outputpath_full=outputpath_full,
+            sampleid=sampleid,
+            cv_value=cv_value,
+            params=params_with_omega,
+            logger_obj=logger_obj,
+        )
+        
+        if export_success:
+            logger_obj.info(f"  ✓ Phylo results exported to: {outputpath_full}/phylo_results/")
+        logger_obj.info("=" * 80)
+        logger_obj.info("")
     
     return (
         T_current,

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from SpaceTracer.pipeline.checkpoint import CheckpointManager
+from SpaceTracer.pipeline.param_recorder import ParamRecorder, snapshot_config, to_jsonable
 from SpaceTracer.pipeline.registry import get_step_class
 from SpaceTracer.pipeline.dag import PipelineDAG
 from SpaceTracer.utils.parallel import memory_checkpoint
@@ -80,6 +81,7 @@ class PipelineOrchestrator:
         self.work_dir.mkdir(parents=True, exist_ok=True)
 
         self.checkpoint = CheckpointManager(self.work_dir, disabled=self.disabled)
+        self.param_recorder = ParamRecorder(self.work_dir)
         # self.validator = Validator(self.config.get("run", {}).get("skip_validation", False))
         self.skip_validation = self.config.get("run", {}).get("skip_validation", False)
         self.dag = PipelineDAG()
@@ -115,6 +117,10 @@ class PipelineOrchestrator:
             raise ValueError("only_steps cannot be used together with start_from/stop_at")
 
         self.stats["start_time"] = time.time()
+
+        # One JSON file for all params of this run (+ history of previous re-runs).
+        run_id = self.param_recorder.start_run(self.config)
+        logger.info(f"Params will be recorded in {self.param_recorder.params_file} (run_id={run_id})")
 
         #build context
         context = self._build_base_context() # base
@@ -167,6 +173,173 @@ class PipelineOrchestrator:
             "elapsed_time": elapsed,
             "chunk_index": self.chunk_index,
             "stats": self.stats,
+        }
+
+    def dry_run(
+        self,
+        *,
+        start_from: Optional[str] = None,
+        stop_at: Optional[str] = None,
+        only_steps: Optional[List[str]] = None,
+        context_override: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Print params for each planned step and check for obvious errors.
+        Does not execute steps or write .pipeline_params.json.
+        """
+        logger.info("=" * 70)
+        label = f"chunk {self.chunk_index:04d}" if self.chunk_index is not None else "full run"
+        logger.info(f"Dry-run Pipeline ({label})")
+        logger.info("=" * 70)
+
+        if only_steps and (start_from is not None or stop_at is not None):
+            raise ValueError("only_steps cannot be used together with start_from/stop_at")
+
+        context = self._build_base_context()
+        self.base_keys = list(context.keys())
+        context = self._load_completed_outputs(context)
+
+        if context_override:
+            resolved = _resolve_paths(context_override)
+            context.update(resolved)
+
+        if only_steps:
+            steps_to_run = self._get_only_steps_plan(only_steps)
+        else:
+            requested_steps = self.dag.get_execution_plan(
+                start_from=start_from,
+                stop_at=stop_at,
+                only_steps=None,
+            )
+            if self.force:
+                steps_to_run = requested_steps
+            else:
+                steps_to_run = self._smart_plan(requested_steps, context_override)
+
+        print("\n" + "=" * 70)
+        print(f"[DRY-RUN] planned steps ({len(steps_to_run)}): {' → '.join(steps_to_run) or '(none)'}")
+        print("=" * 70)
+
+        print("\n[global config]")
+        print(json.dumps(snapshot_config(self.config), indent=2, ensure_ascii=False))
+
+        errors: List[str] = []
+        warnings: List[str] = []
+        step_reports: List[Dict[str, Any]] = []
+        plan_set = set(steps_to_run)
+
+        for step_name in steps_to_run:
+            print("\n" + "-" * 70)
+            print(f"[step] {step_name}")
+            print("-" * 70)
+
+            report: Dict[str, Any] = {"step": step_name, "ok": True}
+
+            try:
+                step = self._get_step_instance(step_name, context)
+            except Exception as exc:
+                msg = f"{step_name}: failed to initialize ({exc})"
+                errors.append(msg)
+                report["ok"] = False
+                report["error"] = str(exc)
+                print(f"  ERROR: {exc}")
+                step_reports.append(report)
+                continue
+
+            params = {
+                "step_config": to_jsonable(step.get_step_config()),
+                "runtime": {
+                    "sample": step.sample,
+                    "sequence_type": step.seq_type,
+                    "condition": step.condition,
+                    "bin_size": step.bin_size,
+                    "threads": step.threads,
+                    "memory": step.memory,
+                },
+            }
+            report["params"] = params
+            print(json.dumps(params, indent=2, ensure_ascii=False))
+
+            try:
+                missing_keys, missing_files = self._check_step_inputs_available(step, context)
+            except Exception as exc:
+                msg = f"{step_name}: input check failed ({exc})"
+                errors.append(msg)
+                report["ok"] = False
+                report["error"] = str(exc)
+                print(f"  ERROR: input check failed: {exc}")
+                step_reports.append(report)
+                continue
+
+            if missing_keys or missing_files:
+                deps = set(getattr(self.dag.steps.get(step_name), "dependencies", []) or [])
+                upstream_in_plan = sorted(deps & plan_set)
+                detail_parts = []
+                if missing_keys:
+                    detail_parts.append(f"missing keys={missing_keys}")
+                if missing_files:
+                    detail_parts.append(f"missing files={missing_files}")
+                detail = "; ".join(detail_parts)
+
+                if only_steps and not upstream_in_plan:
+                    msg = f"{step_name}: {detail}"
+                    errors.append(msg)
+                    report["ok"] = False
+                    report["error"] = detail
+                    print(f"  ERROR: {detail}")
+                elif upstream_in_plan:
+                    warn = (
+                        f"{step_name}: {detail} "
+                        f"(expected after upstream: {upstream_in_plan})"
+                    )
+                    warnings.append(warn)
+                    report["warning"] = warn
+                    print(f"  WARN: {detail} (will be produced by {upstream_in_plan})")
+                else:
+                    # Full pipeline dry-run: missing inputs for early steps that
+                    # depend on nothing mean config/input problems.
+                    if not deps:
+                        msg = f"{step_name}: {detail}"
+                        errors.append(msg)
+                        report["ok"] = False
+                        report["error"] = detail
+                        print(f"  ERROR: {detail}")
+                    else:
+                        warn = f"{step_name}: {detail} (upstream not in this dry-run plan)"
+                        warnings.append(warn)
+                        report["warning"] = warn
+                        print(f"  WARN: {detail}")
+            else:
+                print("  OK: inputs look available")
+
+            step_reports.append(report)
+
+        print("\n" + "=" * 70)
+        print(
+            f"[DRY-RUN SUMMARY] steps={len(steps_to_run)}  "
+            f"errors={len(errors)}  warnings={len(warnings)}"
+        )
+        if errors:
+            print("Errors:")
+            for msg in errors:
+                print(f"  - {msg}")
+        if warnings:
+            print("Warnings:")
+            for msg in warnings:
+                print(f"  - {msg}")
+        if not errors:
+            print("Result: OK (no hard errors). Nothing was executed.")
+        else:
+            print("Result: FAILED preflight checks. Nothing was executed.")
+        print("=" * 70 + "\n")
+
+        return {
+            "dry_run": True,
+            "steps": steps_to_run,
+            "step_reports": step_reports,
+            "errors": errors,
+            "warnings": warnings,
+            "ok": len(errors) == 0,
         }
 
     # ─────────────────────────────────────────────────────────────
@@ -343,11 +516,15 @@ class PipelineOrchestrator:
                 if value is None:
                     raise ValueError(f"Step '{step_name}' output '{key}' is None")
 
-                if not isinstance(value,int):
-                    path = Path(value)
+                if isinstance(value, int):
+                    continue
+
+                values = value if isinstance(value, list) else [value]
+                for path_value in values:
+                    path = Path(path_value)
                     if not path.exists():
                         raise FileNotFoundError(
-                            f"Step '{step_name}' output '{key}' does not exist: {value}"
+                            f"Step '{step_name}' output '{key}' does not exist: {path_value}"
                         )
 
     # ─────────────────────────────────────────────────────────────
@@ -475,8 +652,13 @@ class PipelineOrchestrator:
             if path is None:
                 missing_files.append((key, str(path)))
                 continue
-            if not Path(path).exists():
-                missing_files.append((key, str(path)))
+            if isinstance(path, int):
+                continue
+
+            paths = path if isinstance(path, list) else [path]
+            for path_value in paths:
+                if path_value is None or not Path(path_value).exists():
+                    missing_files.append((key, str(path_value)))
 
         return missing_keys, missing_files
 
@@ -531,7 +713,9 @@ class PipelineOrchestrator:
             raise ValueError(
                 f"No implementation class registered for '{step_name}'. "
             )
-        return cls(step_name, context, self.checkpoint)
+        step = cls(step_name, context, self.checkpoint)
+        step.param_recorder = self.param_recorder
+        return step
 
     # ─────────────────────────────────────────────────────────────
     # diagnostics

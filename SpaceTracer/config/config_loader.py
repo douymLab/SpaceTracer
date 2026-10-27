@@ -253,11 +253,35 @@ class LoadConfig:
         ]:
             self._replace_config(key, resource_details)
 
+    def _normalize_model_name(self, model_name):
+        """Normalize model_name to a non-empty list of strings.
+
+        Accepts a list, or a comma-separated string (English ',' or Chinese '，').
+        """
+        if isinstance(model_name, list):
+            names = [str(name).strip() for name in model_name if str(name).strip()]
+        elif isinstance(model_name, str):
+            raw = model_name.replace("，", ",")
+            names = [part.strip() for part in raw.split(",") if part.strip()]
+        else:
+            names = [str(model_name).strip()] if model_name is not None else []
+
+        if not names:
+            raise ValueError(
+                "model_name is required. Please provide model_name in config.yaml"
+            )
+        return names
+
     def _resolve_model_defaults(self):
         if not self.config.get("model_name"):
-            self.config["model_name"]="spatial_preserved_model"
+            self.config["model_name"] = ["spatial_preserved_model"]
+        else:
+            self.config["model_name"] = self._normalize_model_name(
+                self.config["model_name"]
+            )
         if not self.config.get("model_dir"):
             self.config["model_dir"] = str(files("SpaceTracer").joinpath("models"))
+
 
     def _prepare_visium_hd_cell_info(self):
         if self.config.get("sequence_type") != "visium-HD":

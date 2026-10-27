@@ -372,21 +372,23 @@ class Validator:
         if not final_vcf:
             logger.error("Final filter did not produce final_vcf")
             return False
-        
-        if not self.validate_vcf_file(final_vcf):
-            return False
-        
-        try:
-            with open(final_vcf) as f:
-                variant_count = sum(1 for line in f if not line.startswith('#'))
-                
-                logger.info(f"✓ Final VCF contains {variant_count:,} variants")
-                
-                if variant_count == 0:
-                    logger.warning("No variants in final output (might be expected)")
-        
-        except Exception as e:
-            logger.warning(f"Could not count variants: {e}")
+
+        vcf_files = final_vcf if isinstance(final_vcf, list) else [final_vcf]
+        for vcf_path in vcf_files:
+            if not self.validate_vcf_file(vcf_path):
+                return False
+            
+            try:
+                with open(vcf_path) as f:
+                    variant_count = sum(1 for line in f if not line.startswith('#'))
+                    
+                    logger.info(f"✓ Final VCF ({vcf_path}) contains {variant_count:,} variants")
+                    
+                    if variant_count == 0:
+                        logger.warning("No variants in final output (might be expected)")
+            
+            except Exception as e:
+                logger.warning(f"Could not count variants: {e}")
         
         return True
     
