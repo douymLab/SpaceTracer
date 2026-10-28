@@ -48,4 +48,6 @@ From `steps.read_feature`:
 ## Tuning notes
 
 - Regions are batched and processed in multiprocessing workers.
+- Chunks are scheduled by size. Mitochondrial chunks use a separate runtime profile. Other chunks are treated as huge at 5000 or more variants, medium at 1000 or more, and small below that. Heavy chunks are interleaved with lighter ones.
+- When `cell_info` is set, reads whose barcode is absent from that map are dropped.
 - Feature extraction uses mutation-local read information and produces one row per candidate.

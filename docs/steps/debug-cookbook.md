@@ -22,6 +22,15 @@ Force recompute (ignore completed checkpoints):
 spacetracer run --config config.yaml --start-from <step_name> --force
 ```
 
+Check the plan and resolved parameters before a long run:
+
+```bash
+spacetracer run --config config.yaml --dry-run
+spacetracer run --config config.yaml --only-steps "phasing,merge_feature" --dry-run
+```
+
+`--dry-run` does not execute steps and does not write `output_dir/.pipeline_params.json`.
+
 ## Recommended debug workflows
 
 ## A) Genotyping parameter tuning

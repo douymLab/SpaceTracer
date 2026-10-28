@@ -12,6 +12,7 @@
 
 - merges outputs from Step 5 feature modules
 - applies filtration tags/group switches (`steps.feature_filtration.*`)
+- sets the high-VAF cutoff from top-level `condition`, and the wide-distribution cutoff from `sequence_type`
 - writes integrated feature tables for prediction
 
 This is the step where filtration is handled in the current code path.

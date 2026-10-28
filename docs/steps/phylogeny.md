@@ -18,17 +18,18 @@ Builds a lineage tree from high-confidence mutation calls using the integrated P
 
 ## What this step does
 
-- reads the final PASS mutation list from `mutation_prediction`
-- builds the mutation-by-spot matrix needed by PhyloSOLID
+- reads every PASS mutation list produced by `mutation_prediction`
+- writes a sorted unique merge of those lists to `output_dir/phylogeny/<sample>_merged_mutation_list.txt`
+- builds a mutation-by-spot matrix for each list and for the merged list
 - runs the bundled PhyloSOLID preprocessing script with `Rscript`
 - runs the bundled PhyloSOLID tree-building Python script
-- writes logs and the final tree under `output_dir/phylogeny`
+- writes a separate tree directory for each list that contains at least 3 mutations
 
 ## Required inputs
 
 | Input | Source | Required | Interpretation |
 | --- | --- | --- | --- |
-| `final_mutation_list` | `mutation_prediction` output | Yes | PASS mutation list used for tree building. |
+| `final_mutation_list` | `mutation_prediction` output | Yes | One PASS mutation list per `model_name`. Each list is used for its own tree, and all lists are also merged. |
 | `in_filter_bam` | `bam_processing` output | Yes | Filtered BAM used to build the mutation matrix. |
 | `tissue_position` | resolved from `spaceranger_dir` or `input_details.tissue_position` | Yes unless `target_barcodes` is provided | Barcode/tissue-position file used to map mutations to spatial spots. |
 | `target_barcodes` | `steps.phylogeny.target_barcodes` | No | Optional file containing target barcodes for tree input preparation. |
@@ -36,9 +37,11 @@ Builds a lineage tree from high-confidence mutation calls using the integrated P
 
 ## Skip behavior
 
-The step is skipped when fewer than 3 PASS mutations are available, because there is not enough mutation signal to infer a useful tree.
+Each mutation list is handled on its own. A list with fewer than 3 mutations does not get a tree. If tree building fails for one list, that error is logged and the remaining lists continue.
 
 If neither `tissue_position` nor `target_barcodes` can be resolved, the current implementation logs that automatic tree building is not supported for that run instead of building the tree.
+
+`sequence_type: visium-HD` is accepted when building the mutation matrix. If `cell_info` is set, barcodes missing from that map are omitted from the matrix.
 
 ## Dependencies
 
@@ -50,11 +53,18 @@ This step calls both Python and R code:
 
 ## Outputs
 
+For a per-model list, `<prefix>` is `<sample>_<model_name>`. For the merged list, `<prefix>` is `<sample>_merged_mutation_list.txt`.
+
 Typical outputs include:
 
-- `output_dir/phylogeny/logs/<sample>_phylosolid_prepare.log`
-- `output_dir/phylogeny/logs/<sample>_phylosolid_build_tree.log`
-- `output_dir/phylogeny/tree/mutation_integrator/phylo/final_cleaned_M_full_basedPivots.filtered_sites_inferred.tree_scphylo.pdf`
+- `output_dir/phylogeny/<sample>_merged_mutation_list.txt`
+- `output_dir/phylogeny/logs/<prefix>_phylosolid_prepare.log`
+- `output_dir/phylogeny/logs/<prefix>_phylosolid_build_tree.log`
+- `output_dir/phylogeny/<prefix>_tree/04_final_results/phylo/*_inferred.tree_scphylo.pdf`
+
+Inside each `<prefix>_tree/` directory, PhyloSOLID also writes `01_germline_filter/`, `02_scaffold_builder/`, `03_mutation_integrator/`, `cv_search_summary.csv`, and `cv_selection_report.txt`.
+
+While the mutation matrix is built, a mutation is left out when the number of spots with a non-missing genotype is less than or equal to `min_spot_number`. The pipeline default is `0`, which drops mutations with no covered spots. The matrix builder accepts `--min_spot_number` when run directly; a value above `0` also drops mutations present in only a few spots.
 
 ## Running or skipping this step
 

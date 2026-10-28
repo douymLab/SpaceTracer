@@ -51,4 +51,6 @@ From `steps.RNA_feature`:
 ## Tuning notes
 
 - This step merges several RNA-oriented annotation and statistical modules.
+- `AFind` is the alternate-allele count divided by the total count at the site. `merge_feature` uses this value for `LOW_VAF` and `HIGH_VAF`.
+- Prior strings `1,1,1,1` and `0,0,0,0` are treated as missing, so they do not enter allele-frequency features as real population frequencies.
 - Output fields are heavily used in final merged filtration rules.

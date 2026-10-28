@@ -93,7 +93,9 @@ From the directory where `human_visium_demo` is located, run:
 spacetracer run --config human_visium_demo/config.yaml
 ```
 
-PhyloSOLID currently requires at least 3 mutations to construct a phylogeny tree. The demo output contains only 1 mutation, so the `phylogeny` step is skipped automatically even when the full workflow is run.
+The demo config can omit `condition`. The default is `tumor`, which keeps the high-VAF cutoff at 0.5.
+
+PhyloSOLID builds a tree only for a mutation list with at least 3 mutations. The demo output contains only 1 mutation, so the `phylogeny` step skips tree building even when the full workflow is run.
 
 To run only through mutation prediction and skip PhyloSOLID tree building:
 

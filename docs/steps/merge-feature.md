@@ -43,8 +43,10 @@ This step uses group-based filtration switches. If the section is omitted, the d
 | `RNA_editing` | Filter loci overlapping known RNA-editing contexts. |
 | `ABNORMAL_MISMATCHES` | Filter loci with high/bias mismatch patterns. |
 | `LOW_READ_DIVERSITY` | Filter loci with poor alternative-read diversity. |
-| `HIGH_MULTIPLE_MAPPIN` | Filter loci with high multiple-mapping signal. |
-| `WIDE_DISTRIBUTION` | Filter loci with broad suspicious mutant-probability distribution. |
+| `HIGH_MULTIPLE_MAPPING` | Filter loci with high multiple-mapping signal. The previous key `HIGH_MULTIPLE_MAPPIN` is no longer recognized. |
+| `WIDE_DISTRIBUTION` | Filter loci whose mutant-spot proportion is above 0.5 for `visium` and above 0.35 for other sequence types. |
+| `HIGH_VAF` | Filter loci whose RNA-feature `AFind` is above 0.5 when `condition` is `tumor`, or above 0.3 when `condition` is `normal`. |
+| `LOW_VAF` | Filter loci whose `AFind` is below 0.01. |
 | `NEAR_READ_END` | Filter loci dominated by near-read-end signal. |
 | `CLUSTER_EVENTS` | Filter loci associated with cluster-like event patterns. |
 | `LOW_MAPQ` | Filter low mapping-quality loci. |
@@ -53,6 +55,7 @@ This step uses group-based filtration switches. If the section is omitted, the d
 ## Tuning notes
 
 - Start with defaults for production runs.
+- Set top-level `condition` to `tumor` or `normal` before changing `HIGH_VAF`. `healthy` is treated as `normal`.
 - Disable only specific groups when investigating why candidates were filtered.
 - Document any filtration-group changes to preserve run comparability.
 

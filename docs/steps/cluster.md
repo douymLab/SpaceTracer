@@ -67,6 +67,8 @@ SpaceTracer also handles the tissue-position filename change across Space Ranger
 
 For Visium-HD, `default` clustering uses binned outputs and may require `barcode_mappings.parquet` through `input_details.barcode_mapping`.
 
+SpaGCN and GraphST are imported only when `cluster_method` selects that backend. A `default` run does not require those packages to import.
+
 If `cluster_method` is `SpaGCN` or `GraphST` and the clustering backend fails for Visium/Visium-HD, SpaceTracer falls back to `default` clustering when possible.
 
 ## Outputs

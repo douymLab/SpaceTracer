@@ -10,6 +10,9 @@ SpaceTracer is an open-source algorithm capable of accurately detecting mosaic S
 
 *SpaceTracer is actively maintained. Check the Release Notes below and GitHub Releases for the latest updates.*
 
+- 2026/10/28: Version 2.2.1 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.2.1))
+Added `spacetracer run --dry`, tumor/normal VAF thresholds, comma-separated multi-model prediction and phylogeny, optional PyTorch for clustering, and a covered-spot filter when building trees.
+
 - 2026/06/23: Version 2.2.0 ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.2.0))
 Updated mutation-prediction models, added clustered-noise and mitochondrial/contig filtration controls, and improved RNA-feature and PhyloSOLID handling.
 
@@ -60,8 +63,12 @@ spacetracer --help
 Run with your config:
 
 ```bash
+spacetracer version
 spacetracer run --config config.yaml
+spacetracer run --config config.yaml --dry-run
 ```
+
+`--dry-run` (alias `--dry`) prints the planned steps and resolved parameters and checks inputs. It does not execute the pipeline.
 
 Fallback command:
 
@@ -73,10 +80,14 @@ python -m SpaceTracer.cli.run --config config.yaml
 
 Start from the docs template and update sample/resource paths.
 
+Set `condition` to `tumor` (the default) or `normal` / `healthy`. This chooses the high-VAF filtration cutoff.
+
 SpaceTracer provides two pretrained mutation-prediction models under `models/`:
 
 - `spatial_free_model`
 - `spatial_preserved_model`
+
+`model_name` can be one of those names, a comma-separated list, or a YAML list. Each named model is run separately.
 
 For complete parameter descriptions and resource guidance, see:
 
@@ -103,7 +114,8 @@ Common downstream outputs:
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites.vcf`
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS.vcf`
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS_mutation_list.txt`
-- `output_dir/phylogeny/tree/mutation_integrator/phylo/final_cleaned_M_full_basedPivots.filtered_sites_inferred.tree_scphylo.pdf`
+- `output_dir/phylogeny/<sample>_<model_name>_tree/04_final_results/phylo/*_inferred.tree_scphylo.pdf`
+- `output_dir/phylogeny/<sample>_merged_mutation_list.txt_tree/04_final_results/phylo/*_inferred.tree_scphylo.pdf`
 
 ### Optional: advanced step-by-step mode
 

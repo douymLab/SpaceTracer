@@ -46,7 +46,10 @@ Install SpaceTracer into the activated environment (this provides the `spacetrac
 ```bash
 pip install .
 spacetracer --help
+spacetracer version
 ```
+
+`spacetracer version` prints the installed package version.
 
 !!! note
     Conda must be installed before running these commands.
