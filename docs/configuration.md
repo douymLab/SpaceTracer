@@ -8,7 +8,7 @@ SpaceTracer keeps the main user config small and moves most step-specific parame
 
 | Template | Best for | What to edit |
 | --- | --- | --- |
-| `SpaceTracer/config/config.example.yaml` | Standard Visium runs with a Space Ranger `outs` directory and a prepared resource directory. | Sample name, `spaceranger_dir`, `output_dir`, `resource_dir`, `model_name`, and compute resources. |
+| `SpaceTracer/config/config.example.yaml` | Standard Visium runs with a Space Ranger `outs` directory and a prepared resource directory. | Sample name, `condition`, `spaceranger_dir`, `output_dir`, `resource_dir`, `model_name`, and compute resources. |
 | `SpaceTracer/config/config.advanced.example.yaml` | Visium-HD, manual BAM/tissue-position/resource paths, external cluster files, or custom model locations. | Optional top-level shortcuts such as `cluster_method`, `cell_number`, `cell_info`, `model_dir`, `input_details`, and `resource_details`. |
 | `SpaceTracer/config/default_step_config.yaml` | Advanced step tuning. | Default step parameter values. This is not the run input config; see [Default Step Config](default-step-config.md). |
 
@@ -22,6 +22,7 @@ sequence_type: visium
 spaceranger_dir: /path/to/sample/outs
 output_dir: /path/to/output
 sample: Sample
+condition: tumor  # tumor, normal, or healthy
 resource_dir: /path/to/resource_dir
 model_name: spatial_free_model
 contain_chrM: False
@@ -36,6 +37,20 @@ The two shipped model names are:
 - `spatial_free_model`
 - `spatial_preserved_model`
 
+`model_name` can be a single name, a comma-separated string, or a YAML list. Each name is predicted separately:
+
+```yaml
+model_name: spatial_free_model, spatial_preserved_model
+```
+
+```yaml
+model_name:
+  - spatial_free_model
+  - spatial_preserved_model
+```
+
+If `model_name` is omitted, SpaceTracer uses `spatial_preserved_model`.
+
 ## Advanced config
 
 Use `SpaceTracer/config/config.advanced.example.yaml` when the shortcut directories are not enough:
@@ -46,6 +61,7 @@ sequence_type: visium
 spaceranger_dir: /path/to/sample/outs
 output_dir: /path/to/output
 sample: BCC-1
+condition: tumor  # tumor, normal, or healthy
 resource_dir: /path/to/resource_dir
 
 # Optional advanced settings
@@ -95,17 +111,18 @@ If `spaceranger_dir` or `resource_dir` is not available, fill in the correspondi
 ### Top-level fields
 
 - `sample`: sample label used in output filenames.
+- `condition`: tissue class used by filtration. Accepted values are `tumor`, `normal`, and `healthy`. `healthy` is stored as `normal`. The default is `tumor`. Tumor samples use a high-VAF cutoff of 0.5. Normal samples use 0.3.
 - `genome`: genome build label, such as `hg38` or `mm10`.
 - `sequence_type`: spatial platform mode, such as `visium` or `visium-HD`.
 - `spaceranger_dir`: Space Ranger `outs` directory. SpaceTracer can resolve BAM, tissue positions, and related Visium files from this directory.
 - `resource_dir`: directory containing the prepared reference resources from [Resources](resources.md).
-- `output_dir`: root directory for all pipeline outputs.
-- `model_name`: mutation prediction model name, usually `spatial_free_model` or `spatial_preserved_model`.
+- `output_dir`: root directory for all pipeline outputs. If omitted, the default is the working directory (`./`).
+- `model_name`: one model name, a comma-separated string, or a YAML list. Shipped names are `spatial_free_model` and `spatial_preserved_model`. Each listed model is run separately. If omitted, the default is `spatial_preserved_model`.
 - `model_dir`: directory containing the trained model folders. Use this when the models are not in the default location.
 - `cluster_file`: existing cluster/domain assignment file. If this is provided, SpaceTracer reuses it instead of generating a new cluster file.
-- `cluster_method`: clustering strategy used when SpaceTracer needs to generate clusters. Supported values are `default`, `SpaGCN`, and `GraphST`.
+- `cluster_method`: clustering strategy used when SpaceTracer needs to generate clusters. Supported values are `default`, `SpaGCN`, and `GraphST`. SpaGCN and GraphST are imported only when that method is selected.
 - `cell_number`: fixed cell number or path to a cell-number file.
-- `cell_info`: optional barcode-to-cell annotation file used by read-level feature extraction. The first column is barcode and the second column is cell.
+- `cell_info`: optional barcode-to-cell annotation file used by read-level feature extraction and phylogeny. The first column is barcode and the second column is cell. Barcodes that are absent from this map are dropped. For `visium-HD`, if this field is omitted, SpaceTracer writes `output_dir/cell_info.txt` from `input_details.barcode_mapping`. That parquet file needs columns `square_002um`, `cell_id`, and `in_cell`, or columns `square_002um` and `square_016um`.
 - `contain_chrM`: top-level shortcut for mitochondrial-call filtration behavior; set according to whether mitochondrial chromosomes are included in the run.
 
 ### `run`

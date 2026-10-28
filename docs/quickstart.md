@@ -11,6 +11,7 @@ Make sure you have installed the package into your environment (for CLI usage):
 ```bash
 pip install .
 spacetracer --help
+spacetracer version
 ```
 
 ## 2) Prepare inputs and references
@@ -28,12 +29,15 @@ Create `config.yaml` from the templates described in [Configuration](configurati
 
 For a standard Visium run, start from `SpaceTracer/config/config.example.yaml`. For Visium-HD, manual input paths, or external cluster/cell annotations, start from `SpaceTracer/config/config.advanced.example.yaml`.
 
+Set `condition` to `tumor` (default), `normal`, or `healthy`. This chooses the high-VAF cutoff used during feature filtration.
+
 Pretrained mutation-prediction models are provided under `SpaceTracer/models`:
 
 - `spatial_free_model`
 - `spatial_preserved_model`
 
-Set these via `model_dir` and `model_name` in your config.
+Set these via `model_dir` and `model_name`. `model_name` may be one name or a list. Each listed model is predicted separately.
+
 For step-level default parameters, use [Default Step Config](default-step-config.md).
 
 !!! warning
@@ -43,7 +47,10 @@ For step-level default parameters, use [Default Step Config](default-step-config
 
 ```bash
 spacetracer run --config config.yaml
+spacetracer run --config config.yaml --dry-run
 ```
+
+`--dry-run` (alias `--dry`) prints the planned steps and resolved parameters and checks that expected inputs exist. It does not execute steps.
 
 Fallback command:
 
@@ -69,6 +76,7 @@ Notes:
 - `--only-steps` runs exactly the listed steps (topologically ordered within that subset) and does **not** auto-include external dependencies.
 - If required upstream outputs are missing, `--only-steps` will fail with missing-key or missing-file errors.
 - A full run continues through `phylogeny`. Use `--stop-at mutation_prediction` if you only want mutation VCF output and want to skip tree building.
+- A completed run writes the resolved parameters to `output_dir/.pipeline_params.json`.
 
 Available step names:
 
@@ -93,4 +101,5 @@ Common output files from downstream feature and prediction stages include:
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites.vcf`
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS.vcf`
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS_mutation_list.txt`
-- `output_dir/phylogeny/tree/mutation_integrator/phylo/final_cleaned_M_full_basedPivots.filtered_sites_inferred.tree_scphylo.pdf`
+- `output_dir/phylogeny/<sample>_<model_name>_tree/04_final_results/phylo/*_inferred.tree_scphylo.pdf`
+- `output_dir/phylogeny/<sample>_merged_mutation_list.txt_tree/04_final_results/phylo/*_inferred.tree_scphylo.pdf`

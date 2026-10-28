@@ -40,3 +40,4 @@ No major per-step thresholds are currently exposed; performance mainly scales wi
 
 - Internally processed by chromosome groups.
 - Output includes `mappabilityScore` used in final filtration logic.
+- During feature merge, missing or non-numeric tokens inside `mappabilityScore` are skipped when the minimum score is taken.

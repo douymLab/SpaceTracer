@@ -49,7 +49,7 @@ Typical outputs from `mutation_prediction` are:
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_PASS_mutation_list.txt`
 - `output_dir/mutation_prediction/results/<sample>_<model_name>_total_pred_truesites_MITO_mutation_list.txt`
 
-The filename prefix is `<sample>_<model_name>`, so outputs remain explicit when comparing results from different mutation-prediction models.
+The filename prefix is `<sample>_<model_name>`. When `model_name` lists more than one model, each model gets this full set of files.
 
 ```text
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
@@ -62,13 +62,18 @@ chr1	155234903	.	C	T	.	PASS	DP=39;ALT_DP=3;VAF=0.0769231;NUM_SPOTS=39;NUM_MUT_SP
 
 ## PhyloSOLID phylogeny outputs
 
-The integrated `phylogeny` step runs after `mutation_prediction` during a full workflow. It is skipped when fewer than 3 PASS mutations are available.
+The integrated `phylogeny` step runs after `mutation_prediction` during a full workflow. It builds one tree for each PASS mutation list and one tree for the merged list. A list with fewer than 3 mutations is skipped.
+
+`<prefix>` is `<sample>_<model_name>` for a model-specific list, and `<sample>_merged_mutation_list.txt` for the merged list.
 
 Typical outputs include:
 
-- `output_dir/phylogeny/logs/Sample_phylosolid_prepare.log`
-- `output_dir/phylogeny/logs/Sample_phylosolid_build_tree.log`
-- `output_dir/phylogeny/tree/mutation_integrator/phylo/final_cleaned_M_full_basedPivots.filtered_sites_inferred.tree_scphylo.pdf`
+- `output_dir/phylogeny/<sample>_merged_mutation_list.txt`
+- `output_dir/phylogeny/logs/<prefix>_phylosolid_prepare.log`
+- `output_dir/phylogeny/logs/<prefix>_phylosolid_build_tree.log`
+- `output_dir/phylogeny/<prefix>_tree/04_final_results/phylo/*_inferred.tree_scphylo.pdf`
+
+Resolved parameters for each real run are recorded in `output_dir/.pipeline_params.json`. A `--dry-run` does not write this file.
 
 ## Visualization and validation
 

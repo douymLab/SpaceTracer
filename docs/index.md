@@ -6,6 +6,9 @@ SpaceTracer is a computational framework for detecting somatic single-nucleotide
 
 ## Release notes
 
+* **2026-10-28 · Version 2.2.1** ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.2.1))
+  Added `spacetracer run --dry`, tumor/normal VAF thresholds, comma-separated multi-model prediction and phylogeny, optional PyTorch for clustering, and a covered-spot filter when building trees.
+
 * **2026-06-23 · Version 2.2.0** ([changelog](https://github.com/douymLab/SpaceTracer/releases/tag/v2.2.0))
   Updated mutation-prediction models, added clustered-noise and mitochondrial/contig filtration controls, and improved RNA-feature and PhyloSOLID handling.
 

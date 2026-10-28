@@ -113,7 +113,9 @@ steps:
     alpha: 0.05
     phasing_pad: 1000
     merge_gap: 200
-    max_target: 200000
+    max_target: 50000
+    max_region_span: 10000
+    phasing_max_workers: 8
     seed: 42
 
   feature_filtration:
@@ -129,7 +131,7 @@ steps:
     RNA_editing: True
     ABNORMAL_MISMATCHES: True
     LOW_READ_DIVERSITY: True
-    HIGH_MULTIPLE_MAPPIN: True
+    HIGH_MULTIPLE_MAPPING: True
     WIDE_DISTRIBUTION: True
     NEAR_READ_END: True
     CLUSTER_EVENTS: True
@@ -260,7 +262,9 @@ Controls RNA-informed phasing and cluster-event refinement.
 - `alpha`: significance threshold.
 - `phasing_pad`: padding around target sites for phasing.
 - `merge_gap`: maximum gap for merging nearby phased regions.
-- `max_target`: maximum number of target sites.
+- `max_target`: maximum number of reads sampled from a phasing region. The default is `50000`. Longer regions use a tighter cap: 20000 reads above 10 kb, 10000 above 20 kb, and 5000 above 50 kb.
+- `max_region_span`: maximum window, in base pairs, used when fetching reads from a phasing region. The default is `10000`.
+- `phasing_max_workers`: maximum worker processes for phasing. The default is `8`, and the value is also limited by `run.threads`.
 - `seed`: random seed.
 
 ## `feature_filtration`
@@ -268,7 +272,7 @@ Controls RNA-informed phasing and cluster-event refinement.
 Controls which filtration tags are applied during feature merge and filtration.
 
 - `LOW_VAF`: filter low variant allele frequency calls.
-- `HIGH_VAF`: filter unusually high variant allele frequency calls.
+- `HIGH_VAF`: filter calls whose RNA-feature `AFind` is above 0.5 when `condition` is `tumor`, or above 0.3 when `condition` is `normal`.
 - `LOW_SPOT_NUM`: filter calls supported by too few spots.
 - `LOW_ALT_SPOT_NUM`: filter calls supported by too few mutant spots.
 - `ASE`: filter allele-specific expression artifacts.
@@ -279,8 +283,8 @@ Controls which filtration tags are applied during feature merge and filtration.
 - `RNA_editing`: filter known RNA-editing sites.
 - `ABNORMAL_MISMATCHES`: filter abnormal mismatch-pattern artifacts.
 - `LOW_READ_DIVERSITY`: filter calls with low read diversity.
-- `HIGH_MULTIPLE_MAPPIN`: filter high multiple-mapping artifacts.
-- `WIDE_DISTRIBUTION`: filter calls with overly broad spatial distribution.
+- `HIGH_MULTIPLE_MAPPING`: filter high multiple-mapping artifacts. Configs copied from older releases should use this name. The previous spelling `HIGH_MULTIPLE_MAPPIN` no longer enables the filter.
+- `WIDE_DISTRIBUTION`: filter calls whose mutant-spot proportion is above 0.5 on Visium and above 0.35 on other sequence types.
 - `NEAR_READ_END`: filter calls close to read ends.
 - `CLUSTER_EVENTS`: filter cluster-level event artifacts.
 - `LOW_MAPQ`: filter low mapping-quality evidence.

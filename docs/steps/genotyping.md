@@ -44,6 +44,8 @@ Performs cluster-level and spot-level genotype inference from UMI counts and pri
 - Raise `thr_dp` for more conservative calls on noisy/high-depth data.
 - Lower `pop_vaf` for stricter rare-variant emphasis.
 - Keep `filter_oneallele=true` unless you explicitly want a more permissive candidate set.
+- Sites with no population allele frequency use prior `0,0,0,0`. The individual VAF written by this step is `vaf_hat`, and spot genotyping joins it as `ind_vaf`.
+- If the `cell_num` step has not placed a value in the run context, genotyping uses the top-level `cell_number` setting.
 
 ## Outputs
 

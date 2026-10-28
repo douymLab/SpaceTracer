@@ -38,7 +38,9 @@ This step refines genotype-supported candidate loci using RNA-informed phasing s
 | `alpha` | float | `0.05` | Statistical significance threshold in phasing-related tests. |
 | `phasing_pad` | int | `1000` | Flanking window size used to collect nearby phasing support. |
 | `merge_gap` | int | `200` | Max gap for merging nearby phase-related events. |
-| `max_target` | int | `200000` | Upper cap on target-region/event processing size. |
+| `max_target` | int | `50000` | Maximum number of reads sampled from a phasing region. Spans above 10 kb, 20 kb, and 50 kb are capped at 20000, 10000, and 5000 reads. |
+| `max_region_span` | int | `10000` | Maximum window, in base pairs, used when fetching reads. Longer regions are split into windows of this size. |
+| `phasing_max_workers` | int | `8` | Maximum worker processes. The value is also limited by `run.threads`. `run.memory` is passed to the worker pool. |
 | `seed` | int | `42` | Random seed for deterministic behavior where stochastic operations are used. |
 
 ## Tuning notes
@@ -46,6 +48,8 @@ This step refines genotype-supported candidate loci using RNA-informed phasing s
 - Increase `min_dp` / `min_total_dp` for stricter evidence quality.
 - Increase `phasing_pad` when long-range local context improves support in your data.
 - Use `merge_gap` to control event fragmentation vs over-merging.
+- Raise `max_target` or `max_region_span` when a deep region needs more reads than the default memory cap keeps.
+- Lower `phasing_max_workers` when phasing approaches the `run.memory` limit.
 
 ## Outputs
 
