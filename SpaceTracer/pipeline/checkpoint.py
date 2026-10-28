@@ -178,6 +178,20 @@ class CheckpointManager:
     def get_error(self, step_name: str) -> Optional[str]:
         return self.get_step_record(step_name).get("error")
 
+    def _verify_output_value(self, file_info) -> bool:
+        if isinstance(file_info, list):
+            return bool(file_info) and all(self.verify_output_file(item) for item in file_info)
+        if isinstance(file_info, int):
+            return True
+        return self.verify_output_file(file_info)
+
+    def _extract_output_value(self, file_info):
+        if isinstance(file_info, list):
+            return [item["path"] for item in file_info]
+        if isinstance(file_info, int):
+            return file_info
+        return file_info["path"]
+
     def get_outputs(self, step_name: str) -> Dict[str, str]:
         record = self.get_step_record(step_name)
         if record.get("status") != "complete":
@@ -186,8 +200,8 @@ class CheckpointManager:
         outputs = record.get("outputs", {})
         result = {}
         for key, file_info in outputs.items():
-            if self.verify_output_file(file_info):
-                result[key] = file_info["path"]
+            if self._verify_output_value(file_info):
+                result[key] = self._extract_output_value(file_info)
             elif isinstance(file_info,int):
                 result[key] = file_info
         return result
@@ -209,6 +223,8 @@ class CheckpointManager:
                 continue
             if isinstance(value,str):
                 outputs[key] = self._build_file_info(str(value))
+            elif isinstance(value, list):
+                outputs[key] = [self._build_file_info(str(path)) for path in value]
             elif isinstance(value,int):
                 outputs[key] = {"path": value}
             else:
@@ -220,7 +236,6 @@ class CheckpointManager:
             "outputs": outputs,
         }
         self._save_checkpoints()
-
     def mark_failed(self, step_name: str, error_message: str) -> None:
         if self.disabled:
             return
@@ -251,7 +266,7 @@ class CheckpointManager:
             return False
 
         for key, file_info in outputs.items():
-            if not isinstance(file_info,int) and not self.verify_output_file(file_info):
+            if not self._verify_output_value(file_info):
                 logger.warning(
                     f"Output file missing for {step_name}:{key} -> {file_info}"
                 )
@@ -280,12 +295,17 @@ class CheckpointManager:
 
         outputs = record.get("outputs", {})
         for key, file_info in outputs.items():
-            if self.verify_output_file(file_info):
-                context[key] = file_info["path"]
+            if self._verify_output_value(file_info):
+                context[key] = self._extract_output_value(file_info)
             elif isinstance(file_info,int):
                 context[key] = file_info
             else:
-                logger.warning(f"Output file missing: {file_info.get('path')}")
+                missing = (
+                    [item.get("path") for item in file_info]
+                    if isinstance(file_info, list)
+                    else file_info.get("path")
+                )
+                logger.warning(f"Output file missing: {missing}")
 
         return context
 

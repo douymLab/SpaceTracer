@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.colors import ListedColormap
 import logging
+from src.reproducibility import set_seed, deterministic_permutation
 
 logger = logging.getLogger(__name__)
 
@@ -287,7 +288,7 @@ def plot_heatmap_with_germline_mutations(I_raw, germline_mutations, pdf_file):
     ax_col_bar.set_xlim(ax_heatmap.get_xlim())
     ax_col_bar.set_xticks([])
     ax_col_bar.tick_params(axis="y", labelsize=8)
-    ax_col_bar.set_ylabel("#Mutations", fontsize=10)
+    ax_col_bar.set_ylabel("Cell Number\nper Mutation", fontsize=10)
     
     # -------------------
     # Step 8: 行条形图（每个 cell 有多少突变）
@@ -296,7 +297,7 @@ def plot_heatmap_with_germline_mutations(I_raw, germline_mutations, pdf_file):
                     color="#7D2224", alpha=0.7, align="center")
     ax_row_bar.set_ylim(ax_heatmap.get_ylim())
     ax_row_bar.set_yticks([])
-    ax_row_bar.set_xlabel("#Cells", fontsize=10)
+    ax_row_bar.set_xlabel("Mutation\nBurden\nper Cell", fontsize=10)
     ax_row_bar.invert_xaxis()
     
     # -------------------
@@ -471,6 +472,7 @@ def reorder_columns_by_mutant_stats(df_values, df_features_new,
                                     descending=True, return_stats=True):
     """
     最优化的列重排序函数：按mutant cell number分组，组内按mutant cell fraction排序
+    （完全确定性排序版本）
     
     Parameters:
     -----------
@@ -496,11 +498,11 @@ def reorder_columns_by_mutant_stats(df_values, df_features_new,
         列的排序统计信息
     """
     
-    # 1. 获取两个数据框列的交集
-    common_columns = list(set(df_values.columns) & set(df_features_new.columns))
-    print(f"原始df_values列数: {len(df_values.columns)}")
-    print(f"原始df_features_new列数: {len(df_features_new.columns)}")
-    print(f"共同列数: {len(common_columns)}")
+    # 1. 获取两个数据框列的交集（按字母顺序排序确保确定性）
+    common_columns = sorted(list(set(df_values.columns) & set(df_features_new.columns)))
+    # print(f"原始df_values列数: {len(df_values.columns)}")
+    # print(f"原始df_features_new列数: {len(df_features_new.columns)}")
+    # print(f"共同列数: {len(common_columns)}")
     
     if len(common_columns) == 0:
         raise ValueError("两个数据框没有共同的列！")
@@ -552,18 +554,18 @@ def reorder_columns_by_mutant_stats(df_values, df_features_new,
         ordered=True
     )
     
-    # 8. 排序：先按分组，组内按mutant cell fraction
+    # 8. 完全确定性排序：先按分组，再按mutant cell fraction，最后按列名
     if descending:
-        # 从大到小：高mutant number + 高fraction在前
+        # 从大到小：高mutant number + 高fraction在前，列名按字母顺序
         stats_df_sorted = stats_df.sort_values(
-            ['mutant_group', 'mutant_cell_frac'], 
-            ascending=[True, False]  # 分组用分类顺序，分数降序
+            ['mutant_group', 'mutant_cell_frac', 'column_name'], 
+            ascending=[True, False, True]  # 分组用分类顺序，分数降序，列名升序
         )
     else:
-        # 从小到大：低mutant number + 低fraction在前  
+        # 从小到大：低mutant number + 低fraction在前，列名按字母顺序
         stats_df_sorted = stats_df.sort_values(
-            ['mutant_group', 'mutant_cell_frac'], 
-            ascending=[True, True]   # 分组用分类顺序，分数升序
+            ['mutant_group', 'mutant_cell_frac', 'column_name'], 
+            ascending=[True, True, True]   # 分组用分类顺序，分数升序，列名升序
         )
     
     # 9. 获取排序后的列名
@@ -576,12 +578,25 @@ def reorder_columns_by_mutant_stats(df_values, df_features_new,
     stats_df_sorted = stats_df_sorted.reset_index(drop=True)
     stats_df_sorted['final_order'] = stats_df_sorted.index + 1
     
-    print(f"最终重排序列数: {len(sorted_columns)}")
+    # print(f"最终重排序列数: {len(sorted_columns)}")
+    # print(f"分组统计:")
+    group_counts = stats_df_sorted['mutant_group'].value_counts().sort_index()
+    # for group, count in group_counts.items():
+    #     print(f"  {group}: {count}个突变")
     
     if return_stats:
         return df_reordered, stats_df_sorted
     else:
         return df_reordered
+
+# # 使用示例
+# I_attached, sorting_stats_of_I_attached = reorder_columns_by_mutant_stats(
+#     I_attached_split, 
+#     df_features_new,
+#     min_cell_threshold=30,  # ≥30的作为高优先级组
+#     bin_size=5,             # 30以下每5个一组
+#     descending=True         # 从大到小排序
+# )
 
 
 
@@ -986,7 +1001,7 @@ def compute_clone_and_pair_weights_germline(muts, corr_cache, n_shuffle=100):
         ref_clone_counter = defaultdict(int)  # 记录当前 reference 下每个 clone 的计数
         
         for _ in range(n_shuffle):
-            shuffled = list(np.random.permutation(other_muts))
+            shuffled = list(deterministic_permutation(other_muts))
             remaining = [ref] + shuffled.copy()
             
             while remaining:
@@ -1196,7 +1211,6 @@ def get_correlation_graph_elements_germline(I_S: pd.DataFrame, n_shuffle: int = 
         clone_weights: dict mapping clone tuples to weight
         pair_weights: dict mapping mutation pairs to weight
     """
-    np.random.seed(seed)
     muts = list(I_S.columns)
     n_mut = len(muts)
     

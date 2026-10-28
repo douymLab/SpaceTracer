@@ -15,6 +15,7 @@ from SpaceTracer.utils.handle_UMI_combine import (
 )
 
 from SpaceTracer.utils.read_files import handle_barcode
+from SpaceTracer.utils.utils import barcode_cell_mapping
 
 
 def handle_reads_per_pos_allele_count(
@@ -33,7 +34,6 @@ def handle_reads_per_pos_allele_count(
     
     for item in reads:
         barcode_name, UMI_name = handle_seq_type(item, seq_type, bins,cell_dict)
-
         if barcode_name is None or UMI_name is None:
             continue
 
@@ -228,7 +228,8 @@ class MutationExtractor:
         bins=100,
         seq_type="visium",
         run_type="UMI",
-        cell_dict={}
+        cell_dict={},
+        min_spot_number=0
     ):
         # list or str (seperated by ,)
         self.samples = samples.split(",") if isinstance(samples, str) else list(samples)
@@ -238,7 +239,8 @@ class MutationExtractor:
         self.bins = int(bins) if isinstance(bins,int) else None
         self.seq_type = seq_type
         self.run_type = run_type
-        self.cell_dict = cell_dict
+        self.cell_dict = cell_dict # for only one sample nowdays
+        self.min_spot_number = int(min_spot_number)
 
         if isinstance(barcode_files, str):
             self.barcode_files = barcode_files.split(",")
@@ -266,8 +268,13 @@ class MutationExtractor:
             self.spot_number = barcode_df.shape[0]
             for sample in self.samples:
                 self.barcode_lists.append(barcode_df[barcode_df["sample"] == sample]["barcode"].tolist())
+        elif self.cell_dict:
+            self.barcode_lists = []
+            self.barcode_lists.append(list(set(self.cell_dict.values())))
+            self.spot_number += len(list(set(self.cell_dict.values())))
+
         else:
-            raise FileNotFoundError(f'The barcode files are not found or not provided! Please check!')
+            raise FileNotFoundError(f'The barcode files are not found or not provided! If you run this command for one sample, cell_info file is also suported! Please check!')
 
     def run(self):
         mutation_identifier_list = read_mutation_file(self.mutlist)
@@ -286,6 +293,8 @@ class MutationExtractor:
             alt_counts = 0
             total_counts = 0
             count_values_list = []
+            ind_info = None
+            sample = None
             
             for sample, bam_file, barcode_list in zip(self.samples, self.bams, self.barcode_lists):
                 _, ind_info, posteria_values, \
@@ -300,16 +309,21 @@ class MutationExtractor:
                 alt_counts += counts[0]
                 total_counts += counts[1]
                 count_values_list += count_values
+
+            # spots with coverage at this identifier (non-NA genotype)
+            covered_spot_number = sum(1 for v in posteria_values_list if v != "NA")
+            if covered_spot_number <= self.min_spot_number:
+                continue
             
-                out_list.append(
-                    [sample] +
-                    ind_info +
-                    posteria_values_list +
-                    mut_likelihood_values_list +
-                    nomut_likelihood_values_list +
-                    [f"{alt_counts}/{total_counts}"] +
-                    count_values_list
-                )
+            out_list.append(
+                [sample] +
+                ind_info +
+                posteria_values_list +
+                mut_likelihood_values_list +
+                nomut_likelihood_values_list +
+                [f"{alt_counts}/{total_counts}"] +
+                count_values_list
+            )
         
         # 1. save CSV
         with open(out_name, "w") as out_file:
@@ -336,14 +350,26 @@ def main():
     group.add_argument("--barcode_files", help="Path to barcode files, split by comma for multiple samples")
     group.add_argument("--target_barcodes", help="One file containing target barcodes, 1st col: sample, 2nd col: barcode")
     parser.add_argument("--bins", required=False, default=100, type=int, help="The combine bin level in the cluster file")
-    parser.add_argument("--seq_type", dest='seq_type', default="visium", choices=["visium","stereo","ST"], type=str, help="Your input sequence type")
+    parser.add_argument("--seq_type", dest='seq_type', default="visium", choices=["visium","stereo","ST","visium-HD"], type=str, help="Your input sequence type")
     parser.add_argument("--bams", required=True, help="BAM files, split by comma for multiple samples")
     parser.add_argument("--mutlist", required=True, help="The file storing mutation list")
     parser.add_argument("--outprefix", required=True, help="The output file prefix")
+    parser.add_argument("--cell_info", required=False, default="", help="The 2-colums file record barcode and cell info,sep by Tab")
     parser.add_argument("--samples", required=True, type=str, help="Sample name, split by comma for multiple samples")
     parser.add_argument("--type", required=False, dest="run_type", default="UMI", choices=["UMI","read"], type=str, help="Do you want to use UMI or read")
+    parser.add_argument(
+        "--min_spot_number",
+        required=False,
+        default=0,
+        type=int,
+        help="Filter out an identifier if its covered spot number is <= this value"
+    )
     
     args = parser.parse_args()
+    if args.cell_info:
+        cell_dict = barcode_cell_mapping(args.cell_info)
+    else:
+        cell_dict={}
 
     extractor = MutationExtractor(
         samples=args.samples,
@@ -354,7 +380,9 @@ def main():
         target_barcodes=args.target_barcodes,
         bins=args.bins,
         seq_type=args.seq_type,
-        run_type=args.run_type
+        run_type=args.run_type,
+        cell_dict=cell_dict,
+        min_spot_number=args.min_spot_number
     )
     
     out_name, out_barcode_file, spot_num = extractor.run()

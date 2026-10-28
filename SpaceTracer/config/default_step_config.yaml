@@ -84,7 +84,9 @@ steps:
     alpha: 0.05
     phasing_pad: 1000
     merge_gap: 200
-    max_target: 200000
+    max_target: 50000
+    max_region_span: 10000
+    phasing_max_workers: 8
     seed: 42
 
   feature_filtration:
@@ -100,7 +102,7 @@ steps:
     RNA_editing: True
     ABNORMAL_MISMATCHES: True
     LOW_READ_DIVERSITY: True
-    HIGH_MULTIPLE_MAPPIN: True
+    HIGH_MULTIPLE_MAPPING: True
     WIDE_DISTRIBUTION: True
     NEAR_READ_END: True
     CLUSTER_EVENTS: True

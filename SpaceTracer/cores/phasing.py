@@ -3,9 +3,8 @@ from dataclasses import dataclass
 from functools import partial
 from math import ceil
 import random
-from typing import  List
+from typing import Iterator, List, Optional, Tuple
 import gc
-import multiprocessing
 import os
 
 import numpy as np
@@ -54,6 +53,9 @@ class PhaseConfig:
     merge_gap: int = 200
     max_target: int = 100000
     seed: int = 42
+    max_region_span: int = 10000
+    memory_limit_bytes: Optional[int] = None
+    phasing_max_workers: Optional[int] = None
 
 def _dedup_list_keep_order(values):
     return list(dict.fromkeys(values))
@@ -137,7 +139,7 @@ def parse_germline_to_df(
 def parse_indgeno_mosaic_df(indgeno_file: str) -> pd.DataFrame:
     """
     Expected columns similar to:
-    #chrom site ID germline mutant cluster spot_number consensus_read_count genotype p_mosaic Gi vaf
+    #chrom site ID germline mutant cluster spot_number consensus_read_count genotype p_mosaic Gi vaf_hat
     """
     df= pd.read_csv(indgeno_file, sep="\t", header=0)
     # cols = df.columns.tolist()
@@ -149,8 +151,8 @@ def parse_indgeno_mosaic_df(indgeno_file: str) -> pd.DataFrame:
     df["total_umi"] = df["consensus_read_count"].astype(str).apply(
             lambda x: sum(int(i) for i in x.split(",") if i != "")
         )
-    df["vaf"] = df["vaf"].astype(float)
-    df["mutant_umi"] = df["total_umi"] * df["vaf"]
+    df["vaf_hat"] = df["vaf_hat"].astype(float)
+    df["mutant_umi"] = df["total_umi"] * df["vaf_hat"]
 
     out = pd.DataFrame({
         "Chromosome": df["#chrom"],
@@ -699,6 +701,109 @@ def judge_origin(germline, annotated_type, detail_count_list):
 
     return mut_origin
 
+
+def _iter_subspans(start: int, end: int, max_span: int) -> Iterator[Tuple[int, int]]:
+    """Split [start, end) into windows of at most max_span bp for bounded BAM fetch."""
+    if max_span <= 0 or end - start <= max_span:
+        yield start, end
+        return
+    pos = start
+    while pos < end:
+        sub_end = min(pos + max_span, end)
+        yield pos, sub_end
+        pos = sub_end
+
+
+def _fetch_reads_reservoir(
+    bam: pysam.AlignmentFile,
+    chrom: str,
+    start: int,
+    end: int,
+    k: int,
+    seed: int,
+    max_span: int = 10000,
+) -> Tuple[List, int, bool]:
+    """
+    Stream-fetch reads with reservoir sampling so memory stays O(k), not O(region depth).
+    Returns (sampled_reads, total_seen, adjusted).
+    """
+    if k <= 0:
+        total_seen = 0
+        for sub_start, sub_end in _iter_subspans(start, end, max_span):
+            for _ in bam.fetch(chrom, sub_start, sub_end):
+                total_seen += 1
+        return [], total_seen, total_seen > 0
+
+    rng = random.Random(seed)
+    reservoir: List = []
+    total_seen = 0
+
+    for sub_start, sub_end in _iter_subspans(start, end, max_span):
+        for read in bam.fetch(chrom, sub_start, sub_end):
+            total_seen += 1
+            if len(reservoir) < k:
+                reservoir.append(read)
+            else:
+                j = rng.randint(0, total_seen - 1)
+                if j < k:
+                    reservoir[j] = read
+
+    adjusted = total_seen > k
+    return reservoir, total_seen, adjusted
+
+
+def _accumulate_reads_into_dict(
+    region_reads,
+    run_type,
+    bins,
+    candidate_allele_info,
+    per_read_dict,
+    allele_total_count,
+    used_barcode,
+):
+    for reads in region_reads:
+        barcode_name, UMI_name = handle_seq_type(reads, run_type, bins)
+        if barcode_name is None or UMI_name is None:
+            continue
+
+        seq_cut, pos_cut = handle_cigar(reads.cigar)
+        cut_seq = handle_seq(reads.seq, seq_cut)
+        cut_pos = handle_pos(reads.get_reference_positions(), pos_cut)
+        barcode_name = f"{barcode_name}_{UMI_name}"
+
+        for candidate_allele_tuple in candidate_allele_info:
+            candidate_allele, ref = candidate_allele_tuple
+            pos_index = int(candidate_allele) - 1
+
+            if pos_index not in cut_pos:
+                continue
+
+            raw_index = handle_quality_matrix(cut_pos.index(pos_index), reads.seq, cut_seq)
+            quality = reads.get_forward_qualities()[raw_index]
+            geno = cut_seq[cut_pos.index(pos_index)]
+
+            if geno not in "ATCG":
+                continue
+
+            if candidate_allele not in per_read_dict[barcode_name]:
+                per_read_dict[barcode_name][candidate_allele] = {
+                    "count": defaultdict(int),
+                    "quality": {
+                        "A": defaultdict(int),
+                        "T": defaultdict(int),
+                        "C": defaultdict(int),
+                        "G": defaultdict(int),
+                    },
+                }
+
+            per_read_dict[barcode_name][candidate_allele]["count"][geno] += 1
+            per_read_dict[barcode_name][candidate_allele]["quality"][geno][quality] += 1
+
+            if barcode_name not in used_barcode[candidate_allele]:
+                allele_total_count[candidate_allele] += 1
+                used_barcode[candidate_allele].append(barcode_name)
+
+
 def get_candidate_germline(
     ref_fasta,
     in_bam_name,
@@ -710,8 +815,11 @@ def get_candidate_germline(
     alpha,
     max_target,
     seed,
+    max_region_span,
     line_dict
 ):
+    effective_max_target = line_dict.pop("_effective_max_target", max_target)
+
     out_list = []
     cluster_event_list = []
 
@@ -755,66 +863,33 @@ def get_candidate_germline(
     allele_total_count = defaultdict(int)
     used_barcode = defaultdict(list)
 
+    adjusted = False
     try:
-        # with pysam.AlignmentFile(in_bam_name, "rb", reference_filename=ref_fasta) as in_bam_read:
-        region_reads = []
+        task_seed = seed ^ hash((chr_, pos_s, pos_e, gene_name)) & 0xFFFFFFFF
         with pysam.AlignmentFile(in_bam_name, "rb", reference_filename=ref_fasta) as bam:
-            for read in bam.fetch(chr_, pos_s, pos_e):
-                region_reads.append(read)
+            region_reads, original_region_depth, adjusted = _fetch_reads_reservoir(
+                bam=bam,
+                chrom=chr_,
+                start=pos_s,
+                end=pos_e,
+                k=effective_max_target,
+                seed=task_seed,
+                max_span=max_region_span,
+            )
 
-        original_region_depth = len(region_reads)
-        if original_region_depth > max_target: 
-            random.seed(seed)
-            region_reads = random.sample(region_reads, max_target)
-            adjusted = True
-            # adjusted_depth = max_target
-        else:
-            adjusted = False
-            # adjusted_depth = original_region_depth
-
-        for reads in region_reads:
-            barcode_name,UMI_name=handle_seq_type(reads,run_type,bins)
-            if barcode_name==None or UMI_name==None:
-                continue
-
-            seq_cut, pos_cut = handle_cigar(reads.cigar)
-            cut_seq = handle_seq(reads.seq, seq_cut)
-            cut_pos = handle_pos(reads.get_reference_positions(), pos_cut)
-            barcode_name = f"{barcode_name}_{UMI_name}"
-
-
-            for candidate_allele_tuple in candidate_allele_info:
-                candidate_allele, ref = candidate_allele_tuple
-                pos_index = int(candidate_allele) - 1
-
-                if pos_index in cut_pos:
-                    raw_index = handle_quality_matrix(cut_pos.index(pos_index), reads.seq, cut_seq)
-                    quality = reads.get_forward_qualities()[raw_index]
-                    geno = cut_seq[cut_pos.index(pos_index)]
-
-                    if geno not in "ATCG":
-                        continue
-
-                    if candidate_allele not in per_read_dict[barcode_name]:
-                        per_read_dict[barcode_name][candidate_allele] = {
-                            "count": defaultdict(int),
-                            "quality": {
-                                "A": defaultdict(int),
-                                "T": defaultdict(int),
-                                "C": defaultdict(int),
-                                "G": defaultdict(int),
-                            },
-                        }
-
-                    per_read_dict[barcode_name][candidate_allele]["count"][geno] += 1
-                    per_read_dict[barcode_name][candidate_allele]["quality"][geno][quality] += 1
-
-                    if barcode_name not in used_barcode[candidate_allele]:
-                        allele_total_count[candidate_allele] += 1
-                        used_barcode[candidate_allele].append(barcode_name)
+        _accumulate_reads_into_dict(
+            region_reads=region_reads,
+            run_type=run_type,
+            bins=bins,
+            candidate_allele_info=candidate_allele_info,
+            per_read_dict=per_read_dict,
+            allele_total_count=allele_total_count,
+            used_barcode=used_barcode,
+        )
+        del region_reads
 
     except Exception as e:
-        print(f"Error in fetch: {e}")
+        logger.error(f"Error in fetch chr={chr_} {pos_s}-{pos_e}: {e}")
 
     per_read_genotypes_count = defaultdict(list)
 
@@ -939,15 +1014,34 @@ def get_candidate_germline(
         ]
 
     del per_read_dict
+    del per_read_genotypes_count
     gc.collect()
-    return out_list,cluster_event_list
+    return out_list, cluster_event_list
+
+
+def _pick_effective_max_target(span_bp: int, max_target: int) -> int:
+    """Tighten read cap for large phasing regions to limit per-worker memory."""
+    if span_bp > 50000:
+        return min(max_target, 5000)
+    if span_bp > 20000:
+        return min(max_target, 10000)
+    if span_bp > 10000:
+        return min(max_target, 20000)
+    return max_target
+
+
+def _order_phasing_tasks(lines: List[dict]) -> List[dict]:
+    """Run heavy (large-span) regions first so workers finish big jobs early."""
+    return sorted(
+        lines,
+        key=lambda x: (-(int(x["End"]) - int(x["Start"])), str(x["Chromosome"]), int(x["Start"])),
+    )
 
 
 def run_phase_mode(config: PhaseConfig) -> str:
 
     germ_df = parse_germline_to_df(config.germline, config.species,config.minprior,config.min_dp, config.min_total_dp)
 
-    # if not germ_df.empty:
     mosaic_df = parse_indgeno_mosaic_df(config.indgeno)
     gene_df = parse_gene_bed_to_df(config.gene_bed,config.phasing_chromosomes)
 
@@ -959,10 +1053,39 @@ def run_phase_mode(config: PhaseConfig) -> str:
                     phasing_pad=config.phasing_pad,
                     merge_gap=config.merge_gap
                 )
+
+    del germ_df, mosaic_df, gene_df
+    gc.collect()
     
     gene_name_col = "gene_name"
     final_df_tmp_file = config.out_phasing_file.removesuffix(".txt") + ".raw_info.txt"
     final_df.to_csv(final_df_tmp_file,sep="\t",index=False)
+
+    lines = final_df.to_dict("records")
+    del final_df
+    gc.collect()
+
+    # Per-task effective max_target by region span
+    for line in lines:
+        span_bp = int(line["End"]) - int(line["Start"])
+        line["_effective_max_target"] = _pick_effective_max_target(span_bp, config.max_target)
+
+    lines = _order_phasing_tasks(lines)
+
+    phasing_workers = config.phasing_max_workers or min(config.thread, 8)
+    phasing_workers = max(1, min(phasing_workers, config.thread))
+
+    if config.memory_limit_bytes:
+        logger.info(
+            f"[phasing] tasks={len(lines)}, workers={phasing_workers}, "
+            f"max_target={config.max_target}, max_region_span={config.max_region_span}, "
+            f"memory_limit={config.memory_limit_bytes / 1024**3:.1f}GB"
+        )
+    else:
+        logger.info(
+            f"[phasing] tasks={len(lines)}, workers={phasing_workers}, "
+            f"max_target={config.max_target}, max_region_span={config.max_region_span}"
+        )
 
     partial_func = partial(
         get_candidate_germline,
@@ -975,10 +1098,10 @@ def run_phase_mode(config: PhaseConfig) -> str:
         config.min_total_dp,
         config.alpha,
         config.max_target,
-        config.seed
+        config.seed,
+        config.max_region_span,
     )
 
-    lines = final_df.to_dict("records")
     out_phasing_file = config.out_phasing_file
     out_cluster_file = config.out_cluster_file
 
@@ -1002,12 +1125,14 @@ def run_phase_mode(config: PhaseConfig) -> str:
         for _, result in parallel_imap(
             items=lines,
             worker_fn=partial_func,
-            max_workers=config.thread,
+            max_workers=phasing_workers,
             desc="candidate_germline",
             raise_on_error=True,
             backend="process",
             progress_interval=0.05,
-            max_in_flight=config.thread * 2,
+            max_in_flight=phasing_workers,
+            memory_limit_bytes=config.memory_limit_bytes,
+            logger=logger,
         ):
             if result is None:
                 continue

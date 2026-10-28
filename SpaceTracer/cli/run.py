@@ -56,6 +56,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Force rerun even if checkpoint/output exists",
     )
 
+    parser.add_argument(
+        "--dry",
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        help="Print each step's parameters and check for errors without running",
+    )
+
     return parser
 
 
@@ -81,7 +89,19 @@ def run_command(args: argparse.Namespace):
     )
     
     only_steps = parse_only_steps(args.only_steps)
-    
+
+    if getattr(args, "dry_run", False):
+        result = pipeline.dry_run(
+            only_steps=only_steps,
+            start_from=None if only_steps else args.start_from,
+            stop_at=None if only_steps else args.stop_at,
+        )
+        if result.get("ok"):
+            print("✅ Dry-run passed (nothing was executed).")
+            return 0
+        print("❌ Dry-run found errors (nothing was executed).")
+        return 1
+
     if only_steps:
         results = pipeline.run(
             only_steps=only_steps,

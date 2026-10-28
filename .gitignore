@@ -183,3 +183,4 @@ SpaceTracer.egg-info/
 
 SpaceTracer/installer
 SpaceTracer/third_party/phylosolid/6*.R
+cli/plot.py

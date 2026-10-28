@@ -132,7 +132,7 @@ def format_barcode_key(barcode_key):
 def handel_barcode_name(cell_dict, barcode_key):
     barcode_name = format_barcode_key(barcode_key)
     if cell_dict != {}:
-        return cell_dict.get(barcode_name, barcode_name)
+        return cell_dict.get(barcode_name, None)
     else:
         return barcode_name
 
@@ -190,8 +190,10 @@ def handle_seq_type(read, run_type, bins, cell_dict={}):
         return None, None
 
     barcode_name = handel_barcode_name(cell_dict, barcode_key)
-    UMI_name = barcode_name + "_" + str(umi_key)
+    if barcode_name is None:
+        return None,None
 
+    UMI_name = barcode_name + "_" + str(umi_key)
     return barcode_name, UMI_name
 
 

@@ -259,15 +259,26 @@ def barcode_cell_mapping(mapping_file):
 
 
 def list2min(value):
+    import pandas as pd
     """find the minimum value in the comma-separated string"""
-    # check if the input is a float number
-    if isinstance(value, float):
-        return value
-    elif isinstance(value, int):
-        return value
-    else:
-        return min(float(num) if num!="no" else np.nan for num in value.split(','))
+    if pd.isna(value):
+        return np.nan
+    if isinstance(value, (int, float)):
+        return float(value)
 
+    items = str(value).split(",")
+    valid_numbers = []
+
+    for num in items:
+        num = num.strip() 
+        if num in ["no", "None", "nan", "NaN", ""]:
+            continue
+        try:
+            valid_numbers.append(float(num))
+        except ValueError:
+            continue
+
+    return min(valid_numbers) if valid_numbers else np.nan
 
 def as_int(x):
     return None if x is None or x == "None" else int(x)

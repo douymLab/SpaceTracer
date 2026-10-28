@@ -4,9 +4,11 @@
 import argparse
 from pathlib import Path
 
+from SpaceTracer import __version__
 from SpaceTracer.pipeline.orchestrator import PipelineOrchestrator
 from SpaceTracer.config.config_loader import LoadConfig
 from SpaceTracer.utils.logger import setup_logger
+from SpaceTracer.cli.plot import build_plot_parser
 
 
 def parse_only_steps(only_steps_str: str):
@@ -51,6 +53,13 @@ def build_run_parser(subparsers):
         action="store_true",
         help="Force rerun even if checkpoint/output exists",
     )
+    parser.add_argument(
+        "--dry",
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        help="Print each step's parameters and check for errors without running",
+    )
 
     parser.set_defaults(func=run_command)
 
@@ -78,6 +87,18 @@ def run_command(args: argparse.Namespace):
 
     only_steps = parse_only_steps(args.only_steps)
 
+    if getattr(args, "dry_run", False):
+        result = pipeline.dry_run(
+            only_steps=only_steps,
+            start_from=None if only_steps else args.start_from,
+            stop_at=None if only_steps else args.stop_at,
+        )
+        if result.get("ok"):
+            print("✅ Dry-run passed (nothing was executed).")
+            return 0
+        print("❌ Dry-run found errors (nothing was executed).")
+        return 1
+
     if only_steps:
         pipeline.run(only_steps=only_steps)
     else:
@@ -87,6 +108,13 @@ def run_command(args: argparse.Namespace):
         )
 
     print("✅ Pipeline completed!")
+    return 0
+
+
+def version_command(args):
+    """Print the installed SpaceTracer version."""
+    print(__version__)
+    return 0
 
 
 def build_parser():
@@ -97,6 +125,14 @@ def build_parser():
     subparsers = parser.add_subparsers(dest="command")
 
     build_run_parser(subparsers)
+    # build_plot_parser(subparsers)
+
+    version_parser = subparsers.add_parser(
+        "version",
+        help="Print the SpaceTracer version",
+        description="Print the installed SpaceTracer version",
+    )
+    version_parser.set_defaults(func=version_command)
 
     return parser
 

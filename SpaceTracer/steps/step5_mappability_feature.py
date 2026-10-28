@@ -67,9 +67,6 @@ class MappabilityFeatureStep(BaseStep):
         }
 
     def _prepare_mutation_list(self, manifest_file, merged_output_file):
-        """
-        从 genotype chunk manifest 中提取 ind_geno_filter_mutation_list 并合并。
-        """
         if not manifest_file:
             return None
 

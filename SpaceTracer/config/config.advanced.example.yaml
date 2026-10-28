@@ -3,6 +3,7 @@ sequence_type: visium
 spaceranger_dir: /path/to/sample/outs
 output_dir: /path/to/output
 sample: BCC-1
+condition: tumor  # choices: tumor, normal (healthy)
 resource_dir: /path/to/resource_dir
 
 # Optional advanced settings

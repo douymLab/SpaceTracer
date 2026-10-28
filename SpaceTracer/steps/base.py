@@ -8,7 +8,7 @@ import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 import sys
-from typing import Dict
+from typing import Any, Dict, Optional
 import os
 
 from SpaceTracer.utils.get_genome_info import GenomeDetails
@@ -38,12 +38,15 @@ class BaseStep(ABC):
         self.name = name
         self.context = context
         self.checkpoint = checkpoint_manager
+        self.param_recorder = None
         
         # get the basic context from contig
         self.config = context['config']
         self.sample = context['config']['sample']
 
         self.seq_type = self.config.get("sequence_type")
+        self.condition = self.config.get("condition")
+        
         self.bin_size = self.config.get("bin_size")
 
         self.work_dir = self.config.get('output_dir')
@@ -57,11 +60,32 @@ class BaseStep(ABC):
         check_dir(self.step_dir)
         
         logger.debug(f"Initialized step: {self.name}")
+
+    def record_params(self, extra: Optional[Dict[str, Any]] = None) -> None:
+        """Write this step's params into .pipeline_params.json for the current run."""
+        if self.param_recorder is None:
+            return
+        self.param_recorder.record_step(
+            self.name,
+            self.get_step_config(),
+            extra={
+                "sample": self.sample,
+                "sequence_type": self.seq_type,
+                "condition": self.condition,
+                "bin_size": self.bin_size,
+                "threads": self.threads,
+                "memory": self.memory,
+                **(extra or {}),
+            },
+        )
     
     def execute(self, context: Dict, skip_validation: bool = True) -> Dict:
         # validate input
         if not self.validate_inputs(context):
             raise ValueError(f"Step {self.name}: Input validation failed")
+
+        # record params used by this step for this run
+        self.record_params()
         
         # run func
         self._run(context)
@@ -91,6 +115,13 @@ class BaseStep(ABC):
         for input_name, input_path in inputs.items():
             if isinstance(input_path,int): # the int output was used to pass some step 
                 return True
+
+            if isinstance(input_path, list):
+                for path in input_path:
+                    if isinstance(path, str) and not Path(path).exists():
+                        logger.error(f"Input file not found: {input_name} -> {path}")
+                        return False
+                continue
             
             elif isinstance(input_path,str) and not Path(input_path).exists():
                 logger.error(f"Input file not found: {input_name} -> {input_path}")
@@ -104,15 +135,17 @@ class BaseStep(ABC):
         for output_name, output_path in outputs.items():
             if isinstance(output_path,int): # the int output was used to pass some step 
                 continue
-            
-            path = Path(output_path)
-            if not os.path.exists(output_path):
-                logger.error(f"Output file not created: {output_name} -> {output_path}")
-                return False
-            
-            if path.stat().st_size == 0:
-                logger.error(f"Output file is empty: {output_name} -> {output_path}")
-                return False
+
+            paths = output_path if isinstance(output_path, list) else [output_path]
+            for path_value in paths:
+                path = Path(path_value)
+                if not os.path.exists(path_value):
+                    logger.error(f"Output file not created: {output_name} -> {path_value}")
+                    return False
+                
+                if path.stat().st_size == 0:
+                    logger.error(f"Output file is empty: {output_name} -> {path_value}")
+                    return False
         
         return True
     
