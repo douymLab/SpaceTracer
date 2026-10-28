@@ -125,7 +125,7 @@ def build_parser():
     subparsers = parser.add_subparsers(dest="command")
 
     build_run_parser(subparsers)
-    build_plot_parser(subparsers)
+    # build_plot_parser(subparsers)
 
     version_parser = subparsers.add_parser(
         "version",
