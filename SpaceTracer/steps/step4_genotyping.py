@@ -4,7 +4,7 @@ Genotyping Step - DataFrame optimized version
 """
 
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 import os
 from functools import partial
 import gc
@@ -82,6 +82,15 @@ def profile_gc(tag=""):
     #     f"[PROFILE] gc {tag}: RSS before={_fmt_bytes(before)}, after={_fmt_bytes(after)}",
     #     flush=True
     # )
+
+
+def _optional_int(value) -> Optional[int]:
+    """Parse an optional integer config value; YAML null disables the limit."""
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip().lower() in {"", "none", "null"}:
+        return None
+    return int(value)
 
 
 model_name = __name__
@@ -274,7 +283,7 @@ class GenotypingStep(BaseStep):
         alpha: float,
         epsAF: float,
         mu: float,
-        thr_dp: int,
+        thr_dp: Optional[int],
         pop_vaf: float,
         filter_oneallele: bool,
         cell_num,
@@ -474,7 +483,7 @@ class GenotypingStep(BaseStep):
         epsQ = int(parameters["epsQ"])
         epsAF = float(parameters["epsAF"])
         mu = float(parameters["mu"])
-        thr_dp = int(parameters["thr_dp"])
+        thr_dp = _optional_int(parameters.get("thr_dp"))
         pop_vaf = float(parameters["pop_vaf"])
         filter_oneallele = str2bool(parameters["filter_oneallele"])
 

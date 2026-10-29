@@ -34,14 +34,16 @@ Performs cluster-level and spot-level genotype inference from UMI counts and pri
 | `epsQ` | int | `20` | Quality-to-error conversion scale for UMI/read evidence aggregation. |
 | `epsAF` | float | `0.003` | Allele-frequency error floor used during cluster allele filtering. |
 | `mu` | float | `1e-5` | Prior mutation-rate term used in individual genotype inference. |
-| `thr_dp` | int | `1000` | Depth threshold for robust genotype calling/retention. |
+| `thr_dp` | int or null | `null` | Optional depth threshold for downsampling allele counts. `null` keeps the original depth. |
 | `pop_vaf` | float | `1e-5` | Population-AF threshold used in genotype filtering logic. |
 | `filter_oneallele` | bool | `true` | If true, applies one-allele style filtering for stricter genotype selection. |
 
 ## Tuning notes
 
 - `alpha`, `epsAF`, and `mu` jointly control strictness of candidate retention.
-- Raise `thr_dp` for more conservative calls on noisy/high-depth data.
+- Leave `thr_dp: null` to use all reads with log-space likelihood calculations.
+  Set an integer only when you intentionally want to cap the effective depth;
+  quality-bin counts are scaled and rounded when the threshold is exceeded.
 - Lower `pop_vaf` for stricter rare-variant emphasis.
 - Keep `filter_oneallele=true` unless you explicitly want a more permissive candidate set.
 - Sites with no population allele frequency use prior `0,0,0,0`. The individual VAF written by this step is `vaf_hat`, and spot genotyping joins it as `ind_vaf`.

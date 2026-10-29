@@ -7,7 +7,7 @@ from functools import partial
 import math
 import numpy as np
 import pandas as pd
-from scipy.special import comb, beta
+from scipy.special import betaln, beta, comb, gammaln, logsumexp
 
 from SpaceTracer.utils.utils import str2dict
 
@@ -25,7 +25,7 @@ def _cached_str2dict(q):
     return str2dict(q)
 
 
-def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallele=True):
+def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_dp=None, pop_vaf=1e-5, filter_oneallele=True):
     """
     Calculate the individual posterior probablity for the four genotyping type:
     refhom, althom, het amd mosaic
@@ -36,8 +36,9 @@ def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_
         qA, qT, qC, qG - the consensus read qualities for each nucleotide
         fA, fT, fC, fG - the population frequency for each allele
         mu - the prior probability of the mosaic mutation (default=1e-7)
-        thr_dp - the threshold for the total depth (default=1000)
-                 when depth > thr_dp, downsample the allele numbers to let the depth = thr_dp
+        thr_dp - depth above which allele counts are downsampled (default=None)
+                 None keeps the original counts. If depth > thr_dp, each quality
+                 bin is scaled by thr_dp/depth and rounded, giving depth approximately thr_dp.
         pop_vaf - the probability of mutant allele in population (default=1e-5)
         filter_oneallele - Boolean variable denotes whether set the site with only one allele kind as "NA" (default=True)
 
@@ -60,7 +61,9 @@ def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_
     """
     # delete the low quality consensus reads and the low AF alternative alleles
     # get the consensus read and quality dictionaries
-    count_dict, q_dicts, count_dict_original = quality_format(qA, qT, qC, qG, thr_dp=thr_dp)
+    count_dict, q_dicts, count_dict_original = quality_format(
+        qA, qT, qC, qG, thr_dp=thr_dp
+    )
     count_dict_nozero = {k:v for k,v  in count_dict.items() if v>0}
     n_allele = len(count_dict_nozero)
     allele_list = list(count_dict_nozero.keys())
@@ -68,6 +71,8 @@ def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_
     nucleotide_list = ["A", "T", "C", "G"]
     f_list = [pop_vaf if i==0 else i for i in [float(fA), float(fT), float(fC), float(fG)]]
     f = dict(zip(nucleotide_list, f_list))
+    log_f = {k: np.log(v) for k, v in f.items()}
+    log_mu = np.log(mu)
     
     # initialize germline genotype
     germline_geno = None
@@ -128,26 +133,20 @@ def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_
             alt = allele_list[0]
             marker_withref = False
         
-        # calculate the germline genotype likelihood
-        ref_count = count_dict[ref]
-        qref_dict = q_dicts[ref]
-        alt_count = count_dict[alt]
-        qalt_dict = q_dicts[alt]
-        l_germline = genotype_likelihood(ref_count, alt_count, qref_dict, qalt_dict)
-        l_germline = l_germline
-        # prior
-        prior_refhom = f[ref]**2
-        prior_het = 2*f[ref]*f[alt]
-        prior_althom = f[alt]**2
-        prior_mosaic = mu  # prior for mosaic
-        prior = np.array([prior_refhom, prior_althom, prior_het, prior_mosaic])
-        p_germline = prior * l_germline
-        
-        p_germline = p_germline/sum(p_germline)
+        # calculate the germline genotype posterior in natural-log space
+        ll_germline = genotype_loglikelihood(
+            count_dict[ref], count_dict[alt], q_dicts[ref], q_dicts[alt]
+        )
+        log_prior = np.array([
+            2 * log_f[ref],
+            2 * log_f[alt],
+            np.log(2) + log_f[ref] + log_f[alt],
+            log_mu,
+        ])
+        lp_germline = log_prior + ll_germline
         # find the highest genotype
         germline_genotype_list = ["refhom", "althom", "het", "mosaic"]
-        germline_dict = dict(zip(germline_genotype_list, p_germline))
-        germline_geno = max(germline_dict, key= lambda x: germline_dict[x])
+        germline_geno = germline_genotype_list[int(np.argmax(lp_germline))]
         # if the genotype for the most two alleles is mosaic, then the germline genotype is refhom
         if germline_geno == "mosaic":
             germline_geno = "refhom"
@@ -191,39 +190,38 @@ def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_
         potential_geno = germline_geno
     # each mutant allele consider as an independent case
     for alt in alt_list:
-        # calcualte the posteriors for each genotype
-        # and combine the posteriors for each reference candidate
+        # calculate the posteriors for each genotype and combine reference
+        # candidates while all values remain in natural-log space
         alt_count = count_dict[alt]
         qalt_dict = q_dicts[alt]
-        prior_althom = f[alt]**2  # prior for althom
-        prior_mosaic = mu  # prior for mosaic
-        p = np.array([0]*4)  # initial posteriors
+        lp = np.full(4, -np.inf)
         
         # loop for germline alleles as ref
         for ref in ref_list:
-            # prior
-            prior_refhom = f[ref]**2
-            prior_het = 2*f[ref]*f[alt]
-            # likelihood
-            ref_count = count_dict[ref]
-            qref_dict = q_dicts[ref]
-            l_update = genotype_likelihood(ref_count, alt_count, qref_dict, qalt_dict)
-            # posterior
-            prior = np.array([prior_refhom, prior_althom, prior_het, prior_mosaic])
-            p_update = prior * l_update
-            p = np.array(list(map(add, p, p_update)))
+            log_prior = np.array([
+                2 * log_f[ref],
+                2 * log_f[alt],
+                np.log(2) + log_f[ref] + log_f[alt],
+                log_mu,
+            ])
+            ll_update = genotype_loglikelihood(
+                count_dict[ref], alt_count, q_dicts[ref], qalt_dict
+            )
+            lp = np.logaddexp(lp, log_prior + ll_update)
 
         ## find the highest genotype
         genotype_list = ["refhom", "althom", "het", "mosaic"]
-        p_dict = dict(zip(genotype_list, p))
+        lp_dict = dict(zip(genotype_list, lp))
         # only consider the individual genotype is the germline genotype or mosaic
-        p_ind = [p_dict[potential_geno], p_dict["mosaic"]]
-        ## normalise the posteriors (let sum=1)
-        # normalized_likelihood = preprocessing.normalize(l)
-        p_ind = p_ind/sum(p_ind)
+        lp_germline_vs_mosaic = np.array([
+            lp_dict[potential_geno], lp_dict["mosaic"]
+        ])
+        p_germline_vs_mosaic = np.exp(
+            lp_germline_vs_mosaic - logsumexp(lp_germline_vs_mosaic)
+        )
         indgeno_list = ["germline", "mosaic"]
-        pind_dict = dict(zip(indgeno_list, p_ind))
-        geno_max = max(pind_dict, key= lambda x: pind_dict[x])
+        pind_dict = dict(zip(indgeno_list, p_germline_vs_mosaic))
+        geno_max = max(pind_dict, key=lambda x: pind_dict[x])
         # p_max = pind_dict[geno_max]
         p_mosaic = pind_dict["mosaic"]
         
@@ -247,7 +245,7 @@ def individual_posterior(ref, alt, qA, qT, qC, qG, fA, fT, fC, fG, mu=1e-7, thr_
     return res_list, germline_list
 
 
-def quality_format(qA, qT, qC, qG, thr_dp=1000):
+def quality_format(qA, qT, qC, qG, thr_dp=None):
     """
     Reformat the allele qualities into dictionary format
     Also downsample the allele numbers if the depth is very high
@@ -269,6 +267,7 @@ def quality_format(qA, qT, qC, qG, thr_dp=1000):
     count_dict_original = dict(zip(nucleotide_list, count_list))
     
     # downsample if the depth is too high
+    thr_dp = np.inf if thr_dp is None else thr_dp
     if depth > thr_dp:
         # scale for each quality dict
         scaling_factor = thr_dp / depth
@@ -283,62 +282,99 @@ def quality_format(qA, qT, qC, qG, thr_dp=1000):
     return count_dict, q_dicts, count_dict_original
 
 
-def genotype_likelihood(ref_count, alt_count, qref_dict, qalt_dict):
-    """
-    Calculate the likelihood for the four genotyping type with one ref allele
-    genotype: refhom, althom, het amd mosaic
+def log_comb(n, k):
+    """Natural log of C(n, k), valid for any depth."""
+    return gammaln(n + 1) - gammaln(k + 1) - gammaln(n - k + 1)
 
-    Input:
-        ref_count, alt_count - the number of the consensus reads for the reference and alternative alleles
-        qref_dict, qalt_dict - the dictionaries for the qualities of the consensus reads on the ref and alt alleles
 
-    Output:
-        the likelihood array for the four genotypes
+def genotype_loglikelihood(ref_count, alt_count, qref_dict, qalt_dict):
     """
-    ## depth
+    Same model as genotype_likelihood, but return natural-log likelihoods
+    [ll_refhom, ll_althom, ll_het, ll_mosaic].
+    """
     depth = ref_count + alt_count
-    
-    ## het likelihood
-    l_het = math.log10(comb(depth,alt_count,exact=True)) + math.log10(0.5)*depth
-    l_het = 10 ** l_het
+    qref = {q: n for q, n in qref_dict.items() if n > 0}
+    qalt = {q: n for q, n in qalt_dict.items() if n > 0}
+    err = lambda q: 0.1 ** (q / 10)
+    lc = log_comb(depth, alt_count)
 
-    ## refhom likelihood
-    q_refhom = math.log10(1)
-    if ref_count != 0:
-        q_refhom = q_refhom + sum(math.log10(1-0.1**(i/10)) * qref_dict[i] for i in qref_dict.keys())
-    if alt_count != 0:
-        q_refhom = q_refhom + sum(math.log10(0.1**(i/10)) * qalt_dict[i] for i in qalt_dict.keys())
-    l_refhom = math.log10(comb(depth,alt_count,exact=True)) + q_refhom
-    l_refhom = 10 ** l_refhom
+    ll_het = lc + depth * np.log(0.5)
+    ll_refhom = (
+        lc
+        + sum(np.log1p(-err(q)) * n for q, n in qref.items())
+        + sum(np.log(err(q)) * n for q, n in qalt.items())
+    )
+    ll_althom = (
+        lc
+        + sum(np.log(err(q)) * n for q, n in qref.items())
+        + sum(np.log1p(-err(q)) * n for q, n in qalt.items())
+    )
+    r = (
+        sum(err(q) * n for q, n in qref.items())
+        + sum((1 - err(q)) * n for q, n in qalt.items())
+    )
+    ll_mosaic = lc + betaln(r + 1, depth - r + 1)
 
-    ## althom likelihood
-    q_althom = math.log10(1)
-    if ref_count != 0:
-        q_althom = q_althom + sum(math.log10(0.1**(i/10)) * qref_dict[i] for i in qref_dict.keys())
-    if alt_count != 0:
-        q_althom = q_althom + sum(math.log10(1-0.1**(i/10)) * qalt_dict[i] for i in qalt_dict.keys())
-    l_althom = math.log10(comb(depth,alt_count,exact=True)) + q_althom
-    l_althom = 10 ** l_althom
-    
-    ## mosaic likelihood
-    r = 0
-    if ref_count != 0:
-        r = r + sum([0.1**(float(i)/10) * qref_dict[i] for i in qref_dict.keys()])
-    if alt_count != 0:
-        r = r + sum([(1-0.1**(float(i)/10)) * qalt_dict[i] for i in qalt_dict.keys()])
-    l_mosaic = beta(r+1, depth-r+1)
-    if l_mosaic > 0:
-        l_mosaic = math.log10(l_mosaic) + math.log10(comb(depth,alt_count,exact=True))
-        # l_mosaic = round(l_mosaic, 5)
-        l_mosaic = 10 ** l_mosaic
-
-    # combine the likelihoods
-    l = [l_refhom, l_althom, l_het, l_mosaic]
-    
-    return l
+    return np.array(
+        [ll_refhom, ll_althom, ll_het, ll_mosaic], dtype=float
+    )
 
 
-def individual_genotype(row, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallele=True):
+# Original probability-space implementation retained for reference.
+# def genotype_likelihood(ref_count, alt_count, qref_dict, qalt_dict):
+#     """
+#     Calculate the likelihood for the four genotyping type with one ref allele
+#     genotype: refhom, althom, het amd mosaic
+
+#     Input:
+#         ref_count, alt_count - the number of the consensus reads for the reference and alternative alleles
+#         qref_dict, qalt_dict - the dictionaries for the qualities of the consensus reads on the ref and alt alleles
+
+#     Output:
+#         the likelihood array for the four genotypes
+#     """
+#     ## depth
+#     depth = ref_count + alt_count
+
+#     ## het likelihood
+#     l_het = math.log10(comb(depth,alt_count,exact=True)) + math.log10(0.5)*depth
+#     l_het = 10 ** l_het
+
+#     ## refhom likelihood
+#     q_refhom = math.log10(1)
+#     if ref_count != 0:
+#         q_refhom = q_refhom + sum(math.log10(1-0.1**(i/10)) * qref_dict[i] for i in qref_dict.keys())
+#     if alt_count != 0:
+#         q_refhom = q_refhom + sum(math.log10(0.1**(i/10)) * qalt_dict[i] for i in qalt_dict.keys())
+#     l_refhom = math.log10(comb(depth,alt_count,exact=True)) + q_refhom
+#     l_refhom = 10 ** l_refhom
+
+#     ## althom likelihood
+#     q_althom = math.log10(1)
+#     if ref_count != 0:
+#         q_althom = q_althom + sum(math.log10(0.1**(i/10)) * qref_dict[i] for i in qref_dict.keys())
+#     if alt_count != 0:
+#         q_althom = q_althom + sum(math.log10(1-0.1**(i/10)) * qalt_dict[i] for i in qalt_dict.keys())
+#     l_althom = math.log10(comb(depth,alt_count,exact=True)) + q_althom
+#     l_althom = 10 ** l_althom
+
+#     ## mosaic likelihood
+#     r = 0
+#     if ref_count != 0:
+#         r = r + sum([0.1**(float(i)/10) * qref_dict[i] for i in qref_dict.keys()])
+#     if alt_count != 0:
+#         r = r + sum([(1-0.1**(float(i)/10)) * qalt_dict[i] for i in qalt_dict.keys()])
+#     l_mosaic = beta(r+1, depth-r+1)
+#     if l_mosaic > 0:
+#         l_mosaic = math.log10(l_mosaic) + math.log10(comb(depth,alt_count,exact=True))
+#         l_mosaic = 10 ** l_mosaic
+
+#     # combine the likelihoods
+#     l = [l_refhom, l_althom, l_het, l_mosaic]
+#     return l
+
+
+def individual_genotype(row, mu=1e-7, thr_dp=None, pop_vaf=1e-5, filter_oneallele=True):
     """
     Run the genotype posterior function
     """
@@ -380,7 +416,7 @@ def individual_genotype(row, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallel
     return output_list, germline_output
 
 
-def _individual_genotype_from_values(values, mu=1e-7, thr_dp=1000, pop_vaf=1e-5, filter_oneallele=True):
+def _individual_genotype_from_values(values, mu=1e-7, thr_dp=None, pop_vaf=1e-5, filter_oneallele=True):
     (
         chrom, pos, strand, ref, alt, cluster, spot_number, consensus_read_count,
         qA, qT, qC, qG, fA, fT, fC, fG
@@ -459,7 +495,7 @@ class IndGenoCalculator:
         geno_filter_file=None,
         germline_file=None,
         mu=1e-7,
-        thr_dp=1000,
+        thr_dp=None,
         pop_vaf=1e-5,
         filter_oneallele=True,
         max_workers=1

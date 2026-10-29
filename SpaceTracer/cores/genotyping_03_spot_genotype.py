@@ -6,7 +6,7 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
-from scipy.special import comb
+from scipy.special import comb, gammaln, logsumexp
 
 from SpaceTracer.utils.read_files import load_spot_count_data
 from SpaceTracer.utils.utils import str2dict
@@ -769,7 +769,7 @@ def bin_df(df, bins):
     return df
 
 
-def spot_posterior(germline, mutant, cluster_vaf, qA, qT, qC, qG, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
+def spot_posterior(germline, mutant, cluster_vaf, qA, qT, qC, qG, cell_num=20, epsQ=20, thr_dp=None, pop_vaf=1e-5):
     """
     Calculate the posterior probability of the four spot genotypes:
     refhom, althom, het amd mosaic
@@ -786,8 +786,9 @@ def spot_posterior(germline, mutant, cluster_vaf, qA, qT, qC, qG, cell_num=20, e
         qA, qT, qC, qG - the consensus read qualities for each nucleotide
         cell_num - the number of cell of the spot (default=20)
         epsQ - the threshold for the consensus read quality (default=20)
-        thr_dp - the threshold for the total depth (default=1000)
-                 when depth > thr_dp, downsample the allele numbers to let the depth = thr_dp
+        thr_dp - depth above which allele counts are downsampled (default=None)
+                 None keeps the original counts. If depth > thr_dp, each quality
+                 bin is scaled by thr_dp/depth and rounded, giving depth approximately thr_dp.
         pop_vaf - the probability of mutant allele in population (default=1e-5)
 
     Outputs: p, l_norm, [max_spot_geno, G_spot_max, depth, vaf, p_mosaic]
@@ -802,7 +803,11 @@ def spot_posterior(germline, mutant, cluster_vaf, qA, qT, qC, qG, cell_num=20, e
     """
     # delete the low quality consensus reads and the low AF alternative alleles
     # get the consensus read and quality dictionaries
-    count_filter, q_filter = spot_filter(qA, qT, qC, qG, epsQ=epsQ, thr_dp=thr_dp)
+    count_filter, q_filter = spot_filter(
+        qA, qT, qC, qG,
+        epsQ=epsQ,
+        thr_dp=thr_dp
+    )
     count_filter_nozero = {k:v for k,v  in count_filter.items() if v>0}
     allele_list_spot = list(count_filter_nozero.keys())
     depth = sum(count_filter.values())
@@ -828,48 +833,49 @@ def spot_posterior(germline, mutant, cluster_vaf, qA, qT, qC, qG, cell_num=20, e
 
     # get the alternative allele info
     genotype_list = ["germline", "mosaic"]
-    alt_count = count_filter[alt]
-    qalt_dict = q_filter[alt]
     # if no alternative allele, give alt allele count as 0
     if alt == ".":
         alt_count = 0
+        qalt_dict = {}
+    else:
+        alt_count = count_filter[alt]
+        qalt_dict = q_filter[alt]
 
     ## find the highest genotype
-    # calcualte the likelihoods for each genotype
-    # and combine the likelihoods for each reference candidate
-    l_germline = 0.0
-    l_mosaic = 0.0
+    # likelihoods stay in natural-log space and are combined across
+    # reference alleles with logaddexp
+    ll = np.full(2, -np.inf)
     for ref in ref_list:
-        # likelihood
         ref_count = count_filter[ref]
         qref_dict = q_filter[ref]
-        l_update = spot_likelihood(ref_count, alt_count, qref_dict, qalt_dict, cluster_vaf, pop_vaf)
-        l_germline += l_update[0]
-        l_mosaic += l_update[1]
+        ll_update = spot_loglikelihood(
+            ref_count, alt_count, qref_dict, qalt_dict,
+            cluster_vaf, pop_vaf
+        )
+        ll = np.logaddexp(ll, ll_update)
 
-    # normalized likelihood
-    l = [l_germline, l_mosaic]
-    s_likelihood = l_germline + l_mosaic
-    s_likelihood = 1e-15 if s_likelihood==0 else s_likelihood # avoid all 0
-    l_norm = [j/s_likelihood for j in l]
+    # Convert log likelihoods back to the original normalized probability
+    # scale for output.
+    l_norm = _normalize_log(ll).tolist()
     
-    ## prior probability
+    ## prior probability, also kept as a log
     if cluster_vaf < 0.5:
-        prior_value = [(1-2*cluster_vaf)**cell_num, 1-(1-2*cluster_vaf)**cell_num]
+        germ_prior = (1 - 2 * cluster_vaf) ** cell_num
+        log_prior = np.array([
+            _log_pos(germ_prior),
+            _log_pos(1 - germ_prior),
+        ])
     else:
-        prior_value = [pop_vaf, 1-pop_vaf]
+        log_prior = np.array([
+            _log_pos(pop_vaf),
+            _log_pos(1 - pop_vaf),
+        ])
     # prior_value = [[1-2*mu, 0, 2*mu, 0], [0, 1-2*mu, 2*mu, 0], [0, 0, 1, 0], [(1-2*cluster_vaf)**cell_num, 0, 0, 1-(1-2*cluster_vaf)**cell_num]]
     # prior_dict = dict(zip(genotype_list, prior_value))
     
-    ## calculate the posterior values
-    # multiply prior
-    posterior = [prior_value[0] * l_germline, prior_value[1] * l_mosaic]
-    # normalise
-    s_posterior = sum(posterior)
-    s_posterior = 1e-15 if s_posterior==0 else s_posterior # avoid all 0
-    p = [j/s_posterior for j in posterior]
+    ## posterior = prior * likelihood, normalized in log space
+    p = np.nan_to_num(_normalize_log(log_prior + ll))
     # transfer all nan probability to 0 to avoid 0 ind genotype
-    p = np.nan_to_num(p)
     ## find the highest genotype
     max_spot_geno = "mosaic" if p[1] > p[0] else "germline"
 
@@ -897,7 +903,7 @@ def spot_posterior(germline, mutant, cluster_vaf, qA, qT, qC, qG, cell_num=20, e
     return p, l_norm, [max_spot_geno, G_spot_max, depth, vaf, p_mosaic]
 
 
-def spot_filter(qA, qT, qC, qG, epsQ=20, thr_dp=1000):
+def spot_filter(qA, qT, qC, qG, epsQ=20, thr_dp=None):
     """
     Delete the low quality (quality < epsQ) consensus reads
     Also downsample the allele numbers if the depth is very high
@@ -914,6 +920,7 @@ def spot_filter(qA, qT, qC, qG, epsQ=20, thr_dp=1000):
 
     # downsample if the depth is too high
     depth = sum([sum(q.values()) for q in q_filter_list])
+    thr_dp = np.inf if thr_dp is None else thr_dp
     if depth > thr_dp:
         # scale for each quality dict
         scaling_factor = thr_dp / depth
@@ -928,56 +935,113 @@ def spot_filter(qA, qT, qC, qG, epsQ=20, thr_dp=1000):
     return count_dict, q_filter
 
 
-def spot_likelihood(ref_count, alt_count, qref_dict, qalt_dict, cluster_vaf, pop_vaf=1e-5):
-    """
-    Calculate the four genotype likelihoods with one ref allele for the spots
-    genotype: refhom, althom, het amd mosaic
-    here only outputs two likelihoods: refhom and mosaic, 
-    cause we could see these two values as the likelihoods for germline genotype or mosaic mutation
+def log_comb(n, k):
+    """Natural log of C(n, k), valid for any depth."""
+    return gammaln(n + 1) - gammaln(k + 1) - gammaln(n - k + 1)
 
-    Input:
-        ref_count, alt_count - the number of the consensus reads for the reference and alternative alleles
-        qref_dict, qalt_dict - the dictionaries for the qualities of the consensus reads on the ref and alt alleles
-        cluster_vaf - the allele frequency (AF) of the mutant (alternative) allele on the cluster level
-        pop_vaf - the probability of mutant allele in population (default=1e-5)
 
-    Output:
-        the likelihood array for the four / two genotypes
+def _log_pos(x):
+    """Natural log of a probability; zero stays representable as -inf."""
+    return np.log(x) if x > 0 else -np.inf
+
+
+def _normalize_log(ll):
+    """Normalize log values and return ordinary probabilities."""
+    ll = np.asarray(ll, dtype=float)
+    total = logsumexp(ll)
+    if not np.isfinite(total):
+        return np.zeros(len(ll))
+    return np.exp(ll - total)
+
+
+def spot_loglikelihood(
+    ref_count, alt_count, qref_dict, qalt_dict,
+    cluster_vaf, pop_vaf=1e-5
+):
     """
-    ## depth
+    Natural-log likelihoods of the spot germline (refhom) and mosaic
+    genotypes. Return [ll_refhom, ll_mosaic].
+    """
     depth = ref_count + alt_count
-    # log combination
-    log_comb = math.log10(comb(depth, alt_count, exact=True))
+    qref = (
+        {q: n for q, n in qref_dict.items() if n > 0}
+        if ref_count != 0 and isinstance(qref_dict, dict)
+        else {}
+    )
+    qalt = (
+        {q: n for q, n in qalt_dict.items() if n > 0}
+        if alt_count != 0 and isinstance(qalt_dict, dict)
+        else {}
+    )
+    err = lambda q: 0.1 ** (q / 10)
+    lc = log_comb(depth, alt_count)
 
-    ## refhom likelihood
-    q_refhom = math.log10(1)
-    if ref_count != 0:
-        q_refhom = q_refhom + sum(math.log10(1-0.1**(i/10)) * qref_dict[i] for i in qref_dict.keys())
-    if alt_count != 0:
-        q_refhom = q_refhom + sum(math.log10(0.1**(i/10)) * qalt_dict[i] for i in qalt_dict.keys())
-    l_refhom = log_comb + q_refhom
-    l_refhom = 10 ** l_refhom
+    ll_refhom = (
+        lc
+        + sum(np.log1p(-err(q)) * n for q, n in qref.items())
+        + sum(np.log(err(q)) * n for q, n in qalt.items())
+    )
+
+    cluster_vaf = pop_vaf if cluster_vaf == 0 else cluster_vaf
+    cluster_vaf = 1 - pop_vaf if cluster_vaf == 1 else cluster_vaf
+    r = (
+        sum(err(q) * n for q, n in qref.items())
+        + sum((1 - err(q)) * n for q, n in qalt.items())
+    )
+    ll_mosaic = (
+        lc
+        + r * np.log(cluster_vaf)
+        + (depth - r) * np.log(1 - cluster_vaf)
+    )
+
+    return np.array([ll_refhom, ll_mosaic], dtype=float)
+
+
+# Original probability-space implementation retained for reference.
+# def spot_likelihood(ref_count, alt_count, qref_dict, qalt_dict, cluster_vaf, pop_vaf=1e-5):
+#     """
+#     Calculate the four genotype likelihoods with one ref allele for the spots
+#     genotype: refhom, althom, het amd mosaic
+#     here only outputs two likelihoods: refhom and mosaic,
+#     cause we could see these two values as the likelihoods for germline genotype or mosaic mutation
+
+#     Input:
+#         ref_count, alt_count - the number of the consensus reads for the reference and alternative alleles
+#         qref_dict, qalt_dict - the dictionaries for the qualities of the consensus reads on the ref and alt alleles
+#         cluster_vaf - the allele frequency (AF) of the mutant (alternative) allele on the cluster level
+#         pop_vaf - the probability of mutant allele in population (default=1e-5)
+
+#     Output:
+#         the likelihood array for the four / two genotypes
+#     """
+#     ## depth
+#     depth = ref_count + alt_count
+#     log_comb_value = math.log10(comb(depth, alt_count, exact=True))
+
+#     ## refhom likelihood
+#     q_refhom = math.log10(1)
+#     if ref_count != 0:
+#         q_refhom = q_refhom + sum(math.log10(1-0.1**(i/10)) * qref_dict[i] for i in qref_dict.keys())
+#     if alt_count != 0:
+#         q_refhom = q_refhom + sum(math.log10(0.1**(i/10)) * qalt_dict[i] for i in qalt_dict.keys())
+#     l_refhom = log_comb_value + q_refhom
+#     l_refhom = 10 ** l_refhom
     
-    ## mosaic likelihood
-    # avoid cluster_vaf=0/1
-    cluster_vaf = pop_vaf if cluster_vaf==0 else cluster_vaf
-    cluster_vaf = 1-pop_vaf if cluster_vaf==1 else cluster_vaf
-    # calculate
-    r = 0
-    if ref_count != 0:
-        r = r + sum(0.1**(float(i)/10) * qref_dict[i] for i in qref_dict.keys())
-    if alt_count != 0:
-        r = r + sum((1-0.1**(float(i)/10)) * qalt_dict[i] for i in qalt_dict.keys())
-    l_mosaic = log_comb + r*math.log10(cluster_vaf) + (depth-r)*math.log10(1-cluster_vaf)
-    l_mosaic = 10 ** l_mosaic   
+#     ## mosaic likelihood
+#     cluster_vaf = pop_vaf if cluster_vaf==0 else cluster_vaf
+#     cluster_vaf = 1-pop_vaf if cluster_vaf==1 else cluster_vaf
+#     r = 0
+#     if ref_count != 0:
+#         r = r + sum(0.1**(float(i)/10) * qref_dict[i] for i in qref_dict.keys())
+#     if alt_count != 0:
+#         r = r + sum((1-0.1**(float(i)/10)) * qalt_dict[i] for i in qalt_dict.keys())
+#     l_mosaic = log_comb_value + r*math.log10(cluster_vaf) + (depth-r)*math.log10(1-cluster_vaf)
+#     l_mosaic = 10 ** l_mosaic
 
-    # combine the likelihoods
-    l = [l_refhom, l_mosaic]
-    
-    return l
+#     return [l_refhom, l_mosaic]
 
 
-# def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
+# def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=None, pop_vaf=1e-5):
 #     qA = join_info[8]
 #     qT = join_info[9]
 #     qC = join_info[10]
@@ -995,7 +1059,7 @@ def spot_likelihood(ref_count, alt_count, qref_dict, qalt_dict, cluster_vaf, pop
 #     output = join_info[0:3] + [germline, mutant, str(cluster)] + [join_info[5] , join_info[7]] + l_norm + [str(i) for i in spot_geno]
 #     return output
 
-def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
+def spot_genotype(join_info, cell_num=20, epsQ=20, thr_dp=None, pop_vaf=1e-5):
     """
     must contain: chrom,pos,strand,barcode,consensus_read_count,qA,qT,qC,qG,cluster,germline,mutant,cluster_vaf
     """
@@ -1061,7 +1125,7 @@ def _tuple_get(row, col_idx, key, default="NA"):
     return value
 
 
-def spot_genotype_fast(row, col_idx, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
+def spot_genotype_fast(row, col_idx, cell_num=20, epsQ=20, thr_dp=None, pop_vaf=1e-5):
     qA = _tuple_get(row, col_idx, "qA")
     qT = _tuple_get(row, col_idx, "qT")
     qC = _tuple_get(row, col_idx, "qC")
@@ -1096,7 +1160,7 @@ def spot_genotype_fast(row, col_idx, cell_num=20, epsQ=20, thr_dp=1000, pop_vaf=
     ] + [str(i) for i in spot_geno]
 
 
-def _spot_genotype_from_payload(payload, col_idx, epsQ=20, thr_dp=1000, pop_vaf=1e-5):
+def _spot_genotype_from_payload(payload, col_idx, epsQ=20, thr_dp=None, pop_vaf=1e-5):
     row, cell_num = payload
     return spot_genotype_fast(
         row=row,

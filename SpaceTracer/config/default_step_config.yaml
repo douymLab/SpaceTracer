@@ -48,7 +48,7 @@ steps:
     epsQ: 20
     epsAF: 0.003
     mu: 1e-5
-    thr_dp: 1000
+    thr_dp: null
     pop_vaf: 1e-5
     filter_oneallele: true
 

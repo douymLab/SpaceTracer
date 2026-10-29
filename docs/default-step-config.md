@@ -77,7 +77,7 @@ steps:
     epsQ: 20
     epsAF: 0.003
     mu: 1e-5
-    thr_dp: 1000
+    thr_dp: null
     pop_vaf: 1e-5
     filter_oneallele: true
 
@@ -214,7 +214,8 @@ Controls genotype inference thresholds.
 - `epsQ`: sequencing error quality parameter.
 - `epsAF`: allele-frequency error parameter.
 - `mu`: prior mutation rate.
-- `thr_dp`: depth threshold.
+- `thr_dp`: optional depth threshold for downsampling allele counts. The default
+  `null` keeps the original counts; set an integer to restore depth capping.
 - `pop_vaf`: population allele-frequency threshold.
 - `filter_oneallele`: whether to filter one-allele-only evidence.
 
